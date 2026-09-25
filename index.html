@@ -2126,13 +2126,13 @@ async function openFiles(files){
       if (!lab || !log) throw new Error('archive has no datalabel.txt + .log inside');
       const csv = dlToCsv(dlParseLabels(td.decode(lab.data)), dlSplit(log.data));
       const who = cust ? td.decode(cust.data).split(',').filter(Boolean).slice(0, 2).join(' · ') : '';
-      load(csv, arch.name + (who ? ' — ' + who : '')); $('#savecsv').hidden = false; return;
+      load(csv, arch.name + (who ? ' — ' + who : '')); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); return;
     }
     const log = files.find(f => /\.log$/i.test(f.name)), lab = byName('datalabel\\.txt');
     if (log){
       if (!lab) throw new Error('pick datalabel.txt together with the .log (both are in the recording folder)');
       const csv = dlToCsv(dlParseLabels(await lab.text()), dlSplit(new Uint8Array(await log.arrayBuffer())));
-      load(csv, log.name); $('#savecsv').hidden = false; return;
+      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); return;
     }
     const csvf = files.find(f => /\.csv$/i.test(f.name)) || files[0];
     load(await csvf.text(), csvf.name); $('#savecsv').hidden = true;
