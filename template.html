@@ -326,6 +326,22 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .shead b{font-size:15px}.shead .note{flex:1}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 22px}
 .sgrid section.wide{grid-column:1 / -1}
+.cmode{display:flex;gap:4px;margin:8px 0 6px}
+.cmode .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cbuild{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+.cbuild select,.cbuild input{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;font-size:13px}
+.cbuild select.op{font-family:var(--mono);font-weight:700;width:5.5ch;text-align:center}
+.cbuild input.const{width:9ch;font-family:var(--mono)}
+.cbuild .step{display:inline-flex;gap:4px;align-items:center}
+.cbuild .x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px}
+.acwrap{position:relative;margin:6px 0}
+.acwrap input{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 10px;font:13px var(--mono)}
+.ac{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);max-height:220px;overflow:auto;padding:4px}
+.ac[hidden]{display:none}
+.ac div{padding:6px 8px;border-radius:5px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.ac div code{font-family:var(--mono);color:var(--muted);font-size:11px}
+.ac div.sel,.ac div:hover{background:var(--panel2)}
+.tok{color:var(--accent);font-weight:700}
 .cform{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .cform input{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;font-size:13px;flex:1;min-width:12ch}
 .crow{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
@@ -514,16 +530,21 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
         <label><input type="checkbox" data-s="legend"> Legend and hints</label>
       </section>
       <section class="wide"><h3>Custom tags</h3>
-        <div class="note">Name a metric, write its formula from channel ids, and it appears as an orange tag you can drag anywhere on the diagram. Tap it to pin its trend. Formulas can use + − × ÷, parentheses, Math.abs(), Math.max()… and <code>mode</code> ('heat' / 'cool').</div>
+        <div class="note">Build a metric from the readings on screen. It appears as an orange tag you can drag anywhere on the diagram; tap it to pin its trend.</div>
+        <div class="cmode"><button type="button" class="btn small" id="cm-build" aria-pressed="true">Pick from lists</button><button type="button" class="btn small" id="cm-free" aria-pressed="false">Type a formula</button></div>
+        <div id="cbuild" class="cbuild"></div>
+        <div id="cfree" class="cfree" hidden>
+          <div class="note">Type <b>@</b> and start typing a reading's name — pick it from the list that appears. Use + − * / and parentheses; <code>Math.abs()</code>, <code>Math.max()</code>, <code>Math.min()</code> work too.</div>
+          <div class="acwrap"><input id="c-expr" placeholder="e.g. @discharge - @indoor gas" autocomplete="off" spellcheck="false"><div class="ac" id="c-ac" hidden></div></div>
+        </div>
         <div class="cform">
-          <input id="c-name" placeholder="Name (e.g. Disch − ID gas)">
-          <input id="c-expr" placeholder="Formula (e.g. disch - igas)">
-          <input id="c-unit" placeholder="Unit" style="width:6ch">
-          <input id="c-dec" type="number" min="0" max="3" value="1" title="Decimals" style="width:5ch">
+          <input id="c-name" placeholder="Tag name">
+          <input id="c-unit" placeholder="Unit" style="flex:0 1 8ch">
+          <input id="c-dec" type="number" min="0" max="3" value="1" title="Decimals" style="flex:0 1 6ch">
+          <span class="note" id="c-preview"></span>
           <button class="btn small primary" id="customadd" type="button">Add tag</button>
         </div>
         <div id="customlist"></div>
-        <details><summary class="note">Channel ids you can use</summary><div class="chelp" id="customhelp"></div></details>
       </section>
       <section><h3>Header and bottom bar</h3>
         <label><input type="checkbox" data-s="chips"> Status chip band</label>
@@ -631,7 +652,12 @@ const STAT = [
 const ALLCH = [...NUM, ...DERIVED];
 const chById = Object.fromEntries(ALLCH.map(c => [c.id, c]));
 // user-defined channels: name + formula over channel ids (e.g. "disch - cond", "(igas + iliq) / 2")
+// formulas may name readings as [Label] tokens (from the pickers) or raw ids; both resolve to channel ids
+function tokensToIds(expr){
+  return expr.replace(/\[([^\]]+)\]/g, (m, name) => { const n = name.trim().toLowerCase(); const c = ALLCH.find(x => x.label.toLowerCase() === n || x.short.toLowerCase() === n || x.id === n); if (!c) throw new Error('Unknown reading: ' + name); return c.id; });
+}
 function compileExpr(expr){
+  expr = tokensToIds(expr);
   const ids = ALLCH.map(c => c.id);
   const fn = new Function(...ids, 'mode', 'Math', '"use strict"; return (' + expr + ');');
   return r => { const v = fn(...ids.map(id => (r[id] == null ? NaN : r[id])), r.mode, Math); return Number.isFinite(v) ? v : null; };
@@ -1780,26 +1806,88 @@ function buildGhosts(){
 function refreshAfterCustom(){
   if (D){ const text = D._text, keep = D.aux; D = buildDataset(text, D.name); D._text = text; D.aux = keep; analyze(); evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
   setLayout(); renderCustomList();
+  document.querySelectorAll('#cbuild .chan').forEach(o => { const v = o.value; const n = chanSelect(v); o.replaceWith(n); n.addEventListener('change', () => { n.nextElementSibling.hidden = n.value !== '__const'; updatePreview(); }); });
 }
 function renderCustomList(){
   const host = $('#customlist'); host.innerHTML = '';
   if (!CUSTOM.length){ host.innerHTML = '<div class="note">No custom tags yet.</div>'; }
   for (const c of CUSTOM){
     const row = document.createElement('div'); row.className = 'crow';
-    row.innerHTML = `<b>${c.name}</b><code>${c.expr}</code><span class="note">${c.unit || ''}</span><button class="btn small" type="button">✕</button>`;
+    row.innerHTML = `<b>${c.name}</b><code>${c.expr.replace(/\[([^\]]+)\]/g, '<span class="tok">$1</span>')}</code><span class="note">${c.unit || ''}</span><button class="btn small" type="button">✕</button>`;
     row.querySelector('button').addEventListener('click', () => { CUSTOM = CUSTOM.filter(x => x !== c); saveJSON('dchk.custom', CUSTOM); const k = DERIVED.findIndex(d => d.id === c.id); if (k >= 0) DERIVED.splice(k, 1); const k2 = ALLCH.findIndex(d => d.id === c.id); if (k2 >= 0) ALLCH.splice(k2, 1); delete chById[c.id]; pins = pins.filter(p => p !== c.id); saveJSON('dchk.pins', pins); refreshAfterCustom(); });
     host.appendChild(row);
   }
-  const help = $('#customhelp'); if (help && !help.dataset.done){ help.dataset.done = 1; help.innerHTML = ALLCH.filter(c => !c.custom).map(c => `<span><code>${c.id}</code> ${c.label}</span>`).join(''); }
 }
+// --- builder: [reading] [op] [reading] … with optional constants ---
+let CMODE = 'build';
+const pickable = () => ALLCH.filter(c => !/^(ecode|retry)$/.test(c.id));
+function chanSelect(sel){
+  const o = document.createElement('select'); o.className = 'chan';
+  const groups = [['Sensors', ALLCH.filter(c => !c.calc)], ['Calculated', ALLCH.filter(c => c.calc && !c.custom)], ['Custom', ALLCH.filter(c => c.custom)]];
+  for (const [g, list] of groups){ if (!list.length) continue; const og = document.createElement('optgroup'); og.label = g; for (const c of list){ const op = document.createElement('option'); op.value = c.id; op.textContent = c.label + (c.unit ? ' (' + c.unit + ')' : ''); og.appendChild(op); } o.appendChild(og); }
+  const og = document.createElement('optgroup'); og.label = 'Other'; const op = document.createElement('option'); op.value = '__const'; op.textContent = 'a number…'; og.appendChild(op); o.appendChild(og);
+  if (sel) o.value = sel;
+  return o;
+}
+function addStep(first){
+  const host = $('#cbuild'); const st = document.createElement('span'); st.className = 'step';
+  if (!first){ const op = document.createElement('select'); op.className = 'op'; for (const [v, t] of [['-','−'],['+','+'],['*','×'],['/','÷']]){ const o = document.createElement('option'); o.value = v; o.textContent = t; op.appendChild(o); } st.appendChild(op); }
+  const ch = chanSelect(first ? 'disch' : 'cond'); st.appendChild(ch);
+  const k = document.createElement('input'); k.className = 'const'; k.type = 'number'; k.step = 'any'; k.placeholder = 'value'; k.hidden = true; st.appendChild(k);
+  ch.addEventListener('change', () => { k.hidden = ch.value !== '__const'; updatePreview(); }); k.addEventListener('input', updatePreview);
+  if (!first){ const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '✕'; x.title = 'remove'; x.addEventListener('click', () => { st.remove(); updatePreview(); }); st.appendChild(x); }
+  host.insertBefore(st, $('#cb-add')); updatePreview();
+}
+function builderExpr(){
+  const steps = [...document.querySelectorAll('#cbuild .step')]; let expr = '', label = '';
+  steps.forEach((st, i) => {
+    const op = st.querySelector('.op'), ch = st.querySelector('.chan'), k = st.querySelector('.const');
+    const c = chById[ch.value]; const term = ch.value === '__const' ? (k.value || '0') : '[' + c.label + ']'; const tl = ch.value === '__const' ? (k.value || '0') : c.short;
+    if (i === 0){ expr = term; label = tl; } else { expr = '(' + expr + ' ' + op.value + ' ' + term + ')'; label += ' ' + op.selectedOptions[0].textContent + ' ' + tl; }
+  });
+  return {expr, label};
+}
+function updatePreview(){
+  const pv = $('#c-preview');
+  const expr = CMODE === 'build' ? builderExpr().expr : $('#c-expr').value.trim();
+  if (!expr){ pv.textContent = ''; return; }
+  try { const f = compileExpr(expr); if (D){ const r = {}; for (const c of ALLCH) r[c.id] = D.num[c.id] ? D.num[c.id][cur] : null; r.mode = D.mode[cur]; const v = f(r); pv.textContent = 'now: ' + (isN(v) ? v.toFixed(2) : '—'); } else pv.textContent = 'ok'; }
+  catch(e){ pv.textContent = '⚠ ' + e.message; }
+}
+(() => { const host = $('#cbuild'); const add = document.createElement('button'); add.type = 'button'; add.className = 'btn small'; add.id = 'cb-add'; add.textContent = '+ add'; add.addEventListener('click', () => addStep(false)); host.appendChild(add); addStep(true); addStep(false); })();
+$('#cm-build').addEventListener('click', () => { CMODE = 'build'; $('#cm-build').setAttribute('aria-pressed', true); $('#cm-free').setAttribute('aria-pressed', false); $('#cbuild').hidden = false; $('#cfree').hidden = true; updatePreview(); });
+$('#cm-free').addEventListener('click', () => { CMODE = 'free'; $('#cm-build').setAttribute('aria-pressed', false); $('#cm-free').setAttribute('aria-pressed', true); $('#cbuild').hidden = true; $('#cfree').hidden = false; updatePreview(); $('#c-expr').focus(); });
+// --- free formula: @ opens a picker of the readings, filtered as you type ---
+(() => {
+  const inp = $('#c-expr'), ac = $('#c-ac'); let items = [], sel = 0, range = null;
+  const close = () => { ac.hidden = true; items = []; range = null; };
+  const used = () => { const m = inp.value.match(/\[([^\]]+)\]/g) || []; return new Set(m.map(x => x.slice(1, -1).toLowerCase())); };
+  const show = () => {
+    const pos = inp.selectionStart, txt = inp.value.slice(0, pos); const at = txt.lastIndexOf('@');
+    if (at < 0 || /[\]\s][^@]*$/.test(txt.slice(at + 1)) && txt.slice(at + 1).includes(']')){ close(); return; }
+    const q = txt.slice(at + 1).toLowerCase(); const u = used();
+    const rank = c => { const l = c.label.toLowerCase(), sh = c.short.toLowerCase(); return l.startsWith(q) || sh.startsWith(q) || c.id.startsWith(q) ? 0 : l.split(/\s+/).some(w => w.startsWith(q)) ? 1 : 2; };
+    items = pickable().filter(c => !u.has(c.label.toLowerCase()) && (c.label.toLowerCase().includes(q) || c.short.toLowerCase().includes(q) || c.id.includes(q))).sort((a, b) => rank(a) - rank(b)).slice(0, 12);
+    if (!items.length){ close(); return; }
+    range = [at, pos]; sel = 0;
+    ac.innerHTML = items.map((c, i) => `<div data-i="${i}" class="${i === sel ? 'sel' : ''}"><span>${c.label}${c.unit ? ' <small>' + c.unit + '</small>' : ''}</span><code>${c.id}</code></div>`).join('');
+    ac.hidden = false;
+  };
+  const pick = i => { const c = items[i]; if (!c || !range) return; const v = inp.value; inp.value = v.slice(0, range[0]) + '[' + c.label + '] ' + v.slice(range[1]); const p = range[0] + c.label.length + 3; inp.setSelectionRange(p, p); close(); updatePreview(); inp.focus(); };
+  inp.addEventListener('input', () => { show(); updatePreview(); });
+  inp.addEventListener('keydown', e => { if (ac.hidden) return; if (e.key === 'ArrowDown'){ sel = (sel + 1) % items.length; e.preventDefault(); } else if (e.key === 'ArrowUp'){ sel = (sel - 1 + items.length) % items.length; e.preventDefault(); } else if (e.key === 'Enter' || e.key === 'Tab'){ pick(sel); e.preventDefault(); return; } else if (e.key === 'Escape'){ close(); return; } else return; [...ac.children].forEach((d, i) => d.classList.toggle('sel', i === sel)); });
+  ac.addEventListener('mousedown', e => { const d = e.target.closest('[data-i]'); if (d){ e.preventDefault(); pick(+d.dataset.i); } });
+  inp.addEventListener('blur', () => setTimeout(close, 150));
+})();
 $('#customadd').addEventListener('click', () => {
-  const name = $('#c-name').value.trim(), expr = $('#c-expr').value.trim(), unit = $('#c-unit').value.trim(), dec = +$('#c-dec').value;
+  const b = CMODE === 'build' ? builderExpr() : null;
+  const name = $('#c-name').value.trim() || (b ? b.label : ''), expr = b ? b.expr : $('#c-expr').value.trim(), unit = $('#c-unit').value.trim(), dec = +$('#c-dec').value;
   if (!name || !expr){ toast('Give the tag a name and a formula'); return; }
   const id = 'u_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') + '_' + Date.now().toString(36);
   const c = {id, name, expr, unit, dec:Number.isFinite(dec) ? dec : 1};
   try { registerCustom(c); } catch(e){ toast('Formula did not parse: ' + e.message); return; }
   CUSTOM.push(c); saveJSON('dchk.custom', CUSTOM);
-  $('#c-name').value = ''; $('#c-expr').value = '';
+  $('#c-name').value = ''; $('#c-expr').value = ''; $('#c-preview').textContent = '';
   refreshAfterCustom(); toast(`Added "${name}" — drag it where you want it`);
 });
 
