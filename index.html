@@ -933,8 +933,9 @@ const SCENE_LAND = `
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'', sbKey:'', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
+if (!S.sbUrl) S.sbUrl = S_DEF.sbUrl; if (!S.sbKey) S.sbKey = S_DEF.sbKey;
 function applySettings(){
   saveJSON('dchk.settings', S);
   const b = document.body;
@@ -2178,7 +2179,7 @@ async function openFiles(files){
 window.dchkOpen = openFiles;
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v29';
+const APP_VERSION = 'v30';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
