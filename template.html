@@ -178,11 +178,8 @@ button{cursor:pointer}
 .fanring{fill:none;stroke:var(--metal2);stroke-width:1}
 .fanb{fill:var(--metal2);stroke:var(--ink2);stroke-width:1.1;stroke-linejoin:round;transform-box:fill-box;transform-origin:center}
 .fanhub{fill:var(--panel);stroke:var(--ink2);stroke-width:1.4}
-.air path{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:7 7;opacity:.8;mix-blend-mode:normal;animation:airflow .9s linear infinite}
-.air.rev path{animation-direction:reverse}
+.air path{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:7 7;opacity:.8}
 .air.off{display:none}
-@keyframes airflow{to{stroke-dashoffset:-14}}
-@media (prefers-reduced-motion:reduce){.air path{animation:none}}
 .fanb.on{animation:spin 1.4s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.fanb.on{animation:none}}
@@ -1494,6 +1491,12 @@ if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEven
 
 // installable app: register the service worker only on a real host (not inside a sandboxed preview)
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/claude\.ai$/.test(location.hostname)){ window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
+// air-stream motion is driven from JS (iOS Safari does not repaint CSS dash animations on gradient-stroked paths)
+(() => {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let paths = null; const t0 = Date.now();
+  setInterval(() => { if (!paths || !paths.length) paths = document.querySelectorAll('.air path'); const off = -(((Date.now() - t0) / 900) * 14 % 14).toFixed(2) + 'px'; for (const p of paths) p.style.strokeDashoffset = off; }, 40);
+})();
 // boot
 buildPipes(); buildCoils(); buildTags();
 $('#physlbl').style.display = ADV ? '' : 'none';
