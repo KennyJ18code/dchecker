@@ -175,7 +175,14 @@ button{cursor:pointer}
 .motor{fill:var(--metal);stroke:var(--ink2);stroke-width:1.5}
 .valve line{stroke:var(--ink2);stroke-width:1.2}
 .fanh{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
-.fanb{fill:var(--metal2);stroke:var(--ink2);stroke-width:1.2;transform-box:fill-box;transform-origin:center}
+.fanring{fill:none;stroke:var(--metal2);stroke-width:1}
+.fanb{fill:var(--metal2);stroke:var(--ink2);stroke-width:1.1;stroke-linejoin:round;transform-box:fill-box;transform-origin:center}
+.fanhub{fill:var(--panel);stroke:var(--ink2);stroke-width:1.4}
+.air path{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:7 7;opacity:.8;mix-blend-mode:normal;animation:airflow .9s linear infinite}
+.air.rev path{animation-direction:reverse}
+.air.off{display:none}
+@keyframes airflow{to{stroke-dashoffset:-14}}
+@media (prefers-reduced-motion:reduce){.air path{animation:none}}
 .fanb.on{animation:spin 1.4s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.fanb.on{animation:none}}
@@ -353,6 +360,7 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
           <text class="sublbl" x="734" y="494" text-anchor="end">GAS LINE</text>
           <text class="sublbl" x="470" y="490" text-anchor="middle" id="lineset-note"></text>
 
+          <defs><linearGradient id="g-oc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient><linearGradient id="g-ic" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient></defs>
           <g id="pipes"></g>
           <g id="coils"></g>
 
@@ -361,12 +369,12 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
           <g class="valve"><circle cx="750" cy="540" r="10"/><path d="M750 530 V518 M740 518 H760"/></g>
 
           <!-- indoor blower -->
-          <g id="ifan" transform="translate(40 0)"><circle class="fanh" cx="410" cy="250" r="30"/><g class="fanb" id="ifanb"><path d="M410 250 C398 236 404 224 410 222 C416 224 422 236 410 250Z"/><path d="M410 250 C427 254 432 266 428 270 C422 272 411 266 410 250Z"/><path d="M410 250 C393 254 388 266 392 270 C398 272 409 266 410 250Z"/><circle cx="410" cy="250" r="4"/></g></g>
+          <g id="ifan"></g>
           <!-- indoor EV -->
           <g class="valve" id="iev-sym"><path d="M176 288 L190 300 L176 312 Z M204 288 L190 300 L204 312 Z"/><rect class="motor" x="180" y="272" width="20" height="14" rx="2"/><path d="M190 286 V300" fill="none"/><line x1="184" y1="276" x2="196" y2="276"/><line x1="184" y1="280" x2="196" y2="280"/></g>
 
           <!-- outdoor fan -->
-          <g id="ofan" transform="translate(0 16)"><circle class="fanh" cx="88" cy="932" r="34"/><g class="fanb" id="ofanb"><path d="M88 930 C74 914 81 900 88 898 C95 900 102 914 88 930Z"/><path d="M88 930 C107 934 113 948 108 953 C101 955 89 948 88 930Z"/><path d="M88 930 C69 934 63 948 68 953 C75 955 87 948 88 930Z"/><circle cx="88" cy="930" r="4"/></g></g>
+          <g id="ofan"></g>
           <!-- outdoor EV -->
           <g class="valve" id="ev-sym"><path d="M176 733 L190 745 L176 757 Z M204 733 L190 745 L204 757 Z"/><rect class="motor" x="180" y="717" width="20" height="14" rx="2"/><path d="M190 731 V745" fill="none"/><line x1="184" y1="721" x2="196" y2="721"/><line x1="184" y1="725" x2="196" y2="725"/></g>
 
@@ -950,7 +958,32 @@ function coil(g, id, x, y, w, h, orient){
   else { const x1 = x+w/2-16, x2 = x+w/2, x3 = x+w/2+16; d = `M${x2} ${y} V${y+h*0.15} H${x1} V${y+h*0.85} H${x3} V${y+h*0.3} H${x2} V${y+h}`; }
   el('path', {class:'tube', d, id}, g);
 }
-function buildCoils(){ const g = $('#coils'); g.innerHTML = ''; coil(g, 'ic', 300, 110, 220, 60, 'h'); coil(g, 'oc', 160, 802, 60, 260, 'v'); }
+function fan(host, cx, cy, r, bladeId){
+  host.innerHTML = '';
+  el('circle', {class:'fanh', cx, cy, r}, host);
+  el('circle', {class:'fanring', cx, cy, r:r*0.86}, host);
+  const b = el('g', {class:'fanb', id:bladeId}, host);
+  const L = r*0.82, w = r*0.34;
+  const petal = `M${cx} ${cy} C${cx-w} ${cy-L*0.45}, ${cx-w*0.7} ${cy-L}, ${cx} ${cy-L} C${cx+w*0.7} ${cy-L}, ${cx+w} ${cy-L*0.45}, ${cx} ${cy} Z`;
+  for (const a of [0, 120, 240]) el('path', {d:petal, transform:`rotate(${a} ${cx} ${cy})`}, b);
+  el('circle', {cx, cy, r:r*0.16, class:'fanhub'}, b);
+}
+// wavy air streams through a heat exchanger; colored by a gradient from entering air to leaving air
+function wave(x0, y0, x1, y1, amp, len){
+  const dx = x1-x0, dy = y1-y0, dist = Math.hypot(dx, dy), ux = dx/dist, uy = dy/dist, px = -uy, py = ux;
+  let d = `M${x0} ${y0}`; const n = Math.max(2, Math.round(dist/len));
+  for (let k = 0; k < n; k++){ const t0 = (k+0.5)/n, t1 = (k+1)/n; const sgn = k%2 ? -1 : 1; const cx = x0+dx*t0+px*amp*sgn, cy = y0+dy*t0+py*amp*sgn; d += ` Q${cx.toFixed(1)} ${cy.toFixed(1)} ${(x0+dx*t1).toFixed(1)} ${(y0+dy*t1).toFixed(1)}`; }
+  return d;
+}
+function buildCoils(){
+  const g = $('#coils'); g.innerHTML = '';
+  // air streams sit behind the coils
+  coil(g, 'ic', 300, 110, 220, 60, 'h'); coil(g, 'oc', 160, 802, 60, 260, 'v');
+  const air = el('g', {id:'air'}, g);
+  const oc = el('g', {id:'air-oc', class:'air'}, air); for (const y of [830, 872, 914, 956, 998, 1040]) el('path', {d:wave(232, y, 128, y, 3.5, 14), stroke:'url(#g-oc)'}, oc);
+  const ic = el('g', {id:'air-ic', class:'air'}, air); for (const x of [395, 430, 465, 500]) el('path', {d:wave(x, 86, x, 194, 3.5, 14), stroke:'url(#g-ic)'}, ic);
+  fan($('#ifan'), 450, 250, 30, 'ifanb'); fan($('#ofan'), 88, 948, 34, 'ofanb');
+}
 
 // Tags: x,y in diagram units; anchor left (default) / right / ctr. `from` = sensor point on the pipe (leader + marker).
 // `ch` may be per-mode; null hides the tag in that mode.
@@ -1070,8 +1103,16 @@ function renderCycle(i){
   $('#cmptgt').textContent = isN(trps) ? 'target ' + trps.toFixed(0) : '';
   const dv = $('#cmpdev'); dv.classList.remove('off','dn','up');
   if (isN(rps) && isN(trps)){ const d = rps - trps; dv.textContent = (d === 0 ? 'on target' : (d > 0 ? '▲ +' : '▼ ') + d.toFixed(0) + ' rps'); dv.classList.add(d === 0 ? 'off' : d > 0 ? 'up' : 'dn'); } else dv.textContent = '';
-  $('#ofanb').classList.toggle('on', isN(D.num.fan[i]) ? D.num.fan[i] > 0 : running);
-  $('#ifanb').classList.toggle('on', isN(D.num.cfm[i]) ? D.num.cfm[i] > 0 : running);
+  const ofOn = isN(D.num.fan[i]) ? D.num.fan[i] > 0 : running, ifOn = isN(D.num.cfm[i]) ? D.num.cfm[i] > 0 : running;
+  $('#ofanb').classList.toggle('on', ofOn); $('#ifanb').classList.toggle('on', ifOn);
+  // air through the coils: entering-air color → leaving-air color (leaving air lands most of the way to the coil temperature)
+  const oat = D.num.oat[i], oc = D.num.ochex[i], icT = avg(D.num.igas[i], D.num.iliq[i]);
+  const gOc = document.querySelectorAll('#g-oc stop'), gIc = document.querySelectorAll('#g-ic stop');
+  const grey = cssVar('--muted') || '#888';
+  const outOd = (isN(oat) && isN(oc)) ? oat + 0.75*(oc - oat) : null;
+  gOc[1].setAttribute('stop-color', thermColor(oat) || grey); gOc[0].setAttribute('stop-color', thermColor(outOd) || grey);
+  gIc[0].setAttribute('stop-color', grey); gIc[1].setAttribute('stop-color', thermColor(icT) || grey);
+  $('#air-oc').classList.toggle('off', !ofOn); $('#air-ic').classList.toggle('off', !ifOn);
   const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
   $('#iduhdr').textContent = [im, ia != null ? 'addr ' + ia : null, ie != null ? 'err ' + ie : null].filter(Boolean).join(' · ');
