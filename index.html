@@ -309,6 +309,11 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .note{font-size:12px;color:var(--muted)}
 
 /* data table */
+.fleetbar{display:flex;align-items:center;gap:10px;padding:8px 14px}
+.fleetbar .grow{flex:1}
+.fb{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;font-size:13px}
+.fb input{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 8px;font-size:12px;flex:1;min-width:14ch}
+#fleettable td.sigs{white-space:normal;max-width:30ch;font-size:12px}
 .datawrap{overflow:auto;max-height:70vh;padding:0 14px 14px}
 .datawrap table{font-family:var(--mono);font-size:12px}
 .datawrap th{position:sticky;top:0;background:var(--panel);z-index:1}
@@ -381,6 +386,7 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
     <button role="tab" aria-selected="false" data-tab="rules" id="tab-rules" hidden>Rules</button>
     <button role="tab" aria-selected="false" data-tab="runs" id="tab-runs" hidden>Runs</button>
     <button role="tab" aria-selected="false" data-tab="data" id="tab-data">Data</button>
+    <button role="tab" aria-selected="false" data-tab="fleet" id="tab-fleet" hidden>Fleet</button>
   </div>
 </div></header>
 
@@ -484,6 +490,18 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
     <p class="note" style="padding:0 14px 14px">Fault chips (amber) score how many of a classic fault's conditions hold. Signatures use fixed engineering thresholds (EV within 3% of its log maximum for 3 min, SC 3°F off target after 8 min settle, discharge SH under 25°F at ≥50% speed, 5°F/min discharge climb, PT-table disagreement over 4°F, sensor disagreement over 15 psi, coil 12°F from saturation, current/rps 15% over the log's steady median, runs under 5 min or off-times under 3 min). They are hints, not verdicts.</p>
   </section>
 
+  <!-- FLEET (recordings synced to Supabase) -->
+  <section class="panel card" id="panel-fleet" hidden>
+    <h2>Fleet · recordings opened by the shop</h2>
+    <div class="fleetbar">
+      <span class="note" id="fleetstatus"></span>
+      <span class="grow"></span>
+      <button class="btn small" id="fleetrefresh" type="button">Refresh</button>
+    </div>
+    <div class="fb" id="fbthis" hidden><span>This recording — was the app's read useful?</span><button class="btn small" data-v="right" type="button">👍 Right</button><button class="btn small" data-v="wrong" type="button">👎 Wrong</button><button class="btn small" data-v="unclear" type="button">Unclear</button><input id="fbnote" placeholder="note (optional)"></div>
+    <div class="tablewrap"><table id="fleettable"><thead><tr><th>When</th><th>Site</th><th>Tech</th><th>Model</th><th>Start</th><th>Rows</th><th>Equipment</th><th>Runs</th><th>Signatures</th><th></th></tr></thead><tbody></tbody></table></div>
+  </section>
+
   <!-- DATA -->
   <section class="panel card" id="panel-data" hidden>
     <h2>Rows · click a row to jump to it</h2>
@@ -545,6 +563,22 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
           <button class="btn small primary" id="customadd" type="button">Add tag</button>
         </div>
         <div id="customlist"></div>
+      </section>
+      <section class="wide"><h3>Fleet sync (Supabase)</h3>
+        <div class="note">Paste the project URL and anon key from Supabase → Settings → API, then sign in with the tech account Kenny set up. Recordings you open are uploaded to the shop library; usage is logged so the app can be improved.</div>
+        <div class="cform">
+          <input data-s="sbUrl" placeholder="https://xxxx.supabase.co" style="flex:2">
+          <input data-s="sbKey" placeholder="anon key" style="flex:3">
+        </div>
+        <div class="cform">
+          <input id="sb-email" placeholder="email" type="email" autocomplete="username">
+          <input id="sb-pass" placeholder="password" type="password" autocomplete="current-password">
+          <button class="btn small primary" id="sb-signin" type="button">Sign in</button>
+          <button class="btn small" id="sb-signout" type="button" hidden>Sign out</button>
+          <span class="note" id="sb-status">not signed in</span>
+        </div>
+        <label><input type="checkbox" data-s="syncUp"> Upload recordings I open</label>
+        <label><input type="checkbox" data-s="syncEv"> Send usage events</label>
       </section>
       <section><h3>Header and bottom bar</h3>
         <label><input type="checkbox" data-s="chips"> Status chip band</label>
@@ -899,7 +933,7 @@ const SCENE_LAND = `
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true};
+const S_DEF = {sbUrl:'', sbKey:'', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 function applySettings(){
   saveJSON('dchk.settings', S);
@@ -960,9 +994,9 @@ function applyEquipment(){
   buildDiagram();
 }
 let THERMAL = !!loadJSON('dchk.thermal', false);
-function setThermal(on){ THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
+function setThermal(on){ if (THERMAL !== !!on) logEvent('thermal', {on:!!on}); THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
 const VIEWNOTE = {num:'', bar:'fill = where the reading sits in this log\'s range · grey tick = steady-state norm · black tick = target', spark:'trail behind each number = its last 10 minutes · dashed = steady-state norm', dev:'tint = distance from this log\'s steady-state norm (σ) · red high, blue low'};
-function setView(v){ VIEW = v; saveJSON('dchk.view', v); const dg = $('#diag'); dg.classList.remove('view-num','view-bar','view-spark','view-dev'); dg.classList.add('view-' + v); document.querySelectorAll('#viewsel button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v)); $('#viewnote').textContent = VIEWNOTE[v] || ''; if (D) renderCycle(cur); }
+function setView(v){ if (VIEW !== v) logEvent('view', {view:v}); VIEW = v; saveJSON('dchk.view', v); const dg = $('#diag'); dg.classList.remove('view-num','view-bar','view-spark','view-dev'); dg.classList.add('view-' + v); document.querySelectorAll('#viewsel button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v)); $('#viewnote').textContent = VIEWNOTE[v] || ''; if (D) renderCycle(cur); }
 function loadJSON(k, d){ try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(e){ return d; } }
 function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 function loadRules(){ const r = loadJSON('dchk.rules.v2', null); return (Array.isArray(r) && r.length) ? r : DEFAULT_RULES.map(x => ({...x})); }
@@ -1836,6 +1870,7 @@ function showTip(ev, c, i){
 /* ---------- bottom dock: pinned trends ---------- */
 const dockStrips = [];
 function togglePin(id){
+  logEvent('pin', {id, on:!pins.includes(id)});
   const k = pins.indexOf(id);
   if (k >= 0) pins.splice(k, 1); else { pins.push(id); if (pins.length > 3) pins.shift(); }
   saveJSON('dchk.pins', pins); buildDock(); renderCycle(cur);
@@ -2023,7 +2058,7 @@ $('#customadd').addEventListener('click', () => {
   const id = 'u_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') + '_' + Date.now().toString(36);
   const c = {id, name, expr, unit, dec:Number.isFinite(dec) ? dec : 1};
   try { registerCustom(c); } catch(e){ toast('Formula did not parse: ' + e.message); return; }
-  CUSTOM.push(c); saveJSON('dchk.custom', CUSTOM);
+  CUSTOM.push(c); saveJSON('dchk.custom', CUSTOM); logEvent('custom_tag', {name, expr});
   $('#c-name').value = ''; $('#c-expr').value = ''; $('#c-preview').textContent = '';
   refreshAfterCustom(); toast(`Added "${name}" — drag it where you want it`);
 });
@@ -2126,19 +2161,133 @@ async function openFiles(files){
       if (!lab || !log) throw new Error('archive has no datalabel.txt + .log inside');
       const csv = dlToCsv(dlParseLabels(td.decode(lab.data)), dlSplit(log.data));
       const who = cust ? td.decode(cust.data).split(',').filter(Boolean).slice(0, 2).join(' · ') : '';
-      load(csv, arch.name + (who ? ' — ' + who : '')); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); return;
+      load(csv, arch.name + (who ? ' — ' + who : '')); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname);
+      const hdr = members.find(m => /header\.txt$/i.test(m.name)); const hf = hdr ? td.decode(hdr.data).split(',') : []; const cf = cust ? td.decode(cust.data).split(',') : [];
+      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D) queueUpload(arch, {site:cf[1] || cf[0] || null, customer:cf[3] || null, tech_name:cf[7] || null, model:(hf[2] || '').replace(/\.txt$/i, '') || null}); return;
     }
     const log = files.find(f => /\.log$/i.test(f.name)), lab = byName('datalabel\\.txt');
     if (log){
       if (!lab) throw new Error('pick datalabel.txt together with the .log (both are in the recording folder)');
       const csv = dlToCsv(dlParseLabels(await lab.text()), dlSplit(new Uint8Array(await log.arrayBuffer())));
-      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); return;
+      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); logEvent('open_log', {source:'log', rows:D && D.n}); if (D) queueUpload(log, {}); return;
     }
     const csvf = files.find(f => /\.csv$/i.test(f.name)) || files[0];
-    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true;
+    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true; logEvent('open_log', {source:'csv', rows:D && D.n}); if (D) queueUpload(csvf, {});
   } catch(e){ toast('Could not open: ' + e.message); }
 }
 window.dchkOpen = openFiles;
+
+/* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
+const APP_VERSION = 'v29';
+const SESSION_ID = Math.random().toString(36).slice(2, 10);
+let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
+const sbReady = () => !!(S.sbUrl && S.sbKey);
+async function sbAuth(path, body){
+  const r = await fetch(S.sbUrl.replace(/\/$/, '') + '/auth/v1/' + path, {method:'POST', headers:{apikey:S.sbKey, 'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const j = await r.json(); if (!r.ok) throw new Error(j.error_description || j.msg || j.error || ('auth ' + r.status)); return j;
+}
+function sbSave(j){ SB = j ? {access_token:j.access_token, refresh_token:j.refresh_token, expires_at:Date.now() + (j.expires_in || 3600)*1000 - 60000, user:{id:j.user && j.user.id, email:j.user && j.user.email}} : null; saveJSON('dchk.sb.session', SB); sbUi(); }
+async function sbToken(){
+  if (!SB) return null;
+  if (Date.now() > SB.expires_at){ try { sbSave(await sbAuth('token?grant_type=refresh_token', {refresh_token:SB.refresh_token})); } catch(e){ sbSave(null); return null; } }
+  return SB.access_token;
+}
+async function sbFetch(path, opts = {}){
+  const tok = await sbToken(); if (!tok) throw new Error('not signed in');
+  const h = Object.assign({apikey:S.sbKey, Authorization:'Bearer ' + tok}, opts.headers || {});
+  const r = await fetch(S.sbUrl.replace(/\/$/, '') + path, Object.assign({}, opts, {headers:h}));
+  if (!r.ok){ let t = ''; try { t = await r.text(); } catch(e){} throw new Error((r.status) + ' ' + t.slice(0, 160)); }
+  return r;
+}
+const sbInsert = (table, row) => sbFetch('/rest/v1/' + table, {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=representation'}, body:JSON.stringify(row)}).then(r => r.json());
+function sbUi(){
+  const on = !!SB; $('#sb-status').textContent = on ? ('signed in as ' + SB.user.email) : (sbReady() ? 'not signed in' : 'enter project URL and key first');
+  $('#sb-signin').hidden = on; $('#sb-signout').hidden = !on; $('#tab-fleet').hidden = !on;
+  if (!on && !$('#panel-fleet').hidden) $('#tab-cycle').click();
+}
+$('#sb-signin').addEventListener('click', async () => {
+  try { if (!sbReady()) throw new Error('enter the project URL and anon key first'); sbSave(await sbAuth('token?grant_type=password', {email:$('#sb-email').value.trim(), password:$('#sb-pass').value})); $('#sb-pass').value = ''; toast('Signed in'); logEvent('sign_in', {}); flushQueue(); fleetRefresh(); }
+  catch(e){ toast('Sign-in failed: ' + e.message); }
+});
+$('#sb-signout').addEventListener('click', () => { sbSave(null); toast('Signed out'); });
+// --- usage events: buffered, flushed every 30 s and on page hide ---
+const EVQ = [];
+function logEvent(kind, detail){ if (!S.syncEv) return; EVQ.push({kind, detail, session_id:SESSION_ID, app_version:APP_VERSION, device:navigator.userAgent.slice(0, 120)}); if (EVQ.length >= 20) flushEvents(); }
+async function flushEvents(){
+  if (!EVQ.length || !SB || !sbReady() || !navigator.onLine) return;
+  const batch = EVQ.splice(0, EVQ.length);
+  try { await sbFetch('/rest/v1/events', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(batch), keepalive:true}); } catch(e){ EVQ.unshift(...batch); }
+}
+setInterval(flushEvents, 30000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushEvents(); });
+// --- recording uploads with an offline queue in IndexedDB ---
+function idb(){ return new Promise((res, rej) => { const q = indexedDB.open('dchk', 1); q.onupgradeneeded = () => q.result.createObjectStore('queue', {keyPath:'sha'}); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function qPut(item){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('queue', 'readwrite'); t.objectStore('queue').put(item); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function qAll(){ const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('queue').objectStore('queue').getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function qDel(sha){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('queue', 'readwrite'); t.objectStore('queue').delete(sha); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function sha256(buf){ const h = await crypto.subtle.digest('SHA-256', buf); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+function recordingSummary(){
+  const sigs = {}; D.sig.forEach(a => a.forEach(x => { if (x.st === 'sig' || x.st === 'fault'){ const L = x.label.replace(/ · \d+\/\d+$/, ''); sigs[L] = (sigs[L] || 0) + 1; } }));
+  const spanH = (D.t[D.n-1] - D.t[0]) / 3.6e6;
+  return {runs:D.runs.length, cycles_per_hr: spanH > 0 ? +(D.runs.length/spanH).toFixed(2) : null, steady_min: +(D.steady.filter(Boolean).length*D.interval/60).toFixed(0), signatures:sigs,
+          max_disch: D.range.disch ? D.range.disch.max : null, max_hp: D.range.hp ? D.range.hp.max : null, min_lp: D.range.lp ? D.range.lp.min : null, modes:[...new Set(D.mode)]};
+}
+let CURRENT_REC = null;   // {sha, id?} for feedback
+async function queueUpload(file, meta){
+  if (!S.syncUp) return;
+  try {
+    const buf = await file.arrayBuffer(); const sha = await sha256(buf);
+    CURRENT_REC = {sha, id:null};
+    await qPut({sha, name:file.name, type:file.type || 'application/octet-stream', blob:new Blob([buf]), meta:Object.assign({}, meta, {row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, in:EQ.in, auto:EQ.auto}, summary:recordingSummary(), app_version:APP_VERSION})});
+    flushQueue();
+  } catch(e){ console.warn('queue', e); }
+}
+let flushing = false;
+async function flushQueue(){
+  if (flushing || !SB || !sbReady() || !navigator.onLine) return; flushing = true;
+  try {
+    for (const it of await qAll()){
+      try {
+        const uid = SB.user.id;
+        const exists = await sbFetch(`/rest/v1/recordings?select=id&sha256=eq.${it.sha}&uploaded_by=eq.${uid}`).then(r => r.json());
+        let row = exists[0];
+        if (!row){
+          const ext = (it.name.match(/\.(tgz|gz|tar|csv|log)$/i) || ['', 'bin'])[1].toLowerCase();
+          const path = `${uid}/${it.sha}.${ext}`;
+          await sbFetch('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type, 'x-upsert':'true'}, body:it.blob});
+          row = (await sbInsert('recordings', Object.assign({file_name:it.name, file_path:path, sha256:it.sha, tech_email:SB.user.email}, it.meta)))[0];
+          toast('Recording saved to the shop library');
+        }
+        if (CURRENT_REC && CURRENT_REC.sha === it.sha){ CURRENT_REC.id = row.id; $('#fbthis').hidden = false; }
+        await qDel(it.sha);
+      } catch(e){ console.warn('upload', e); break; }
+    }
+  } finally { flushing = false; }
+}
+window.addEventListener('online', () => { flushQueue(); flushEvents(); });
+// --- fleet list ---
+async function fleetRefresh(){
+  if (!SB || !sbReady()) return;
+  const st = $('#fleetstatus'); st.textContent = 'loading…';
+  try {
+    const rows = await sbFetch('/rest/v1/recordings?select=id,created_at,site,customer,tech_name,tech_email,model,started_at,row_count,equipment,summary,file_name,file_path&order=created_at.desc&limit=200').then(r => r.json());
+    const tb = $('#fleettable tbody'); tb.innerHTML = '';
+    for (const r of rows){
+      const tr = document.createElement('tr');
+      const sg = r.summary && r.summary.signatures ? Object.entries(r.summary.signatures).map(([k, v]) => `${k} (${v})`).join('; ') : '';
+      const eq = r.equipment ? `${r.equipment.out === 'ac' ? 'AC' : 'HP'} + ${r.equipment.in}` : '';
+      tr.innerHTML = `<td>${new Date(r.created_at).toLocaleString()}</td><td>${r.site || ''}${r.customer ? ' · ' + r.customer : ''}</td><td>${r.tech_name || (r.tech_email || '').split('@')[0]}</td><td>${r.model || ''}</td><td>${r.started_at ? new Date(r.started_at).toLocaleString() : ''}</td><td>${r.row_count || ''}</td><td>${eq}</td><td>${r.summary ? r.summary.runs : ''}</td><td class="sigs">${sg || '—'}</td><td><button class="btn small" type="button">Open</button></td>`;
+      tr.querySelector('button').addEventListener('click', async () => { try { toast('Downloading…'); const blob = await sbFetch('/storage/v1/object/authenticated/recordings/' + r.file_path).then(x => x.blob()); await openFiles([new File([blob], r.file_name)]); CURRENT_REC = {sha:null, id:r.id}; $('#fbthis').hidden = false; $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
+      tb.appendChild(tr);
+    }
+    st.textContent = `${rows.length} recording${rows.length === 1 ? '' : 's'}`;
+  } catch(e){ st.textContent = 'could not load: ' + e.message; }
+}
+$('#fleetrefresh').addEventListener('click', fleetRefresh);
+document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('click', async () => {
+  if (!CURRENT_REC || !CURRENT_REC.id) return;
+  try { await sbInsert('feedback', {recording_id:CURRENT_REC.id, verdict:b.dataset.v, note:$('#fbnote').value.trim() || null}); toast('Thanks — feedback saved'); $('#fbnote').value = ''; } catch(e){ toast('Could not save feedback: ' + e.message); }
+}));
 
 /* ---------- load ---------- */
 function load(text, name){
@@ -2161,7 +2310,7 @@ setView(VIEW);
 $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
 
 if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: landscape)').addEventListener('change', () => { if (LAND === null) setLayout(); });
-$('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); applyEquipment(); if (D) renderCycle(cur); });
+$('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); logEvent('equipment', {value:e.target.value}); applyEquipment(); if (D) renderCycle(cur); });
 setThermal(THERMAL);
 $('#loadbtn').addEventListener('click', () => $('#csvfile').click());
 $('#csvfile').addEventListener('change', e => { openFiles([...e.target.files]); e.target.value = ''; });
@@ -2174,6 +2323,7 @@ $('#tabs').addEventListener('click', e => {
   document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + b.dataset.tab);
   if (b.dataset.tab === 'trends') drawAllStrips();
   if (b.dataset.tab === 'data') highlightRow();
+  if (b.dataset.tab === 'fleet') fleetRefresh();
 });
 $('#scrub').addEventListener('input', e => setCur(+e.target.value));
 $('#ticks').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); setCur(Math.floor((e.clientX - r.left) / r.width * D.n)); });
@@ -2216,13 +2366,14 @@ $('#settings').addEventListener('click', e => { if (e.target === e.currentTarget
 $('#settingsreset').addEventListener('click', () => { S = Object.assign({}, S_DEF); applySettings(); setLayout(); });
 document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListener('input', () => {
   const k = inp.dataset.s; S[k] = inp.type === 'checkbox' ? inp.checked : (inp.type === 'range' ? +inp.value : inp.value);
-  applySettings();
-  if (k === 'land') setLayout(); else if (D) renderCycle(cur);
+  applySettings(); sbUi();
+  if (k === 'land') setLayout(); else if (D && !/^sb|^sync/.test(k)) renderCycle(cur);
 }));
 // boot
 applySettings();
 setLayout();
 renderCustomList();
+sbUi(); logEvent('session_start', {layout:LAY === LAYOUTS.land ? 'land' : 'port', standalone:window.matchMedia && window.matchMedia('(display-mode: standalone)').matches}); flushQueue(); if (SB) fleetRefresh();
 
 $('#cmp').addEventListener('click', () => togglePin('rps'));
 const sample = $('#sample-csv').textContent;
