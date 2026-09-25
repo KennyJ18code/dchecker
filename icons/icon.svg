@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#0F151C"/>
+  <!-- refrigerant loop: high side right (orange-red), low side left (blue) -->
+  <path d="M50 24 H62 A10 10 0 0 1 72 34 V70 A10 10 0 0 1 62 80 H50" fill="none" stroke="#F0673F" stroke-width="7.5" stroke-linecap="butt"/>
+  <path d="M50 24 H38 A10 10 0 0 0 28 34 V70 A10 10 0 0 0 38 80 H50" fill="none" stroke="#5FA0E0" stroke-width="7.5" stroke-linecap="butt"/>
+  <!-- flow dashes -->
+  <g stroke="#FFFFFF" stroke-opacity=".85" stroke-width="1.8" stroke-linecap="round">
+    <path d="M72 40 V45 M72 52 V57 M72 64 V69"/>
+    <path d="M28 40 V45 M28 52 V57 M28 64 V69"/>
+    <path d="M56 24 H61 M39 24 H44 M56 80 H61 M39 80 H44"/>
+  </g>
+  <!-- expansion valve -->
+  <path d="M41 74 L50 80 L41 86 Z M59 74 L50 80 L59 86 Z" fill="#FFFFFF"/>
+  <!-- compressor -->
+  <circle cx="50" cy="24" r="12.5" fill="#F0673F" stroke="#0F151C" stroke-width="2.5"/>
+  <circle cx="50" cy="24" r="4" fill="none" stroke="#0F151C" stroke-width="2"/>
+</svg>
