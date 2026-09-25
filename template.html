@@ -1,0 +1,1458 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>D-Checker Cycle Viewer</title>
+<meta name="theme-color" content="#003A70">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="D-Checker">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#F3F5F8; --panel:#FFFFFF; --panel2:#E9EDF2; --line:#D5DBE3; --ink:#16202B; --ink2:#4E5A68; --muted:#7A8592;
+  --accent:#003A70; --accent-ink:#FFFFFF; --accent-soft:#E3ECF6;
+  --hi:#D9482B; --lo:#2B7BD1; --hi-soft:#FBE3DD; --lo-soft:#DCE9F8;
+  --ok:#2E7D5B; --ok-soft:#DDF0E6; --warn:#B8800A; --warn-soft:#FBEFCF; --alarm:#C62828; --alarm-soft:#F9D9D9;
+  --idle:#9AA3AE; --idle-soft:#EDF0F3; --metal:#CFD6DE; --metal2:#B4BEC9;
+  --shadow:0 1px 2px rgba(22,32,43,.06),0 4px 14px rgba(22,32,43,.06);
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --sans:"Mulish",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0F151C; --panel:#182028; --panel2:#212B36; --line:#2E3946; --ink:#E9EEF3; --ink2:#B6C0CB; --muted:#7F8B98;
+    --accent:#5B9BE6; --accent-ink:#0F151C; --accent-soft:#1B2A3C;
+    --hi:#F0673F; --lo:#5FA0E0; --hi-soft:#3B2217; --lo-soft:#172A3E;
+    --ok:#5DBB8C; --ok-soft:#173226; --warn:#E0A83A; --warn-soft:#3A2D10; --alarm:#EF6A6A; --alarm-soft:#40191B;
+    --idle:#6F7B87; --idle-soft:#1D2630; --metal:#3A4652; --metal2:#4A5966;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F151C; --panel:#182028; --panel2:#212B36; --line:#2E3946; --ink:#E9EEF3; --ink2:#B6C0CB; --muted:#7F8B98;
+  --accent:#5B9BE6; --accent-ink:#0F151C; --accent-soft:#1B2A3C;
+  --hi:#F0673F; --lo:#5FA0E0; --hi-soft:#3B2217; --lo-soft:#172A3E;
+  --ok:#5DBB8C; --ok-soft:#173226; --warn:#E0A83A; --warn-soft:#3A2D10; --alarm:#EF6A6A; --alarm-soft:#40191B;
+  --idle:#6F7B87; --idle-soft:#1D2630; --metal:#3A4652; --metal2:#4A5966;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{padding-inline:16px;padding-block:0 12px;max-width:1100px;margin:0 auto}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding-block:8px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-weight:600;font-size:12px}
+.file{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;font-weight:700;font-size:13px;line-height:1.2}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:4px 9px;font-size:12px}
+.dsname{color:var(--ink2);font-size:12px;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;gap:2px;margin-left:auto;background:var(--panel2);border-radius:8px;padding:3px}
+.tabs button{border:0;background:transparent;border-radius:6px;padding:6px 12px;font-weight:700;color:var(--ink2)}
+.tabs button[hidden]{display:none}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+
+/* now bar */
+/* locked layout: timestamp row, status row, chip band — nothing reflows as the text changes */
+.nowbar{display:grid;grid-template-columns:auto 1fr;grid-template-rows:28px 100px;align-items:center;column-gap:14px;row-gap:6px;padding-block:10px 6px}
+.nowbar .stamp{font-size:19px;font-weight:700;white-space:nowrap;line-height:28px}
+.nowbar .idx{color:var(--muted);font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;line-height:28px}
+.nowbar .chips{grid-column:1 / -1}
+@media (max-width:600px){.nowbar{grid-template-columns:1fr;grid-template-rows:24px 18px 100px;row-gap:4px}.nowbar .stamp{line-height:24px}.nowbar .idx{line-height:18px}}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:var(--panel2);color:var(--ink2);border:1px solid transparent;white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--idle);flex:none}
+.chip.on::before{background:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--ink)}.chip.warn::before{background:var(--warn)}
+.chip.alarm{background:var(--alarm-soft);color:var(--ink)}.chip.alarm::before{background:var(--alarm)}
+.chip.info{background:var(--lo-soft);color:var(--ink)}.chip.info::before{background:var(--lo)}
+.chip.mode-heat{background:var(--hi-soft);color:var(--ink)}.chip.mode-heat::before{background:var(--hi)}
+.chip.mode-cool{background:var(--lo-soft);color:var(--ink)}.chip.mode-cool::before{background:var(--lo)}
+.chip small{font-weight:600;color:var(--ink2)}
+.chip.sig{background:var(--accent-soft);color:var(--ink)}.chip.sig::before{background:var(--accent)}
+.chip.fault{background:var(--warn-soft);color:var(--ink);border-color:var(--warn)}.chip.fault::before{background:var(--warn);border-radius:2px}
+.runsum{padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--ink2)}
+.runsum b{color:var(--ink)}
+#runtable tr[data-i]{cursor:pointer}
+#runtable tr[data-i]:hover td{background:var(--panel2)}
+#runtable td.sigs{white-space:normal;max-width:34ch;font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;width:100%;height:100px;overflow-y:auto;align-content:flex-start;scrollbar-width:thin}
+
+/* diagram card */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.card h2{margin:0;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 14px 0}
+.diagwrap{padding:6px}
+.diag{position:relative;width:100%;max-width:760px;margin:0 auto;aspect-ratio:780/1520;container-type:inline-size;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.diag > svg{position:absolute;inset:0;width:100%;height:100%}
+.hint{text-align:center;font-size:12px;color:var(--muted);padding:0 14px 10px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:0 14px 12px;font-size:12px;color:var(--ink2);justify-content:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:4px;border-radius:2px}
+.legend .sw{width:10px;height:10px;border-radius:3px}
+
+/* view selector */
+.viewbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px 0}
+.viewlbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.viewsel{display:flex;gap:2px;background:var(--panel2);border-radius:8px;padding:3px}
+.viewsel button{border:0;background:transparent;border-radius:6px;padding:5px 11px;font-weight:700;font-size:12px;color:var(--ink2)}
+.viewsel button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.viewnote{font-size:12px;color:var(--muted)}
+.thermtog{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;background:var(--panel)}
+.thermtog input{margin:0;accent-color:var(--accent)}
+.thermtog:has(input:checked){background:var(--panel2);border-color:var(--ink2);color:var(--ink)}
+.thermscale{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.thermscale i{display:inline-block;width:120px;height:10px;border-radius:5px;background:linear-gradient(90deg,#1a237e,#1e88e5 22%,#26a69a 39%,#fdd835 56%,#fb8c00 78%,#c62828)}
+.thermscale[hidden]{display:none}
+.diag.thermal .pipe.off{stroke:var(--metal2)}
+/* tag pieces per view */
+.tag{overflow:hidden}
+.tag .l,.tag .v,.tag .s,.tag .bar{position:relative;z-index:1}
+.tag .viz{display:none;position:absolute;inset:0;z-index:0;pointer-events:none}
+.tag .viz .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);opacity:.22;width:0;transition:width .25s}
+.tag .viz .tgt{position:absolute;top:0;bottom:0;width:.4cqw;background:var(--ink);opacity:.85;display:none}
+.tag .viz .ghost{position:absolute;top:0;bottom:0;width:.3cqw;background:var(--muted);opacity:.6;display:none}
+.tag .spark{display:none;position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.55}
+.tag .gsvg{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.26}
+.tag .gsvg polyline{fill:none;stroke:var(--ink);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.tag .gsvg .cur{stroke:var(--accent);stroke-width:1.2;vector-effect:non-scaling-stroke}
+.tag .gsvg circle{fill:var(--accent)}
+.diag.view-spark .tag .gsvg{opacity:.12}
+.tag .spark polyline{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.tag .spark .base{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 2}
+.tag .spark circle{fill:var(--accent)}
+.diag.view-bar .tag .viz{display:block}
+.diag.view-bar .tag .tr{display:none}
+.diag.view-spark .tag .spark{display:block}
+.diag.view-spark .tag .tr{display:none}
+.diag.view-dev .tag{background:var(--devbg,var(--panel));border-color:var(--devline,var(--line))}
+.diag.view-dev .tag .tr{display:none}
+.diag.view-dev .tag .dv{display:none}
+.diag.view-dev .tag .dz{display:inline}
+.tag .dz{display:none;font-family:var(--mono);font-weight:700;font-size:1.8cqw;margin-left:.6cqw;color:var(--ink2)}
+.flow{animation-duration:var(--flowdur,1.1s)}
+/* svg */
+.box{fill:var(--panel2);fill-opacity:.35;stroke:var(--line);stroke-width:1.5}
+.boxlbl{font:800 16px var(--sans);fill:var(--muted);letter-spacing:.14em}
+.sublbl{font:700 11px var(--sans);fill:var(--muted);letter-spacing:.1em}
+.hdrtxt{font:700 12px var(--sans);fill:var(--ink2)}
+.pipe-o{fill:none;stroke:var(--ink);stroke-opacity:.22;stroke-width:11;stroke-linejoin:round;stroke-linecap:round}
+.pipe{fill:none;stroke-width:7;stroke-linejoin:round;stroke-linecap:round;transition:stroke .3s}
+.pipe.hi{stroke:var(--hi)}.pipe.lo{stroke:var(--lo)}.pipe.off{stroke:var(--metal2)}
+.flow{fill:none;stroke:#fff;stroke-opacity:.85;stroke-width:2.2;stroke-dasharray:5 13;stroke-linecap:round;animation:flow 1.1s linear infinite}
+.flow.rev{animation-direction:reverse}
+.diag.idle .flow{animation-play-state:paused;opacity:0}
+@keyframes flow{to{stroke-dashoffset:-18}}
+@media (prefers-reduced-motion:reduce){.flow{animation:none;opacity:0}}
+.leader{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:2 3;fill:none}
+.tp{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
+.tp.press{fill:var(--ink2)}
+.comp-body{fill:var(--metal);stroke:var(--ink2);stroke-width:2.5;transition:fill .3s}
+.comp-body.on{fill:var(--hi-soft);stroke:var(--hi)}
+.comp-in{fill:none;stroke:var(--ink2);stroke-width:2}
+.cmplbl{font:800 14px var(--sans);fill:var(--ink);text-anchor:middle}
+.cmpsub{font:700 12px var(--mono);fill:var(--ink2);text-anchor:middle}
+.cmpbig{font:700 19px var(--mono);fill:var(--ink);text-anchor:middle}
+.hold{font:800 10px var(--sans);fill:var(--alarm);letter-spacing:.06em}
+.cmpdev.off{fill:var(--ok)}.cmpdev.dn{fill:var(--alarm)}.cmpdev.up{fill:var(--warn)}
+.coilbg{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
+.fins{stroke:var(--metal2);stroke-width:1.2}
+.tube{fill:none;stroke:var(--metal2);stroke-width:4;stroke-linejoin:round;transition:stroke .3s}
+.tube.hi{stroke:var(--hi)}.tube.lo{stroke:var(--lo)}
+.valve{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
+.motor{fill:var(--metal);stroke:var(--ink2);stroke-width:1.5}
+.valve line{stroke:var(--ink2);stroke-width:1.2}
+.fanh{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
+.fanb{fill:var(--metal2);stroke:var(--ink2);stroke-width:1.2;transform-box:fill-box;transform-origin:center}
+.fanb.on{animation:spin 1.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.fanb.on{animation:none}}
+.fw-body{fill:var(--panel);stroke:var(--ink2);stroke-width:2.5}
+.fw-link{fill:none;stroke-width:7;stroke-linecap:round}
+.fw-link.hi{stroke:var(--hi)}.fw-link.lo{stroke:var(--lo)}.fw-link.off{stroke:var(--metal2)}
+.acc{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
+.acc-lvl{fill:var(--lo-soft);stroke:none}
+.sv{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
+.sv.on{fill:var(--ok);stroke:var(--ok)}
+.state{font:700 11px var(--mono);fill:var(--ink2)}
+.state.on{fill:var(--ok)}
+
+/* sensor tags (HTML over svg) */
+.tag{position:absolute;transform:translate(0,-50%);background:var(--panel);border:1.5px solid var(--line);border-radius:1cqw;padding:.5cqw .8cqw;box-shadow:var(--shadow);width:19cqw;height:7.4cqw;box-sizing:border-box;line-height:1.1;z-index:2;cursor:pointer;transition:box-shadow .15s}
+.tag.tall{height:10.2cqw}
+.tag .l{line-height:2.2cqw}.tag .v{line-height:3.4cqw}.tag .s{line-height:2.1cqw;margin-top:0}
+.tag:hover{border-color:var(--accent)}
+.tag.pinned{outline:2px solid var(--accent);outline-offset:1px}
+.tag .l{display:block;font-size:2cqw;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.tag .v{display:block;font-family:var(--mono);font-weight:700;font-size:3.1cqw;color:var(--ink);white-space:nowrap;margin-top:.15cqw}
+.tag .v small{font-family:var(--sans);font-weight:600;font-size:1.8cqw;color:var(--muted);margin-left:.35cqw}
+.tag .tr{font-family:var(--mono);font-weight:700;font-size:1.8cqw;margin-left:.7cqw;letter-spacing:-.02em}
+.tag .tr .up{color:var(--ok)}.tag .tr .dn{color:var(--alarm)}.tag .tr .flat{color:var(--muted);opacity:.6}
+.tag .s{display:block;font-family:var(--mono);font-size:1.8cqw;color:var(--ink2);white-space:nowrap;margin-top:.2cqw}
+.tag .s[hidden]{display:none}
+.tag .s .dv{font-weight:700;margin-left:.4cqw}
+.tag .s .dv.off{color:var(--ok)}.tag .s .dv.up{color:var(--warn)}.tag .s .dv.dn{color:var(--alarm)}
+.tag .bar{display:block;height:.6cqw;border-radius:.3cqw;background:var(--panel2);margin-top:.25cqw;overflow:hidden}
+.tag .bar i{display:block;height:100%;background:var(--accent);width:0}
+.tag.calc{background:var(--accent-soft);border-style:dashed}
+.tag.calc .l{color:var(--accent)}
+.tag.ok{border-color:var(--ok)}
+.tag.warn{border-color:var(--warn);background:var(--warn-soft)}
+.tag.alarm{border-color:var(--alarm);background:var(--alarm-soft);box-shadow:0 0 0 .6cqw var(--alarm-soft),var(--shadow)}
+.tag.alarm .v{color:var(--alarm)}
+.tag.warn .v{color:var(--warn)}
+.tag.idle{opacity:.72}
+.tag.na .v{color:var(--muted)}
+.tag.right{transform:translate(-100%,-50%)}
+.tag.ctr{transform:translate(-50%,-50%)}
+.tag[hidden]{display:none}
+@media (prefers-reduced-motion:no-preference){.tag.alarm{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{box-shadow:0 0 0 1.4cqw var(--alarm-soft),var(--shadow)}}
+
+/* timeline dock (sticky bottom) */
+.timeline{position:sticky;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);margin-top:14px;padding-bottom:env(safe-area-inset-bottom,0px)}
+.timeline .wrap{padding-block:6px 8px;display:flex;flex-direction:column;gap:5px}
+.dock{display:flex;flex-direction:column;gap:4px}
+.dock:empty{display:none}
+.dstrip{display:grid;grid-template-columns:118px 1fr 26px;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 6px 4px 8px}
+.dstrip .h{font-size:11px;line-height:1.2;overflow:hidden}
+.dstrip .h b{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dstrip .h .num{color:var(--ink2);font-size:13px}
+.dstrip canvas{width:100%;height:58px;display:block;cursor:crosshair}
+.dstrip .x{border:0;background:transparent;color:var(--muted);font-size:16px;line-height:1;padding:4px;border-radius:4px}
+.dstrip .x:hover{background:var(--panel2);color:var(--ink)}
+@media (max-width:480px){.dstrip{grid-template-columns:86px 1fr 24px}.dstrip .h b{font-size:10px}.dstrip canvas{height:50px}}
+.transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.transport .btn{min-width:38px;text-align:center;font-family:var(--mono)}
+.transport .grow{flex:1}
+.transport select{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 8px;font-size:12px;font-weight:700}
+.ticks{width:100%;height:24px;display:block;border-radius:4px;cursor:pointer}
+input[type=range].scrub{width:100%;margin:0;accent-color:var(--accent);height:22px}
+.tickkey{display:flex;gap:12px;font-size:11px;color:var(--muted)}
+.tickkey span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--idle)}
+.tickkey .s::before{background:var(--accent)}.tickkey .a::before{background:var(--alarm)}.tickkey .w::before{background:var(--warn)}.tickkey .o::before{background:var(--ok-soft);border:1px solid var(--ok)}
+@media (max-width:600px){.tickkey{display:none}.brand small{display:none}.tabs{margin-left:0;width:100%;justify-content:space-between}.tabs button{flex:1;padding:6px 4px}.nowbar .stamp{font-size:17px}.transport .btn{min-width:34px;padding:6px 8px}}
+
+/* trends */
+.trendbar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px}
+.trendbar label{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;background:var(--panel)}
+.trendbar label:has(input:checked){background:var(--panel2);border-color:var(--ink2)}
+.trendbar input{margin:0;accent-color:var(--accent)}
+.strips{padding:0 14px 14px;display:flex;flex-direction:column;gap:4px}
+.strip{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:4px}
+@media (max-width:600px){.strip{grid-template-columns:1fr;gap:2px}}
+.strip .h{font-size:12px;line-height:1.25}
+.strip .h b{display:block;font-weight:700}
+.strip .h .num{color:var(--ink2);font-size:13px}
+.strip canvas{width:100%;height:76px;display:block;cursor:crosshair}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:6px;z-index:50;white-space:nowrap;font-family:var(--mono);font-weight:500}
+.tip[hidden]{display:none}
+
+/* rules */
+.rulehead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px}
+.rulehead p{margin:0;color:var(--ink2);font-size:13px;max-width:70ch}
+.rulehead .sp{flex:1}
+.tablewrap{overflow-x:auto;padding:0 14px 14px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+td input[type=number]{width:70px;border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:12px}
+td input[type=number].lo{border-left:3px solid var(--warn)}
+td input[type=number].alo{border-left:3px solid var(--alarm)}
+td input[type=number].hi{border-right:3px solid var(--warn)}
+td input[type=number].ahi{border-right:3px solid var(--alarm)}
+td select{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:4px 6px;font-size:12px}
+td.chname{font-weight:700}
+td .sub{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.bandhelp{display:flex;font-size:11px;font-weight:700;margin:0 14px 8px;border-radius:6px;overflow:hidden;max-width:520px}
+.bandhelp span{flex:1;text-align:center;padding:4px 6px}
+.bandhelp .a{background:var(--alarm-soft);color:var(--ink)}.bandhelp .w{background:var(--warn-soft);color:var(--ink)}.bandhelp .o{background:var(--ok-soft);color:var(--ink)}
+textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font:12px var(--mono);padding:8px}
+.io{padding:0 14px 14px;display:none;flex-direction:column;gap:8px}
+.io.open{display:flex}
+.io .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:12px;color:var(--muted)}
+
+/* data table */
+.datawrap{overflow:auto;max-height:70vh;padding:0 14px 14px}
+.datawrap table{font-family:var(--mono);font-size:12px}
+.datawrap th{position:sticky;top:0;background:var(--panel);z-index:1}
+.datawrap td{padding:3px 7px;text-align:right}
+.datawrap td:first-child,.datawrap th:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+.datawrap tr.cur td{background:var(--panel2)}
+.datawrap td.warn{color:var(--warn);font-weight:700}
+.datawrap td.alarm{color:var(--alarm);font-weight:700}
+.datawrap tr{cursor:pointer}
+.panel[hidden]{display:none}
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand"><h1>D-Checker Cycle Viewer</h1><small>Daikin inverter log · °F / psig</small></div>
+  <div class="file">
+    <input type="file" id="csvfile" accept=".csv,text/csv" hidden>
+    <button class="btn primary" id="loadbtn" type="button">Open CSV…</button>
+    <span class="dsname" id="dsname"></span>
+  </div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" aria-selected="true" data-tab="cycle" id="tab-cycle">Cycle</button>
+    <button role="tab" aria-selected="false" data-tab="trends" id="tab-trends">Trends</button>
+    <button role="tab" aria-selected="false" data-tab="rules" id="tab-rules" hidden>Rules</button>
+    <button role="tab" aria-selected="false" data-tab="runs" id="tab-runs" hidden>Runs</button>
+    <button role="tab" aria-selected="false" data-tab="data" id="tab-data">Data</button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <div class="nowbar">
+    <span class="stamp num" id="stamp">—</span>
+    <span class="idx num" id="stampidx"></span>
+    <div class="chips" id="modechips"></div>
+  </div>
+
+  <!-- CYCLE -->
+  <section class="panel" id="panel-cycle">
+    <div class="card">
+      <div class="viewbar">
+        <span class="viewlbl">View</span>
+        <div class="viewsel" role="group" id="viewsel">
+          <button type="button" data-view="num" aria-pressed="true" title="Numbers with change arrows">123</button>
+          <button type="button" data-view="bar" aria-pressed="false" title="Bars: where each reading sits in this log's range, with its target">Bars</button>
+          <button type="button" data-view="spark" aria-pressed="false" title="Trails: the last 10 minutes of each reading">Trails</button>
+          <button type="button" data-view="dev" aria-pressed="false" title="Deviation: tinted by how far each reading is from this log's steady-state norm">Deviation</button>
+        </div>
+        <label class="thermtog"><input type="checkbox" id="thermal"> Thermal pipes</label>
+        <span class="viewnote" id="viewnote"></span>
+        <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
+      </div>
+      <div class="diagwrap"><div class="diag" id="diag">
+        <svg viewBox="0 0 780 1520" aria-hidden="true">
+          <!-- unit enclosures -->
+          <rect class="box" x="16" y="40" width="748" height="400" rx="14"/>
+          <rect class="box" x="16" y="540" width="748" height="960" rx="14"/>
+          <text class="boxlbl" x="32" y="76">INDOOR UNIT</text>
+          <text class="hdrtxt" x="748" y="76" text-anchor="end" id="iduhdr"></text>
+          <text class="boxlbl" x="32" y="576">OUTDOOR UNIT</text>
+          <text class="hdrtxt" x="748" y="576" text-anchor="end" id="oduhdr"></text>
+          <text class="sublbl" x="86" y="611" text-anchor="middle">COMP · INVERTER</text>
+          <text class="sublbl" x="86" y="1134" text-anchor="middle" id="physlbl">PHYSICS CHECKS</text>
+          <text class="sublbl" x="206" y="494">LIQUID LINE</text>
+          <text class="sublbl" x="734" y="494" text-anchor="end">GAS LINE</text>
+          <text class="sublbl" x="470" y="490" text-anchor="middle" id="lineset-note"></text>
+
+          <g id="pipes"></g>
+          <g id="coils"></g>
+
+          <!-- service (stop) valves -->
+          <g class="valve"><circle cx="190" cy="540" r="10"/><path d="M190 530 V518 M180 518 H200"/></g>
+          <g class="valve"><circle cx="750" cy="540" r="10"/><path d="M750 530 V518 M740 518 H760"/></g>
+
+          <!-- indoor blower -->
+          <g id="ifan" transform="translate(40 0)"><circle class="fanh" cx="410" cy="250" r="30"/><g class="fanb" id="ifanb"><path d="M410 250 C398 236 404 224 410 222 C416 224 422 236 410 250Z"/><path d="M410 250 C427 254 432 266 428 270 C422 272 411 266 410 250Z"/><path d="M410 250 C393 254 388 266 392 270 C398 272 409 266 410 250Z"/><circle cx="410" cy="250" r="4"/></g></g>
+          <!-- indoor EV -->
+          <g class="valve" id="iev-sym"><path d="M176 288 L190 300 L176 312 Z M204 288 L190 300 L204 312 Z"/><rect class="motor" x="180" y="272" width="20" height="14" rx="2"/><path d="M190 286 V300" fill="none"/><line x1="184" y1="276" x2="196" y2="276"/><line x1="184" y1="280" x2="196" y2="280"/></g>
+
+          <!-- outdoor fan -->
+          <g id="ofan" transform="translate(0 16)"><circle class="fanh" cx="88" cy="932" r="34"/><g class="fanb" id="ofanb"><path d="M88 930 C74 914 81 900 88 898 C95 900 102 914 88 930Z"/><path d="M88 930 C107 934 113 948 108 953 C101 955 89 948 88 930Z"/><path d="M88 930 C69 934 63 948 68 953 C75 955 87 948 88 930Z"/><circle cx="88" cy="930" r="4"/></g></g>
+          <!-- outdoor EV -->
+          <g class="valve" id="ev-sym"><path d="M176 733 L190 745 L176 757 Z M204 733 L190 745 L204 757 Z"/><rect class="motor" x="180" y="717" width="20" height="14" rx="2"/><path d="M190 731 V745" fill="none"/><line x1="184" y1="721" x2="196" y2="721"/><line x1="184" y1="725" x2="196" y2="725"/></g>
+
+          <!-- compressor -->
+          <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="460" cy="830" r="62"/><text class="cmplbl" x="460" y="806">COMP</text><text class="cmpbig" x="460" y="830" id="cmpsub">—</text><text class="cmpsub" x="460" y="848" id="cmptgt"></text><text class="cmpsub cmpdev" x="460" y="866" id="cmpdev"></text><text class="hold" x="460" y="790" text-anchor="middle" id="cmphold"></text></g>
+
+          <!-- accumulator -->
+          <g class="acc"><rect x="662" y="980" width="36" height="100" rx="16"/><rect class="acc-lvl" x="666" y="1040" width="28" height="36" rx="10"/><path d="M680 980 V1010" fill="none"/></g>
+          <text class="sublbl" x="708" y="1034">ACC</text>
+
+          <!-- 4-way valve -->
+          <g id="fourway"><rect class="fw-body" x="425" y="1195" width="70" height="70" rx="10"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
+          <text class="sublbl" x="506" y="1292">4-WAY VALVE</text>
+          <text class="state" x="506" y="1308" id="fwstate">—</text>
+
+          <!-- hot gas bypass solenoid (stub off discharge) -->
+          <path class="pipe-o" d="M460 1120 H412"/><path class="pipe off" id="svpipe" d="M460 1120 H412"/>
+          <g id="svsym" class="valve"><rect class="sv" x="382" y="1108" width="30" height="24" rx="4"/><rect class="motor" x="389" y="1094" width="16" height="12" rx="2"/><line x1="392" y1="1098" x2="402" y2="1098"/><line x1="392" y1="1102" x2="402" y2="1102"/></g>
+          <text class="sublbl" x="397" y="1150" text-anchor="middle">HOT GAS SV</text>
+          <text class="state" x="397" y="1165" text-anchor="middle" id="svstate">—</text>
+
+          <g id="leaders"></g>
+          <g id="markers"></g>
+        </svg>
+        <div id="tags"></div>
+      </div></div>
+      <div class="hint">Tap any reading to pin its trend to the bottom bar · ▲▼ show change from the previous row · readings with a target show the deviation (amber over, red under, green on target)</div>
+      <div class="legend">
+        <span><i style="background:var(--hi)"></i>High side</span>
+        <span><i style="background:var(--lo)"></i>Low side</span>
+        <span><i class="sw" style="border:2px dashed var(--accent);background:var(--accent-soft)"></i>Calculated</span>
+        <span><i class="sw" style="border:2px solid var(--ok)"></i>In range</span>
+        <span><i class="sw" style="background:var(--warn-soft);border:2px solid var(--warn)"></i>Caution</span>
+        <span><i class="sw" style="background:var(--alarm-soft);border:2px solid var(--alarm)"></i>Out of range</span>
+        <span><i class="sw" style="border:2px solid var(--idle)"></i>Not evaluated</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRENDS -->
+  <section class="panel card" id="panel-trends" hidden>
+    <h2>Trends · click or drag on any strip to move the cursor</h2>
+    <div class="trendbar" id="trendpick"></div>
+    <div class="strips" id="strips"></div>
+  </section>
+
+  <!-- RULES -->
+  <section class="panel card" id="panel-rules" hidden>
+    <h2>Range rules</h2>
+    <div class="rulehead">
+      <p>Rules are <b>off</b> until you tick them on. Each rule has a green band (normal) and a yellow band (caution); outside the yellow band is red. Leave a bound blank for no limit. <b>Comp running</b> skips the rule while the compressor is off; <b>Settle</b> waits that many minutes after the compressor starts. Rules save in this browser automatically.</p>
+      <span class="sp"></span>
+      <button class="btn small" id="addrule" type="button">+ Add rule</button>
+      <button class="btn small" id="exportrules" type="button">Export / Import</button>
+      <button class="btn small" id="resetrules" type="button">Reset to defaults</button>
+    </div>
+    <div class="bandhelp"><span class="a">red</span><span class="w">yellow</span><span class="o">green — normal</span><span class="w">yellow</span><span class="a">red</span></div>
+    <div class="io" id="ruleio">
+      <textarea id="rulejson" spellcheck="false"></textarea>
+      <div class="row">
+        <button class="btn small" id="copyrules" type="button">Copy JSON</button>
+        <button class="btn small" id="applyrules" type="button">Apply pasted JSON</button>
+        <span class="note">Paste a rule set from another device into the box and press Apply.</span>
+      </div>
+    </div>
+    <div class="tablewrap"><table id="ruletable">
+      <thead><tr><th>On</th><th>Channel</th><th>Mode</th><th>Red below</th><th>Yellow below</th><th>Yellow above</th><th>Red above</th><th>Comp running</th><th>Settle (min)</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <!-- RUNS -->
+  <section class="panel card" id="panel-runs" hidden>
+    <h2>Compressor runs · click a run to jump to its start</h2>
+    <div class="runsum" id="runsum"></div>
+    <div class="tablewrap"><table id="runtable">
+      <thead><tr><th>Run</th><th>Start</th><th>Length</th><th>Off before</th><th>To target rps</th><th>To target SC</th><th>To steady</th><th>Defrosts</th><th>Max disch</th><th>Max HP</th><th>Min LP</th><th>Drop controls</th><th>Retries</th><th>Signatures</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="note" style="padding:0 14px 14px">Fault chips (amber) score how many of a classic fault's conditions hold. Signatures use fixed engineering thresholds (EV within 3% of its log maximum for 3 min, SC 3°F off target after 8 min settle, discharge SH under 25°F at ≥50% speed, 5°F/min discharge climb, PT-table disagreement over 4°F, sensor disagreement over 15 psi, coil 12°F from saturation, current/rps 15% over the log's steady median, runs under 5 min or off-times under 3 min). They are hints, not verdicts.</p>
+  </section>
+
+  <!-- DATA -->
+  <section class="panel card" id="panel-data" hidden>
+    <h2>Rows · click a row to jump to it</h2>
+    <div class="datawrap" id="datawrap"></div>
+  </section>
+</main>
+
+<div class="timeline"><div class="wrap">
+  <div class="dock" id="dock"></div>
+  <div class="transport">
+    <button class="btn" id="b-first" type="button" title="First row">|&lt;</button>
+    <button class="btn" id="b-prevflag" type="button" title="Previous flagged row">&lt;!</button>
+    <button class="btn" id="b-prev" type="button" title="Back one row (←)">&lt;</button>
+    <button class="btn primary" id="b-play" type="button" title="Play / pause (space)">▶</button>
+    <button class="btn" id="b-next" type="button" title="Forward one row (→)">&gt;</button>
+    <button class="btn" id="b-nextflag" type="button" title="Next flagged row">!&gt;</button>
+    <button class="btn" id="b-last" type="button" title="Last row">&gt;|</button>
+    <select id="speed" title="Playback speed"><option value="2">2 rows/s</option><option value="5" selected>5 rows/s</option><option value="12">12 rows/s</option></select>
+    <span class="grow"></span>
+    <span class="tickkey"><span class="a">red</span><span class="w">yellow</span><span class="s">signature</span><span class="o">ok</span><span>comp off</span></span>
+  </div>
+  <canvas class="ticks" id="ticks" height="24"></canvas>
+  <input type="range" class="scrub" id="scrub" min="0" max="0" value="0" step="1" aria-label="Time position">
+</div></div>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast"></div>
+
+<script id="sample-csv" type="text/plain">__SAMPLE_CSV__</script>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const SVGNS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+/* ---------- channel registry (D-Checker column numbers) ---------- */
+const NUM = [
+  {id:'oat',   col:55, label:'Outdoor air',        short:'Outdoor air',unit:'°F', kind:'temp'},
+  {id:'ochex', col:56, label:'ODU coil temp',      short:'OD coil',    unit:'°F', kind:'temp'},
+  {id:'disch', col:57, label:'Discharge temp',     short:'Discharge',  unit:'°F', kind:'temp'},
+  {id:'suct',  col:58, label:'Suction temp',       short:'Suction',    unit:'°F', kind:'temp'},
+  {id:'ocmid', col:59, label:'ODU coil mid temp',  short:'OD coil mid',unit:'°F', kind:'temp'},
+  {id:'liq',   col:60, label:'Liquid pipe temp',   short:'Liquid pipe',unit:'°F', kind:'temp'},
+  {id:'hp',    col:61, label:'High pressure',      short:'High press', unit:'psi', kind:'press'},
+  {id:'lp',    col:62, label:'Low pressure',       short:'Low press',  unit:'psi', kind:'press'},
+  {id:'cond',  col:63, label:'Cond. sat temp (Tc)',short:'Tc sat',     unit:'°F', kind:'temp'},
+  {id:'evap',  col:64, label:'Evap. sat temp (Te)',short:'Te sat',     unit:'°F', kind:'temp'},
+  {id:'tsc',   col:65, label:'Target subcooling',  short:'Target SC',  unit:'°F', kind:'dtemp'},
+  {id:'inv1',  col:66, label:'INV primary current',short:'INV current',unit:'A'},
+  {id:'inv2',  col:67, label:'INV secondary current',short:'INV 2nd',  unit:'A'},
+  {id:'fin',   col:68, label:'INV fin temp',       short:'Fin temp',   unit:'°F', kind:'temp'},
+  {id:'syscur',col:71, label:'System current',     short:'Sys current',unit:'A'},
+  {id:'fancur',col:72, label:'Fan current',        short:'Fan current',unit:'A'},
+  {id:'rps',   col:77, label:'Compressor speed',   short:'Comp speed', unit:'rps'},
+  {id:'fanstep',col:78,label:'Fan step',           short:'Fan step',   unit:''},
+  {id:'ev',    col:79, label:'Outdoor EV pulses',  short:'Outdoor EV', unit:'pls', max:327},
+  {id:'trps',  col:107,label:'Target comp speed',  short:'Target',     unit:'rps'},
+  {id:'tfan',  col:108,label:'Target OU fan',      short:'Target fan', unit:'rpm'},
+  {id:'fan',   col:109,label:'OU fan',             short:'OU fan',     unit:'rpm'},
+  {id:'iliq',  col:121,label:'Indoor liquid temp', short:'ID liquid',  unit:'°F', kind:'temp'},
+  {id:'igas',  col:122,label:'Indoor gas temp',    short:'ID gas',     unit:'°F', kind:'temp'},
+  {id:'iev',   col:123,label:'Indoor EV pulses',   short:'Indoor EV',  unit:'pls', max:480},
+  {id:'reqcfm',col:125,label:'Requested airflow',  short:'Req CFM',    unit:'cfm', scale:10},
+  {id:'cfm',   col:126,label:'Present airflow',    short:'Airflow',    unit:'cfm', scale:10},
+  {id:'ipress',col:127,label:'Indoor pressure',    short:'ID pressure',unit:'psi', kind:'press'},
+  {id:'tsh',   col:128,label:'Target superheat',   short:'Target SH',  unit:'°F', kind:'dtemp'},
+  {id:'demand',col:53, label:'Demand',             short:'Demand',     unit:'%'},
+  {id:'retry', col:52, label:'Retry code',         short:'Retry',      unit:''},
+  {id:'ecode', col:38, label:'Error code',         short:'Err',        unit:''},
+];
+// R-410A saturation table (psig → °F), used only to sanity-check the unit's own Tc/Te against its transducers
+const PT410 = [[13,-30],[17,-25],[22,-20],[27,-15],[32,-10],[38,-5],[45,0],[52,5],[59,10],[67,15],[76,20],[85,25],[95,30],[106,35],[118,40],[130,45],[142,50],[156,55],[170,60],[185,65],[201,70],[217,75],[235,80],[253,85],[274,90],[295,95],[317,100],[340,105],[365,110],[390,115],[417,120],[445,125],[475,130],[506,135],[540,140],[575,145],[612,150]];
+// R-410A saturated enthalpies (kJ/kg, IIR reference) by °F, for relative capacity indices only
+const HT = [-40,-22,-4,14,32,50,68,86,104,122,140], HF = [144.0,157.8,172.0,186.4,200.0,215.0,230.4,246.5,263.5,282.2,303.7], HG = [405.9,411.5,416.6,420.5,421.3,424.2,426.5,427.7,427.5,425.3,419.6];
+function interp(xs, ys, x){ if (x <= xs[0]) return ys[0]; for (let k = 1; k < xs.length; k++) if (x <= xs[k]) return ys[k-1] + (ys[k]-ys[k-1])*(x-xs[k-1])/(xs[k]-xs[k-1]); return ys[ys.length-1]; }
+function hLiquid(tF){ return interp(HT, HF, tF); }
+function hVapor(tSatF, shF){ return interp(HT, HG, tSatF) + 0.9 * Math.max(0, shF) * 5/9; }
+function rhoSuction(lpPsig, suctF){ if (!isN(lpPsig) || !isN(suctF) || lpPsig < 5) return null; const P = (lpPsig + 14.7) * 6894.76, T = (suctF + 459.67) * 5/9; return P / (0.85 * 114.5 * T); }
+function isoDisch(lpPsig, hpPsig, suctF){ if (!isN(lpPsig) || !isN(hpPsig) || !isN(suctF) || lpPsig < 5 || hpPsig <= lpPsig) return null; const k = 1.2; const T1 = suctF + 459.67; return T1 * Math.pow((hpPsig + 14.7)/(lpPsig + 14.7), (k-1)/k) - 459.67; }
+function satF(psig){ if (!isN(psig)) return null; const T = PT410; if (psig <= T[0][0]) return T[0][1]; for (let k = 1; k < T.length; k++){ if (psig <= T[k][0]){ const [p0,t0] = T[k-1], [p1,t1] = T[k]; return t0 + (t1-t0)*(psig-p0)/(p1-p0); } } return T[T.length-1][1]; }
+const DERIVED = [
+  {id:'sh',  label:'Suction superheat', short:'Suction SH', unit:'°F', calc:r => sub(r.suct, r.evap), note:'Suction − Te'},
+  {id:'sc',  label:'Subcooling (outdoor liquid pipe)', short:'Subcooling', unit:'°F', calc:r => sub(r.cond, r.liq), note:'Tc − liquid pipe — the SC Daikin\'s target refers to'},
+  {id:'scerr',label:'SC vs target', short:'SC error', unit:'°F', calc:r => sub(sub(r.cond, r.liq), r.tsc), note:'SC − Target SC'},
+  {id:'scid', label:'Subcooling at indoor coil', short:'SC at ID coil', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.cond, r.iliq) : null, note:'Tc − indoor liquid (heating: condenser outlet)'},
+  {id:'linedt', label:'Liquid line ΔT (indoor → outdoor)', short:'Line ΔT', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.iliq, r.liq) : null, note:'ID liquid − liquid pipe; heat loss along the line set, large = flashing / restriction'},
+  {id:'dsh', label:'Discharge superheat', short:'Disch SH', unit:'°F', calc:r => sub(r.disch, r.cond), note:'Discharge − Tc'},
+  {id:'cr',  label:'Compression ratio', short:'Comp ratio', unit:'', dec:2, calc:r => (isN(r.hp)&&isN(r.lp)&&r.lp>-14) ? (r.hp+14.7)/(r.lp+14.7) : null, note:'(HP+14.7)/(LP+14.7)'},
+  {id:'coildt',label:'Indoor coil ΔT (gas − liquid)', short:'ID coil ΔT', unit:'°F', calc:r => sub(r.igas, r.iliq), note:m => m==='heat' ? 'Gas − liquid (condenser drop)' : 'Gas − liquid (coil SH)'},
+  {id:'appr',label:'Outdoor coil approach', short:'Approach', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.oat, r.evap) : sub(r.cond, r.oat), note:m => m==='heat' ? 'OAT − Te' : 'Tc − OAT'},
+  {id:'evpct', label:'Outdoor EV % open', short:'Outdoor EV', unit:'%', dec:0, max:100, calc:r => isN(r.ev) ? r.ev/327*100 : null, note:'pulses ÷ 327 (full open)'},
+  {id:'ievpct',label:'Indoor EV % open', short:'Indoor EV', unit:'%', dec:0, max:100, calc:r => isN(r.iev) ? r.iev/480*100 : null, note:'pulses ÷ 480 (full open)'},
+  {id:'rpserr',label:'Comp vs target', short:'Comp Δ', unit:'rps', calc:r => sub(r.rps, r.trps), note:'Actual − target'},
+  {id:'odsat', label:'Outdoor coil vs saturation', short:'OD coil − sat', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.ochex, r.evap) : sub(r.cond, r.ochex), note:m => m==='heat' ? 'OD coil − Te' : 'Tc − OD coil'},
+  {id:'apr',   label:'INV current per rps', short:'Amps / rps', unit:'A/rps', dec:3, calc:r => (isN(r.inv1)&&isN(r.rps)&&r.rps>0) ? r.inv1/r.rps : null, note:'INV current ÷ comp speed'},
+  {id:'tcchk', label:'Tc check vs PT table', short:'Tc − PT(HP)', unit:'°F', calc:r => (isN(r.hp)&&r.hp>30&&isN(r.cond)) ? r.cond - satF(r.hp) : null, note:'logged Tc − R-410A sat temp at HP'},
+  {id:'techk', label:'Te check vs PT table', short:'Te − PT(LP)', unit:'°F', calc:r => (isN(r.lp)&&r.lp>20&&isN(r.evap)) ? r.evap - satF(r.lp) : null, note:'logged Te − R-410A sat temp at LP'},
+  {id:'hpip',  label:'HP vs indoor pressure', short:'HP − ID press', unit:'psi', calc:r => sub(r.hp, r.ipress), note:'outdoor HP sensor − indoor pressure'},
+  {id:'lift',  label:'Lift (Tc − Te)', short:'Lift', unit:'°F', calc:r => sub(r.cond, r.evap), note:'condensing − evaporating sat temp'},
+  {id:'isod',  label:'Discharge vs isentropic', short:'Disch − isen', unit:'°F', calc:r => { const t = isoDisch(r.lp, r.hp, r.suct); return isN(t) ? r.disch - t : null; }, note:'actual discharge − ideal compression estimate (k=1.2); high = compressor heat/wear, negative = wet suction or 4-way bypass'},
+  {id:'mflow', label:'Mass flow index', short:'Flow idx', unit:'', dec:0, calc:r => { const d = rhoSuction(r.lp, r.suct); return (isN(d) && isN(r.rps)) ? r.rps * d : null; }, note:'rps × suction gas density (relative)'},
+  {id:'capidx',label:'Capacity index', short:'Cap idx', unit:'', dec:2, calc:(r,m) => { const d = rhoSuction(r.lp, r.suct); if (!isN(d) || !isN(r.rps) || !isN(r.evap) || !isN(r.suct) || !isN(r.liq)) return null; const dh = hVapor(r.evap, r.suct - r.evap) - hLiquid(r.liq); return dh > 0 ? r.rps * d * dh / 10000 : null; }, note:'flow index × refrigerant Δh across the evaporator (relative, not BTU/h)'},
+  {id:'copidx',label:'Efficiency index', short:'COP idx', unit:'', dec:2, calc:r => null, post:r => (isN(r.capidx) && isN(r.inv1) && r.inv1 > 0.5) ? r.capidx / r.inv1 : null, note:'capacity index ÷ INV current (relative)'},
+  {id:'dslope', label:'Discharge slope (5 min)', short:'Disch slope', unit:'°F/min', dec:1, calc:() => null, slope:{src:'disch', win:300}},
+  {id:'lpslope',label:'Low pressure slope (5 min)', short:'LP slope', unit:'psi/min', dec:1, calc:() => null, slope:{src:'lp', win:300}},
+  {id:'evslope',label:'Outdoor EV slope (5 min)', short:'EV slope', unit:'pls/min', dec:1, calc:() => null, slope:{src:'ev', win:300}},
+  {id:'rpsslope',label:'Comp speed slope (5 min)', short:'rps slope', unit:'rps/min', dec:1, calc:() => null, slope:{src:'rps', win:300}},
+];
+const STAT = [
+  {id:'opmode',col:12,label:'Mode'}, {id:'therm',col:13,label:'Thermo'}, {id:'restart',col:14,label:'Restart standby'},
+  {id:'startup',col:15,label:'Startup ctrl'}, {id:'defrost',col:16,label:'Defrost'}, {id:'oilret',col:17,label:'Oil return'},
+  {id:'dsig',col:19,label:'Demand signal'}, {id:'lownoise',col:20,label:'Low noise'}, {id:'freeze',col:21,label:'Freeze protect'},
+  {id:'etype',col:37,label:'Error'}, {id:'dropDisch',col:41,label:'Disch temp drop'}, {id:'dropInv',col:43,label:'INV current drop'},
+  {id:'dropHp',col:45,label:'HP drop ctrl'}, {id:'dropLp',col:47,label:'LP drop ctrl'}, {id:'dropFin',col:49,label:'Fin temp drop'},
+  {id:'dropOther',col:51,label:'Other drop ctrl'}, {id:'fourway',col:80,label:'4-way'}, {id:'svhot',col:88,label:'Hot gas SV'},
+  {id:'compcmd',col:104,label:'Comp cmd'}, {id:'fancmd',col:105,label:'Fan cmd'}, {id:'iaddr',col:112,label:'IDU addr'}, {id:'imode',col:113,label:'IDU mode'}, {id:'ierr',col:116,label:'IDU error'},
+];
+const ALLCH = [...NUM, ...DERIVED];
+const chById = Object.fromEntries(ALLCH.map(c => [c.id, c]));
+const isN = v => typeof v === 'number' && Number.isFinite(v);
+const sub = (a,b) => (isN(a)&&isN(b)) ? a-b : null;
+
+/* ---------- default rules (starting points — tune on the Rules tab) ---------- */
+const DEFAULT_RULES = [
+  {ch:'disch', mode:'both', alo:100, wlo:120, whi:210, ahi:225, gate:true, settle:3},
+  {ch:'dsh',   mode:'both', alo:20,  wlo:30,  whi:90,  ahi:110, gate:true, settle:5},
+  {ch:'sh',    mode:'cool', alo:2,   wlo:5,   whi:20,  ahi:30,  gate:true, settle:5},
+  {ch:'sh',    mode:'heat', alo:0,   wlo:3,   whi:25,  ahi:35,  gate:true, settle:5},
+  {ch:'sc',    mode:'cool', alo:2,   wlo:5,   whi:20,  ahi:30,  gate:true, settle:5},
+  {ch:'sc',    mode:'heat', alo:2,   wlo:5,   whi:25,  ahi:35,  gate:true, settle:5},
+  {ch:'scerr', mode:'both', alo:-8,  wlo:-4,  whi:4,   ahi:8,   gate:true, settle:8},
+  {ch:'hp',    mode:'cool', alo:200, wlo:250, whi:450, ahi:520, gate:true, settle:3},
+  {ch:'hp',    mode:'heat', alo:200, wlo:250, whi:420, ahi:500, gate:true, settle:3},
+  {ch:'lp',    mode:'cool', alo:80,  wlo:100, whi:150, ahi:170, gate:true, settle:3},
+  {ch:'lp',    mode:'heat', alo:30,  wlo:50,  whi:140, ahi:160, gate:true, settle:3},
+  {ch:'evap',  mode:'cool', alo:28,  wlo:32,  whi:55,  ahi:60,  gate:true, settle:3},
+  {ch:'cond',  mode:'cool', alo:80,  wlo:90,  whi:130, ahi:150, gate:true, settle:3},
+  {ch:'cond',  mode:'heat', alo:70,  wlo:85,  whi:120, ahi:130, gate:true, settle:3},
+  {ch:'cr',    mode:'both', alo:1.5, wlo:1.8, whi:4.5, ahi:6,   gate:true, settle:3},
+  {ch:'appr',  mode:'both', alo:0,   wlo:5,   whi:30,  ahi:40,  gate:true, settle:5},
+  {ch:'fin',   mode:'both', alo:null,wlo:null,whi:160, ahi:180, gate:false, settle:0},
+  {ch:'retry', mode:'both', alo:null,wlo:null,whi:0,   ahi:null,gate:false, settle:0},
+  {ch:'ecode', mode:'both', alo:null,wlo:null,whi:null,ahi:0,   gate:false, settle:0},
+].map((r,i) => ({on:false, id:'r'+i, ...r}));
+
+/* ---------- state ---------- */
+const ADV = false; // fault-library chips + physics-check tags: computed, shown later
+let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
+let pins = loadJSON('dchk.pins', []);
+let VIEW = loadJSON('dchk.view', 'num');
+let THERMAL = !!loadJSON('dchk.thermal', false);
+function setThermal(on){ THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
+const VIEWNOTE = {num:'', bar:'fill = where the reading sits in this log\'s range · grey tick = steady-state norm · black tick = target', spark:'trail behind each number = its last 10 minutes · dashed = steady-state norm', dev:'tint = distance from this log\'s steady-state norm (σ) · red high, blue low'};
+function setView(v){ VIEW = v; saveJSON('dchk.view', v); const dg = $('#diag'); dg.classList.remove('view-num','view-bar','view-spark','view-dev'); dg.classList.add('view-' + v); document.querySelectorAll('#viewsel button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v)); $('#viewnote').textContent = VIEWNOTE[v] || ''; if (D) renderCycle(cur); }
+function loadJSON(k, d){ try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(e){ return d; } }
+function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function loadRules(){ const r = loadJSON('dchk.rules.v2', null); return (Array.isArray(r) && r.length) ? r : DEFAULT_RULES.map(x => ({...x})); }
+function saveRules(){ saveJSON('dchk.rules.v2', rules); }
+
+/* ---------- CSV parsing ---------- */
+function parseCSV(text){
+  const rows = []; let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i+1] === '"'){ field += '"'; i++; } else q = false; } else field += c; }
+    else if (c === '"') q = true;
+    else if (c === ','){ row.push(field); field = ''; }
+    else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+    else if (c !== '\r') field += c;
+  }
+  if (field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || (r[0]||'').trim());
+}
+function parseDate(s){
+  s = (s||'').trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) return new Date(+m[3], +m[1]-1, +m[2], +m[4], +m[5], +(m[6]||0));
+  m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0));
+  const d = new Date(s); return isNaN(d) ? null : d;
+}
+function buildDataset(text, name){
+  const rows = parseCSV(text.replace(/^﻿/, ''));
+  if (rows.length < 2) throw new Error('No data rows found.');
+  const head = rows[0].map(h => h.trim());
+  const byNum = {}, unitOf = {};
+  head.forEach((h, i) => { const m = h.match(/^(\d+)\s*:\s*(.*)$/); if (m){ byNum[+m[1]] = i; unitOf[+m[1]] = m[2]; } });
+  const colIdx = c => { if (byNum[c.col] != null) return byNum[c.col]; const key = c.label.toLowerCase().split(' ')[0]; return head.findIndex(h => h.toLowerCase().includes(key)); };
+  const n = rows.length - 1;
+  const t = new Array(n), num = {}, str = {};
+  for (let i = 0; i < n; i++) t[i] = parseDate(rows[i+1][0]);
+  const conv = (c, raw) => {
+    if (raw == null) return null; raw = raw.trim(); if (!raw || raw === '---' || raw === '-') return null;
+    let v = parseFloat(raw); if (!Number.isFinite(v)) return null;
+    const hdr = (unitOf[c.col] || '').toLowerCase();
+    if (c.kind === 'temp' && /\(\s*c\s*\)|°c/.test(hdr)) v = v*9/5 + 32;
+    if (c.kind === 'dtemp' && /\(\s*c\s*\)|°c/.test(hdr)) v = v*9/5;
+    if (c.kind === 'press' && /kpa/.test(hdr)) v = v*0.145038;
+    if (c.kind === 'press' && /mpa/.test(hdr)) v = v*145.038;
+    if (c.scale) v *= c.scale;
+    return v;
+  };
+  for (const c of NUM){ const ix = colIdx(c); const a = new Array(n).fill(null); if (ix >= 0) for (let i = 0; i < n; i++) a[i] = conv(c, rows[i+1][ix]); num[c.id] = a; c.present = ix >= 0; }
+  for (const c of STAT){ const ix = colIdx(c); const a = new Array(n).fill(null); if (ix >= 0) for (let i = 0; i < n; i++){ const v = (rows[i+1][ix]||'').trim(); a[i] = (v && v !== '---') ? v : null; } str[c.id] = a; c.present = ix >= 0; }
+  const mode = new Array(n);
+  for (let i = 0; i < n; i++){ const m = ((str.opmode[i] || str.imode[i] || '')).toLowerCase(); mode[i] = /heat/.test(m) ? 'heat' : /cool|dry/.test(m) ? 'cool' : 'other'; }
+  for (const d of DERIVED){ const a = new Array(n); for (let i = 0; i < n; i++){ const r = {}; for (const c of NUM) r[c.id] = num[c.id][i]; a[i] = d.calc(r, mode[i]); } num[d.id] = a; }
+  for (const d of DERIVED) if (d.post){ for (let i = 0; i < n; i++){ const r = {}; for (const c of ALLCH) r[c.id] = num[c.id] ? num[c.id][i] : null; num[d.id][i] = d.post(r, mode[i]); } }
+  const valid = t.filter(Boolean);
+  const span = valid.length > 1 ? (valid[valid.length-1] - valid[0]) / 1000 : n * 30;
+  const interval = n > 1 ? Math.max(1, span / (n - 1)) : 30;
+  const runSec = new Array(n); let startIdx = -1;
+  for (let i = 0; i < n; i++){ const on = isN(num.rps[i]) ? num.rps[i] > 0 : (str.compcmd[i] === 'ON'); if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
+  return {name, n, t, num, str, mode, runSec, interval, head};
+}
+
+/* ---------- rule evaluation ---------- */
+const SEV = {na:0, idle:1, settling:2, ok:3, info:3, sig:3.5, warn:4, alarm:5};
+function evalRow(i){
+  const out = {byCh:{}, hits:[], worst:'ok'};
+  const running = D.runSec[i] >= 0, m = D.mode[i];
+  for (const r of rules){
+    if (!r.on || !chById[r.ch]) continue;
+    if (r.mode !== 'both' && r.mode !== m) continue;
+    const v = D.num[r.ch] ? D.num[r.ch][i] : null;
+    let st;
+    if (!isN(v)) st = 'na';
+    else if (r.gate && !running) st = 'idle';
+    else if (r.gate && r.settle > 0 && D.runSec[i] < r.settle*60) st = 'settling';
+    else if ((isN(r.alo) && v < r.alo) || (isN(r.ahi) && v > r.ahi)) st = 'alarm';
+    else if ((isN(r.wlo) && v < r.wlo) || (isN(r.whi) && v > r.whi)) st = 'warn';
+    else st = 'ok';
+    const prev = out.byCh[r.ch];
+    if (!prev || SEV[st] > SEV[prev.st]) out.byCh[r.ch] = {st, rule:r, v};
+    if (st === 'warn' || st === 'alarm') out.hits.push({ch:r.ch, st, v, rule:r});
+  }
+  const s = D.str, ev = [];
+  if (s.etype[i] && !/normal/i.test(s.etype[i])) ev.push({label:'Error: '+s.etype[i], st:'alarm'});
+  if (s.ierr[i] && !/^0+$/.test(s.ierr[i])) ev.push({label:'IDU error '+s.ierr[i], st:'alarm'});
+  for (const id of ['dropDisch','dropInv','dropHp','dropLp','dropFin']) if (s[id][i] === 'ON') ev.push({label:STAT.find(x=>x.id===id).label+' active', st:'warn'});
+  if (s.dropOther[i] === 'ON') ev.push({label:'Other drop ctrl', st:'info'});
+  if (s.defrost[i] === 'ON') ev.push({label:'Defrost', st:'info'});
+  if (s.oilret[i] === 'ON') ev.push({label:'Oil return', st:'info'});
+  if (s.freeze[i] === 'ON') ev.push({label:'Freeze protection', st:'warn'});
+  if (s.restart[i] === 'ON') ev.push({label:'Restart standby', st:'info'});
+  if (s.startup[i] === 'ON') ev.push({label:'Startup control', st:'info'});
+  if (s.lownoise[i] === 'ON') ev.push({label:'Low noise', st:'info'});
+  if (isN(D.num.demand[i]) && D.num.demand[i] < 100) ev.push({label:'Demand '+D.num.demand[i]+'%', st:'info'});
+  if (isN(D.num.retry[i]) && D.num.retry[i] !== 0) ev.push({label:'Retry code '+D.num.retry[i], st:'warn'});
+  out.events = ev; out.sigs = D.sig ? D.sig[i] : [];
+  let worst = 'ok';
+  for (const h of out.hits) if (SEV[h.st] > SEV[worst]) worst = h.st;
+  for (const e of ev) if (e.st !== 'info' && SEV[e.st] > SEV[worst]) worst = e.st;
+  if (worst === 'ok' && out.sigs.some(x => x.st === 'sig' || x.st === 'fault')) worst = 'sig';
+  if (worst === 'ok' && !running) worst = 'idle';
+  out.worst = worst;
+  return out;
+}
+function evalAll(){ evalCache = []; for (let i = 0; i < D.n; i++) evalCache.push(evalRow(i)); }
+
+/* ---------- diagnostics: slopes, steady state, signatures, runs ---------- */
+// Fixed engineering thresholds for the signature detectors (not the user rules table)
+const SIG = { evPinFrac:0.97, evPinMin:3, scErr:3, settle:8, dshLow:25, rpsFrac:0.5, dischSlope:5, lpSlope:-5, evSlope:3, rpsHold:5, ptTol:4, hpipTol:15, odsatHi:12, aprRise:1.15, steadyMin:3, steadyRps:3, steadyHp:15, steadyLp:8, steadyEv:10, shortRun:5, shortOff:3, scNever:15 };
+function stdWin(a, i, k){ let n = 0, s1 = 0, s2 = 0; for (let j = Math.max(0, i-k); j <= i; j++){ const v = a[j]; if (!isN(v)) continue; n++; s1 += v; s2 += v*v; } if (n < 3) return null; const mu = s1/n; return Math.sqrt(Math.max(0, s2/n - mu*mu)); }
+function rangeWin(a, i, k){ let lo = Infinity, hi = -Infinity, n = 0; for (let j = Math.max(0, i-k); j <= i; j++){ const v = a[j]; if (!isN(v)) continue; n++; lo = Math.min(lo, v); hi = Math.max(hi, v); } return n < 3 ? null : hi - lo; }
+function faultCtx(i){
+  const v = {}; for (const ch of ALLCH) v[ch.id] = D.num[ch.id] ? D.num[ch.id][i] : null;
+  const k5 = Math.max(2, Math.round(300 / D.interval));
+  const evMax = chById.ev.max, rpsMax = D.ref.rpsMax || 126;
+  return {
+    v, m: D.mode[i], s: D.str, i, steady: D.steady[i],
+    evFrac: isN(v.ev) ? v.ev / evMax : null,
+    rpsFrac: isN(v.rps) ? v.rps / rpsMax : null,
+    fanMax: isN(v.fanstep) ? v.fanstep >= 8 : (isN(v.fan) && isN(v.tfan) ? v.fan >= v.tfan - 10 && v.tfan >= 700 : null),
+    cfmShort: (isN(v.cfm) && isN(v.reqcfm) && v.reqcfm > 0) ? v.cfm < 0.9 * v.reqcfm : null,
+    rpsSteady: isN(v.rpsslope) ? Math.abs(v.rpsslope) <= 2 : null,
+    evStd: stdWin(D.num.ev, i, k5), scStd: stdWin(D.num.sc, i, k5), lpStd: stdWin(D.num.lp, i, k5), evRange: rangeWin(D.num.ev, i, k5),
+    aprHigh: (D.ref.aprRef && isN(v.apr)) ? v.apr >= D.ref.aprRef * 1.15 : null,
+    svOn: D.str.svhot[i] === 'ON', freeze: D.str.freeze[i] === 'ON',
+  };
+}
+const nn = isN;
+// Classic faults as multi-channel patterns. A test returns true / false / null (not applicable in this mode or missing data).
+const FAULTS = [
+  {id:'under', label:'Undercharge', conds:[
+    ['EV ≥ 80% open', c => c.evFrac != null ? c.evFrac >= 0.8 : null],
+    ['SC ≥ 3°F under target', c => nn(c.v.scerr) ? c.v.scerr <= -3 : null, true],
+    ['suction SH high', c => nn(c.v.sh) ? c.v.sh >= (c.m === 'heat' ? 15 : 12) : null],
+    ['discharge SH high', c => nn(c.v.dsh) ? c.v.dsh >= 60 : null],
+    ['evaporator starved', c => c.m === 'heat' ? (nn(c.v.appr) ? c.v.appr >= 30 : null) : (nn(c.v.evap) ? c.v.evap <= 35 : null)],
+    ['head low for ambient', c => c.m === 'cool' ? ((nn(c.v.cond) && nn(c.v.oat)) ? c.v.cond - c.v.oat <= 15 : null) : null],
+  ]},
+  {id:'over', label:'Overcharge', conds:[
+    ['EV ≤ 25% open', c => c.evFrac != null ? c.evFrac <= 0.25 : null],
+    ['SC ≥ 4°F over target', c => nn(c.v.scerr) ? c.v.scerr >= 4 : null, true],
+    ['head high', c => c.m === 'cool' ? ((nn(c.v.cond) && nn(c.v.oat)) ? c.v.cond - c.v.oat >= 30 : null) : (nn(c.v.cond) ? c.v.cond >= 115 : null)],
+    ['discharge SH low', c => nn(c.v.dsh) ? c.v.dsh <= 40 : null],
+    ['suction SH normal/low', c => nn(c.v.sh) ? c.v.sh <= 12 : null],
+  ]},
+  {id:'restrict', label:'Liquid-line restriction', conds:[
+    ['big liquid-line ΔT', c => nn(c.v.linedt) ? c.v.linedt >= 12 : null, true],
+    ['EV ≥ 80% open', c => c.evFrac != null ? c.evFrac >= 0.8 : null],
+    ['suction SH high', c => nn(c.v.sh) ? c.v.sh >= 15 : null],
+    ['pressure drop to indoor', c => (c.m === 'heat' && nn(c.v.hpip)) ? c.v.hpip >= 15 : null],
+    ['SC under target', c => nn(c.v.scerr) ? c.v.scerr <= -3 : null],
+  ]},
+  {id:'evstuck', label:'EEV not responding', conds:[
+    ['SC error ≥ 4°F', c => nn(c.v.scerr) ? Math.abs(c.v.scerr) >= 4 : null, true],
+    ['EV frozen 5 min', c => c.evRange != null ? c.evRange <= 3 : null],
+    ['comp speed steady', c => c.rpsSteady],
+    ['SH abnormal', c => nn(c.v.sh) ? (c.v.sh <= 2 || c.v.sh >= 20) : null],
+  ]},
+  {id:'hunt', label:'EEV hunting', conds:[
+    ['comp speed steady', c => c.rpsSteady],
+    ['EV swinging', c => c.evStd != null ? c.evStd >= 12 : null, true],
+    ['SC swinging', c => c.scStd != null ? c.scStd >= 2 : null],
+    ['LP swinging', c => c.lpStd != null ? c.lpStd >= 5 : null],
+  ]},
+  {id:'noncond', label:'Non-condensables', conds:[
+    ['SC ≥ 4°F over target', c => c.m === 'cool' ? (nn(c.v.scerr) ? c.v.scerr >= 4 : null) : null, true],
+    ['condenser coil far below Tc', c => c.m === 'cool' ? (nn(c.v.odsat) ? c.v.odsat >= 12 : null) : null, true],
+    ['outdoor fan at max', c => c.m === 'cool' ? c.fanMax : null],
+    ['discharge SH normal', c => c.m === 'cool' ? (nn(c.v.dsh) ? c.v.dsh >= 30 : null) : null],
+  ]},
+  {id:'idair', label:'Low indoor airflow', conds:[
+    ['head high / Te low', c => c.m === 'heat' ? (nn(c.v.cond) ? c.v.cond >= 110 : null) : (nn(c.v.evap) ? c.v.evap <= 35 : null), true],
+    ['SC over target', c => c.m === 'heat' ? (nn(c.v.scerr) ? c.v.scerr >= 3 : null) : null],
+    ['indoor coil ΔT collapsed', c => nn(c.v.coildt) ? (c.m === 'heat' ? c.v.coildt <= 25 : c.v.coildt <= 4) : null],
+    ['airflow short of request', c => c.cfmShort],
+    ['EV closing', c => c.m === 'heat' ? (c.evFrac != null ? c.evFrac <= 0.4 : null) : null],
+    ['freeze protection', c => c.m === 'cool' ? c.freeze : null],
+    ['LP low', c => c.m === 'cool' ? (nn(c.v.lp) ? c.v.lp <= 100 : null) : null],
+  ]},
+  {id:'odcoil', label:'Outdoor coil airflow / fouling', conds:[
+    ['approach wide', c => nn(c.v.appr) ? c.v.appr >= 30 : null, true],
+    ['outdoor fan at max', c => c.fanMax],
+    ['coil far from saturation', c => nn(c.v.odsat) ? c.v.odsat >= 12 : null],
+    ['steady state', c => c.steady],
+  ]},
+  {id:'fourway', label:'4-way valve bypassing', conds:[
+    ['suction SH high', c => nn(c.v.sh) ? c.v.sh >= 20 : null, true],
+    ['discharge SH low', c => nn(c.v.dsh) ? c.v.dsh <= 35 : null, true],
+    ['EV not wide open', c => c.evFrac != null ? c.evFrac <= 0.6 : null],
+    ['hot-gas SV closed', c => !c.svOn],
+    ['discharge below isentropic', c => nn(c.v.isod) ? c.v.isod <= 0 : null],
+  ]},
+  {id:'compwear', label:'Compressor inefficiency', conds:[
+    ['discharge far above isentropic', c => nn(c.v.isod) ? c.v.isod >= 50 : null, true],
+    ['current per rps above norm', c => c.aprHigh],
+    ['low ratio at speed', c => (nn(c.v.cr) && c.rpsFrac != null) ? (c.v.cr <= 1.8 && c.rpsFrac >= 0.5) : null],
+    ['suction SH high', c => nn(c.v.sh) ? c.v.sh >= 15 : null],
+  ]},
+  {id:'flood', label:'Liquid floodback', conds:[
+    ['discharge SH < 25', c => nn(c.v.dsh) ? c.v.dsh < 25 : null, true],
+    ['suction SH ≤ 3', c => nn(c.v.sh) ? c.v.sh <= 3 : null],
+    ['comp ≥ 50% speed', c => c.rpsFrac != null ? c.rpsFrac >= 0.5 : null],
+    ['discharge below isentropic', c => nn(c.v.isod) ? c.v.isod <= 5 : null],
+  ]},
+];
+function slopeAt(a, i, k){ // least-squares slope per minute over rows i-k..i
+  let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (let j = Math.max(0, i-k); j <= i; j++){ const v = a[j]; if (!isN(v)) continue; const x = (j-i)*D.interval/60; n++; sx += x; sy += v; sxx += x*x; sxy += x*v; }
+  if (n < 3) return null; const den = n*sxx - sx*sx; if (Math.abs(den) < 1e-9) return null; return (n*sxy - sx*sy)/den;
+}
+function analyze(){
+  const n = D.n, num = D.num, s = D.str;
+  for (const d of DERIVED) if (d.slope){ const k = Math.max(2, Math.round(d.slope.win/D.interval)); const src = num[d.slope.src]; const a = new Array(n).fill(null); for (let i = 0; i < n; i++){ if (D.runSec[i] >= Math.min(d.slope.win, 120)) a[i] = slopeAt(src, i, k); } num[d.id] = a; }
+  D.dropout = new Array(n).fill(false);
+  for (let i = 0; i < n; i++){ const hp = num.hp[i], tc = num.cond[i], lp = num.lp[i]; if ((isN(hp) && hp <= 5) || (isN(tc) && tc <= -40) || (isN(lp) && lp <= 5)) D.dropout[i] = true; }
+  // steady state: compressor speed, pressures and EV all held within narrow bands for the last few minutes
+  const kS = Math.max(2, Math.round(SIG.steadyMin*60/D.interval));
+  D.steady = new Array(n).fill(false);
+  const rng = (a, i) => { let lo = Infinity, hi = -Infinity; for (let j = i-kS; j <= i; j++){ const v = a[j]; if (!isN(v)) return null; lo = Math.min(lo, v); hi = Math.max(hi, v); } return hi-lo; };
+  for (let i = kS; i < n; i++){ if (D.runSec[i] < SIG.steadyMin*60 || D.dropout[i]) continue; const r1 = rng(num.rps, i), r2 = rng(num.hp, i), r3 = rng(num.lp, i), r4 = rng(num.ev, i); if (r1 != null && r2 != null && r3 != null && r1 <= SIG.steadyRps && r2 <= SIG.steadyHp && r3 <= SIG.steadyLp && (r4 == null || r4 <= SIG.steadyEv)) D.steady[i] = true; }
+  const evVals = num.ev.filter(isN), rpsVals = num.rps.filter(isN);
+  const evMax = evVals.length ? Math.max(...evVals) : null, rpsMax = rpsVals.length ? Math.max(...rpsVals) : null;
+  const aprSteady = []; for (let i = 0; i < n; i++) if (D.steady[i] && isN(num.apr[i])) aprSteady.push(num.apr[i]);
+  const aprRef = aprSteady.length >= 10 ? aprSteady.slice().sort((a,b) => a-b)[Math.floor(aprSteady.length/2)] : null;
+  D.ref = {evMax, rpsMax, aprRef};
+  // per-channel range over the log and steady-state baseline (median / spread) for the Bars and Deviation views
+  D.range = {}; D.base = {};
+  for (const ch of ALLCH){
+    const a = num[ch.id]; if (!a) continue;
+    const vals = []; for (let i = 0; i < n; i++) if (isN(a[i]) && !D.dropout[i]) vals.push(a[i]);
+    if (!vals.length) continue;
+    D.range[ch.id] = {min:Math.min(...vals), max:Math.max(...vals)};
+    let bv = []; for (let i = 0; i < n; i++) if (D.steady[i] && isN(a[i])) bv.push(a[i]);
+    if (bv.length < 6){ bv = []; for (let i = 0; i < n; i++) if (D.runSec[i] >= 300 && isN(a[i]) && !D.dropout[i]) bv.push(a[i]); }
+    if (bv.length >= 3){ const srt = bv.slice().sort((x,y) => x-y); const med = srt[Math.floor(srt.length/2)]; const mad = srt.map(x => Math.abs(x-med)).sort((x,y) => x-y)[Math.floor(srt.length/2)]; D.base[ch.id] = {med, spread:Math.max(mad*1.4826, Math.abs(med)*0.01, 0.5)}; }
+  }
+  // compressor runs
+  D.runs = []; let curRun = null;
+  for (let i = 0; i < n; i++){ const on = D.runSec[i] >= 0; if (on && !curRun){ curRun = {start:i, end:i}; D.runs.push(curRun); } if (on) curRun.end = i; if (!on) curRun = null; }
+  D.runOf = new Array(n).fill(-1); D.runs.forEach((r, k) => { for (let i = r.start; i <= r.end; i++) D.runOf[i] = k; });
+  D.runs.forEach((r, k) => {
+    const rows = []; for (let i = r.start; i <= r.end; i++) rows.push(i);
+    r.min = rows.length*D.interval/60;
+    r.offBefore = k > 0 ? (r.start - D.runs[k-1].end - 1)*D.interval/60 : null;
+    const first = pred => { for (const i of rows) if (pred(i)) return (i - r.start)*D.interval/60; return null; };
+    r.tRps = first(i => isN(num.rps[i]) && isN(num.trps[i]) && num.trps[i] > 0 && Math.abs(num.rps[i]-num.trps[i]) <= 2);
+    r.tSc = first(i => isN(num.scerr[i]) && Math.abs(num.scerr[i]) <= 2);
+    r.tSteady = first(i => D.steady[i]);
+    r.defrost = 0; r.defrostMin = 0; r.retries = new Set(); r.drops = new Set(); r.maxDisch = null; r.minLp = null; r.maxHp = null; r.sigs = new Map(); r.hasTsc = false;
+    let inD = false;
+    for (const i of rows){
+      const d = s.defrost[i] === 'ON'; if (d && !inD) r.defrost++; if (d) r.defrostMin += D.interval/60; inD = d;
+      if (isN(num.retry[i]) && num.retry[i]) r.retries.add(num.retry[i]);
+      for (const id of ['dropDisch','dropInv','dropHp','dropLp','dropFin']) if (s[id][i] === 'ON') r.drops.add(STAT.find(x => x.id === id).label);
+      if (isN(num.tsc[i])) r.hasTsc = true;
+      if (!D.dropout[i]){ if (isN(num.disch[i])) r.maxDisch = Math.max(r.maxDisch ?? -Infinity, num.disch[i]); if (isN(num.lp[i])) r.minLp = Math.min(r.minLp ?? Infinity, num.lp[i]); if (isN(num.hp[i])) r.maxHp = Math.max(r.maxHp ?? -Infinity, num.hp[i]); }
+    }
+    r.short = r.min < SIG.shortRun || (r.offBefore != null && r.offBefore < SIG.shortOff);
+  });
+  // signatures per row
+  D.sig = new Array(n);
+  const evPinRows = Math.max(1, Math.round(SIG.evPinMin*60/D.interval));
+  for (let i = 0; i < n; i++){
+    const out = []; D.sig[i] = out; const run = D.runSec[i] >= 0, rs = D.runSec[i]/60, m = D.mode[i];
+    if (D.dropout[i]){ out.push({code:'dropout', label:'Sensor dropout', detail:'HP / LP / Tc read zero on this row — ignore it', st:'info'}); continue; }
+    if (!run) continue;
+    const settled = rs >= SIG.settle;
+    const EVM = chById.ev.max;
+    if (isN(num.ev[i]) && num.ev[i] >= EVM*SIG.evPinFrac){
+      let pinned = true; for (let j = i-evPinRows+1; j <= i; j++){ if (j < 0 || !isN(num.ev[j]) || num.ev[j] < EVM*SIG.evPinFrac){ pinned = false; break; } }
+      if (pinned && settled && isN(num.scerr[i]) && num.scerr[i] <= -SIG.scErr) out.push({code:'ev-open', label:'EV pinned open, SC below target', detail:`EV ${num.ev[i].toFixed(0)} of ${EVM} pls, SC ${num.scerr[i].toFixed(1)}°F vs target — undercharge or liquid-line restriction`, st:'sig'});
+    }
+    if (isN(num.ev[i]) && num.ev[i] <= EVM*0.12 && settled && isN(num.scerr[i]) && num.scerr[i] >= SIG.scErr) out.push({code:'ev-closed', label:'EV nearly closed, SC above target', detail:`EV ${num.ev[i].toFixed(0)} of ${EVM} pls, SC +${num.scerr[i].toFixed(1)}°F vs target — overcharge or restriction downstream`, st:'sig'});
+    if (rpsMax && isN(num.dsh[i]) && isN(num.rps[i]) && rs >= 5 && num.dsh[i] < SIG.dshLow && num.rps[i] >= rpsMax*SIG.rpsFrac) out.push({code:'floodback', label:'Low discharge SH at speed', detail:`DSH ${num.dsh[i].toFixed(1)}°F at ${num.rps[i].toFixed(0)} rps — liquid floodback signature`, st:'sig'});
+    if (isN(num.dslope[i]) && num.dslope[i] >= SIG.dischSlope && isN(num.rpsslope[i]) && Math.abs(num.rpsslope[i]) <= 2) out.push({code:'disch-climb', label:'Discharge climbing at steady speed', detail:`+${num.dslope[i].toFixed(1)}°F/min over the last 5 min`, st:'sig'});
+    if (isN(num.lpslope[i]) && num.lpslope[i] <= SIG.lpSlope && isN(num.evslope[i]) && num.evslope[i] >= SIG.evSlope) out.push({code:'lp-fall', label:'LP falling while EV opens', detail:`${num.lpslope[i].toFixed(1)} psi/min with EV +${num.evslope[i].toFixed(1)} pls/min — starving evaporator`, st:'sig'});
+    const drops = ['dropDisch','dropInv','dropHp','dropLp','dropFin'].filter(id => s[id][i] === 'ON').map(id => STAT.find(x => x.id === id).label);
+    if (drops.length && isN(num.rps[i]) && isN(num.trps[i]) && num.rps[i] <= num.trps[i]-SIG.rpsHold) out.push({code:'held', label:'Capacity limited: ' + drops.join(', '), detail:`${num.rps[i].toFixed(0)} of ${num.trps[i].toFixed(0)} rps`, st:'sig', hold:drops.join(', ')});
+    if (isN(num.tcchk[i]) && Math.abs(num.tcchk[i]) > SIG.ptTol) out.push({code:'pt-tc', label:'Tc disagrees with HP', detail:`logged Tc is ${num.tcchk[i] > 0 ? '+' : ''}${num.tcchk[i].toFixed(1)}°F from R-410A saturation at ${num.hp[i].toFixed(0)} psi — transducer or refrigerant mismatch`, st:'sig'});
+    if (isN(num.techk[i]) && Math.abs(num.techk[i]) > SIG.ptTol) out.push({code:'pt-te', label:'Te disagrees with LP', detail:`logged Te is ${num.techk[i] > 0 ? '+' : ''}${num.techk[i].toFixed(1)}°F from R-410A saturation at ${num.lp[i].toFixed(0)} psi`, st:'sig'});
+    if (m === 'heat' && rs >= 3 && isN(num.hpip[i]) && Math.abs(num.hpip[i]) > SIG.hpipTol) out.push({code:'hp-ip', label:'HP and indoor pressure disagree', detail:`${num.hpip[i] > 0 ? '+' : ''}${num.hpip[i].toFixed(0)} psi between the outdoor and indoor sensors`, st:'sig'});
+    if (D.steady[i] && isN(num.odsat[i]) && num.odsat[i] > SIG.odsatHi) out.push({code:'od-coil', label:'Outdoor coil far from saturation', detail:`${num.odsat[i].toFixed(1)}°F between coil sensor and sat temp — airflow or fouling`, st:'sig'});
+    if (aprRef && D.steady[i] && isN(num.apr[i]) && num.apr[i] > aprRef*SIG.aprRise) out.push({code:'amps', label:'Current per rps above norm', detail:`${num.apr[i].toFixed(3)} vs ${aprRef.toFixed(3)} A/rps steady-state median for this log`, st:'sig'});
+    // thermistor ordering (physics says these must hold once settled; a violation is a sensor or a real reversal)
+    if (settled){
+      const rulesOrd = m === 'heat'
+        ? [['Discharge','disch','ID gas','igas'],['ID gas','igas','Tc','cond'],['Tc','cond','ID liquid','iliq'],['ID liquid','iliq','Liquid pipe','liq'],['Liquid pipe','liq','Te','evap'],['Suction','suct','Te','evap'],['Discharge','disch','Suction','suct']]
+        : [['Discharge','disch','Tc','cond'],['Tc','cond','Liquid pipe','liq'],['Liquid pipe','liq','ID liquid','iliq'],['ID gas','igas','ID liquid','iliq'],['ID gas','igas','Te','evap'],['Suction','suct','Te','evap'],['Discharge','disch','Suction','suct']];
+      const bad = [];
+      for (const [la, a, lb, b] of rulesOrd){ const va = num[a][i], vb = num[b][i]; if (isN(va) && isN(vb) && va < vb - 3) bad.push(`${la} ${va.toFixed(1)} < ${lb} ${vb.toFixed(1)}`); }
+      const coilSat = m === 'heat' ? num.evap[i] : num.cond[i];
+      if (isN(num.ochex[i]) && isN(coilSat) && Math.abs(num.ochex[i] - coilSat) > 20) bad.push(`OD coil ${num.ochex[i].toFixed(1)} is ${Math.abs(num.ochex[i]-coilSat).toFixed(0)}°F from ${m==='heat'?'Te':'Tc'}`);
+      if (bad.length) out.push({code:'order', label:'Thermistor order violated', detail:bad.join('; ') + ' — bad sensor or a real reversal', st:'sig'});
+    }
+    // fault library: each fault is a set of conditions; confidence = met / applicable
+    if (settled){
+      const c = faultCtx(i);
+      for (const F of FAULTS){
+        let met = 0, app = 0; const hits = [];
+        let keyOk = true;
+        for (const [lab, test, key] of F.conds){ const v = test(c); if (v == null){ if (key) keyOk = false; continue; } app++; if (v){ met++; hits.push(lab); } else if (key) keyOk = false; }
+        if (keyOk && app >= 3 && met >= 3 && met/app >= 0.5) out.push({code:'fault-'+F.id, label:`${F.label} · ${met}/${app}`, detail:hits.join(' · '), st:'fault', conf:met/app});
+      }
+    }
+    const r = D.runs[D.runOf[i]];
+    if (r && r.short) out.push({code:'short', label:'Short cycle', detail:`run ${r.min.toFixed(0)} min` + (r.offBefore != null ? `, off ${r.offBefore.toFixed(0)} min before` : ''), st:'sig'});
+    if (r && r.hasTsc && r.tSc == null && rs >= SIG.scNever) out.push({code:'sc-never', label:'SC never reached target this run', detail:`${rs.toFixed(0)} min in, still ${isN(num.scerr[i]) ? num.scerr[i].toFixed(1) + '°F' : '?'} from target`, st:'sig'});
+  }
+  // faults must persist: keep a fault only where it also holds on the two neighbouring rows (≈1.5 min)
+  const has = (i, code) => i >= 0 && i < n && D.sig[i].some(x => x.code === code);
+  const raw = D.sig.map(a => a.slice());
+  for (let i = 0; i < n; i++) D.sig[i] = raw[i].filter(x => x.st !== 'fault' || ((has(i-1, x.code) && has(i-2, x.code)) || (has(i-1, x.code) && has(i+1, x.code)) || (has(i+1, x.code) && has(i+2, x.code))) );
+}
+
+/* ---------- formatting ---------- */
+function fmt(v, ch){ if (!isN(v)) return '—'; const dec = ch && ch.dec != null ? ch.dec : (Math.abs(v) >= 100 ? 0 : 1); return v.toFixed(dec); }
+const pad = n => String(n).padStart(2,'0');
+function fmtTime(d, full){ if (!d) return '—'; const hm = pad(d.getHours())+':'+pad(d.getMinutes())+(d.getSeconds()?':'+pad(d.getSeconds()):''); return full ? `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()} ${hm}` : hm; }
+
+/* ---------- diagram: pipes, coils, tags ---------- */
+// Pipes are drawn in COOLING flow order. `rev` segments reverse in heating; sides flip per mode.
+const PIPES = [
+  {id:'disch',  d:'M460 892 V1195',                 hi:true},
+  {id:'suct',   d:'M460 1265 V1310 H680 V1080 M680 980 V830 H522', lo:true},
+  {id:'oc-in',  d:'M425 1230 H190 V1062',            cool:'hi', heat:'lo', rev:true},
+  {id:'oc-out', d:'M190 802 V745',                  cool:'hi', heat:'lo', rev:true},
+  {id:'liq',    d:'M190 745 V300',                  cool:'hi', heat:'hi', rev:true},
+  {id:'ic-in',  d:'M190 300 V140 H300',             cool:'lo', heat:'hi', rev:true},
+  {id:'gas',    d:'M520 140 H750 V1230 H692 A12 12 0 0 0 668 1230 H495', cool:'lo', heat:'hi', rev:true},
+];
+function buildPipes(){
+  const g = $('#pipes'); g.innerHTML = '';
+  for (const p of PIPES) el('path', {class:'pipe-o', d:p.d}, g);
+  for (const p of PIPES) el('path', {class:'pipe off', d:p.d, id:'p-'+p.id}, g);
+  for (const p of PIPES) el('path', {class:'flow' + (p.rev ? ' r' : ''), d:p.d, id:'f-'+p.id}, g);
+}
+// finned heat-exchanger blocks; the tube enters/leaves along the axis
+function coil(g, id, x, y, w, h, orient){
+  el('rect', {class:'coilbg', x, y, width:w, height:h, rx:5}, g);
+  const fins = el('g', {class:'fins'}, g);
+  if (orient === 'h'){ for (let fx = x+8; fx < x+w-4; fx += 8) el('line', {x1:fx, y1:y+4, x2:fx, y2:y+h-4}, fins); }
+  else { for (let fy = y+8; fy < y+h-4; fy += 8) el('line', {x1:x+4, y1:fy, x2:x+w-4, y2:fy}, fins); }
+  let d;
+  if (orient === 'h'){ const y1 = y+h/2-16, y2 = y+h/2, y3 = y+h/2+16; d = `M${x} ${y2} H${x+w*0.15} V${y1} H${x+w*0.85} V${y3} H${x+w*0.3} V${y2} H${x+w}`; }
+  else { const x1 = x+w/2-16, x2 = x+w/2, x3 = x+w/2+16; d = `M${x2} ${y} V${y+h*0.15} H${x1} V${y+h*0.85} H${x3} V${y+h*0.3} H${x2} V${y+h}`; }
+  el('path', {class:'tube', d, id}, g);
+}
+function buildCoils(){ const g = $('#coils'); g.innerHTML = ''; coil(g, 'ic', 300, 110, 220, 60, 'h'); coil(g, 'oc', 160, 802, 60, 260, 'v'); }
+
+// Tags: x,y in diagram units; anchor left (default) / right / ctr. `from` = sensor point on the pipe (leader + marker).
+// `ch` may be per-mode; null hides the tag in that mode.
+const TAGS = [
+  // indoor unit
+  {ch:'iliq',  x:175, y:200, anchor:'right', from:[190,200], mk:'temp'},
+  {ch:'ievpct', x:175, y:300, anchor:'right', bar:true, sub:'iev', subLabel:'', subUnit:true},
+  {ch:{heat:'scid', cool:'coildt'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:212, y:210, sub:{heat:'linedt'}, subLabel:'line loss', target:{cool:'tsh'}},
+  {ch:'igas',  x:735, y:200, anchor:'right', from:[750,200], mk:'temp'},
+  {ch:'ipress',x:735, y:300, anchor:'right', from:[750,300], mk:'press'},
+  {ch:'cfm',   x:450, y:335, anchor:'ctr', target:'reqcfm', targetLabel:'req'},
+  // outdoor: compressor / inverter column
+  {ch:'rpserr', x:84, y:660, anchor:'ctr', sub:'trps', subLabel:'target'},
+  {ch:'inv1',  x:84, y:732, anchor:'ctr'},
+  {ch:'fin',   x:84, y:794, anchor:'ctr'},
+  {ch:'cr',    x:84, y:856, anchor:'ctr'},
+  {ch:'oat',   x:84, y:1018, anchor:'ctr'},
+  {ch:'fan',   x:84, y:1088, anchor:'ctr', target:'tfan'},
+  // physics checks column
+  {ch:'isod',  x:86, y:1160, anchor:'ctr', adv:true},
+  {ch:'lift',  x:86, y:1222, anchor:'ctr', adv:true},
+  {ch:'capidx',x:86, y:1284, anchor:'ctr', adv:true},
+  {ch:'copidx',x:86, y:1346, anchor:'ctr', adv:true},
+  // outdoor: liquid side & coil
+  {ch:'liq',   x:212, y:606, from:[190,606], mk:'temp'},
+  {ch:'sc',    label:'Subcooling', x:212, y:676, target:'tsc', states:['sc','scerr']},
+  {ch:'evpct', x:212, y:758, bar:true, sub:'ev', subLabel:'', subUnit:true},
+  {ch:'ochex', x:236, y:880, from:[220,880], mk:'temp'},
+  {ch:'ocmid', x:236, y:950, from:[220,950], mk:'temp'},
+  {ch:'appr',  x:236, y:1020},
+  // outdoor: suction side (acc → comp)
+  {ch:'suct',  x:530, y:720, from:[580,830], mk:'temp'},
+  {ch:'lp',    x:530, y:780, from:[620,830], mk:'press'},
+  {ch:'evap',  x:530, y:882},
+  {ch:'sh',    x:530, y:951, target:'tsh'},
+  // outdoor: discharge side (comp → 4-way)
+  {ch:'disch', x:530, y:1022, from:[460,1022], mk:'temp'},
+  {ch:'hp',    x:530, y:1084, from:[460,1084], mk:'press'},
+  {ch:'cond',  x:530, y:1146},
+  {ch:'dsh',   x:530, y:1208},
+];
+const pick = (v, m) => (v && typeof v === 'object' && !Array.isArray(v)) ? v[m] : v;
+function tagCh(tg, m){ return pick(tg.ch, m); }
+function buildTags(){
+  const host = $('#tags'); host.innerHTML = '';
+  const L = $('#leaders'), M = $('#markers'); L.innerHTML = ''; M.innerHTML = '';
+  TAGS.forEach((tg, k) => {
+    const e = document.createElement('div');
+    tg.tall = !!(tg.sub || tg.target || tg.bar);
+    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '');
+    e.style.left = (tg.x/7.8) + '%'; e.style.top = (tg.y/15.2) + '%';
+    e.id = 'tag-' + k;
+    e.innerHTML = `<span class="l"></span><span class="v"><span class="n">—</span><small></small><span class="tr"></span><span class="dz"></span></span><span class="viz"><i class="fill"></i><i class="ghost"></i><i class="tgt"></i></span><svg class="gsvg" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""></polyline><line class="cur" x1="0" y1="0" x2="0" y2="30"></line><circle r="1.8" cx="0" cy="15"></circle></svg><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="base" points="0,15 100,15"></polyline><polyline class="line" points=""></polyline><circle r="2.2" cx="100" cy="15"></circle></svg>` + ((tg.sub || tg.target) ? `<span class="s"></span>` : '') + (tg.bar ? `<span class="bar"><i></i></span>` : '');
+    e.addEventListener('click', () => { const id = tagCh(tg, D ? (D.mode[cur] === 'cool' ? 'cool' : 'heat') : 'heat'); if (id) togglePin(id); });
+    host.appendChild(e);
+    if (tg.from){
+      el('line', {class:'leader', x1:tg.from[0], y1:tg.from[1], x2:tg.x, y2:tg.y}, L);
+      el('circle', {class:'tp ' + (tg.mk||'temp'), cx:tg.from[0], cy:tg.from[1], r:tg.mk === 'press' ? 6 : 5.5}, M);
+    }
+  });
+}
+function stateOf(chid, i){ const e = evalCache[i].byCh[chid]; return e ? e.st : 'none'; }
+function worstOf(ids, i){ let w = 'none', ws = -1; for (const id of ids){ const st = stateOf(id, i); const sv = SEV[st] ?? -1; if (sv > ws){ ws = sv; w = st; } } return w; }
+function tagClass(st){ return st === 'ok' ? 'ok' : st === 'warn' ? 'warn' : st === 'alarm' ? 'alarm' : (st === 'idle' || st === 'settling') ? 'idle' : ''; }
+// 4-way internal links: top port = discharge in, bottom = suction out, left = outdoor coil, right = gas line
+const FW = {
+  cool: {a:['M460 1200 Q460 1230 430 1230', 'hi'], b:['M460 1260 Q460 1230 490 1230', 'lo']},
+  heat: {a:['M460 1200 Q460 1230 490 1230', 'hi'], b:['M460 1260 Q460 1230 430 1230', 'lo']},
+};
+const THERM = [[0,[26,35,126]],[40,[30,136,229]],[70,[38,166,154]],[100,[253,216,53]],[140,[251,140,0]],[180,[198,40,40]]];
+function thermColor(t){ if (!isN(t)) return null; if (t <= THERM[0][0]) return `rgb(${THERM[0][1]})`; for (let k = 1; k < THERM.length; k++){ if (t <= THERM[k][0]){ const [t0,c0] = THERM[k-1], [t1,c1] = THERM[k]; const f = (t-t0)/(t1-t0); return `rgb(${c0.map((c,j) => Math.round(c + (c1[j]-c)*f)).join(',')})`; } } return `rgb(${THERM[THERM.length-1][1]})`; }
+const avg = (a,b) => (isN(a) && isN(b)) ? (a+b)/2 : (isN(a) ? a : (isN(b) ? b : null));
+// which logged temperature best represents each pipe segment, per mode
+function segTemp(seg, i, m){
+  const v = id => D.num[id][i];
+  switch (seg){
+    case 'disch': return v('disch');
+    case 'suct': return v('suct');
+    case 'gas': return v('igas');
+    case 'oc-in': return m === 'heat' ? v('suct') : v('disch');
+    case 'oc': return v('ochex');
+    case 'oc-out': return m === 'heat' ? v('evap') : v('liq');
+    case 'liq': return avg(v('liq'), v('iliq'));
+    case 'ic-in': return v('iliq');
+    case 'ic': return avg(v('igas'), v('iliq'));
+    case 'sv': return v('disch');
+  }
+  return null;
+}
+function renderCycle(i){
+  const m = D.mode[i] === 'cool' ? 'cool' : 'heat', running = D.runSec[i] >= 0;
+  $('#diag').classList.toggle('idle', !running);
+  for (const p of PIPES){
+    const side = p.hi ? 'hi' : p.lo ? 'lo' : p[m];
+    const pe = document.getElementById('p-' + p.id); pe.classList.remove('hi','lo','off'); pe.classList.add(running ? side : 'off');
+    document.getElementById('f-' + p.id).classList.toggle('rev', !!p.rev && m === 'heat');
+  }
+  const tube = (id, side) => { const t = document.getElementById(id); t.classList.remove('hi','lo'); if (running) t.classList.add(side); };
+  tube('oc', m === 'heat' ? 'lo' : 'hi'); tube('ic', m === 'heat' ? 'hi' : 'lo');
+  // thermal-camera coloring of the tubing by the temperature logged on each segment
+  const paint = (elm, seg) => { if (!elm) return; if (THERMAL && running){ const c = thermColor(segTemp(seg, i, m)); if (c){ elm.style.stroke = c; return; } } elm.style.stroke = ''; };
+  for (const p of PIPES) paint(document.getElementById('p-' + p.id), p.id);
+  paint(document.getElementById('oc'), 'oc'); paint(document.getElementById('ic'), 'ic');
+  paint(document.getElementById('svpipe'), D.str.svhot[i] === 'ON' ? 'sv' : null);
+  const fw = FW[m];
+  for (const k of ['a','b']){ const pth = document.getElementById('fw-' + k); pth.setAttribute('d', fw[k][0]); pth.classList.remove('hi','lo','off'); pth.classList.add(running ? fw[k][1] : 'off'); pth.style.stroke = (THERMAL && running) ? (thermColor(fw[k][1] === 'hi' ? D.num.disch[i] : D.num.suct[i]) || '') : ''; }
+  const fwv = D.str.fourway[i];
+  $('#fwstate').textContent = fwv ? (fwv === 'ON' ? 'ON · de-energized' : 'OFF · energized') : '—';
+  const sv = D.str.svhot[i] === 'ON';
+  $('#svsym').querySelector('.sv').classList.toggle('on', sv);
+  const svp = $('#svpipe'); svp.classList.remove('hi','off'); svp.classList.add(sv && running ? 'hi' : 'off');
+  const svs = $('#svstate'); svs.textContent = D.str.svhot[i] ? (sv ? 'OPEN' : 'closed') : '—'; svs.classList.toggle('on', sv);
+  $('#cmpbody').classList.toggle('on', running);
+  { const mf = D.num.mflow ? D.num.mflow[i] : null; const mr = D.range.mflow; const f = (isN(mf) && mr && mr.max > 0) ? mf/mr.max : 0.6; $('#diag').style.setProperty('--flowdur', (2.6 - 2.0*Math.max(0.15, Math.min(1, f))).toFixed(2) + 's'); }
+  const rps = D.num.rps[i], trps = D.num.trps[i];
+  $('#cmpsub').textContent = isN(rps) ? rps.toFixed(0) + ' rps' : (running ? 'on' : 'off');
+  $('#cmptgt').textContent = isN(trps) ? 'target ' + trps.toFixed(0) : '';
+  const dv = $('#cmpdev'); dv.classList.remove('off','dn','up');
+  if (isN(rps) && isN(trps)){ const d = rps - trps; dv.textContent = (d === 0 ? 'on target' : (d > 0 ? '▲ +' : '▼ ') + d.toFixed(0) + ' rps'); dv.classList.add(d === 0 ? 'off' : d > 0 ? 'up' : 'dn'); } else dv.textContent = '';
+  $('#ofanb').classList.toggle('on', isN(D.num.fan[i]) ? D.num.fan[i] > 0 : running);
+  $('#ifanb').classList.toggle('on', isN(D.num.cfm[i]) ? D.num.cfm[i] > 0 : running);
+  const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
+  const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
+  $('#iduhdr').textContent = [im, ia != null ? 'addr ' + ia : null, ie != null ? 'err ' + ie : null].filter(Boolean).join(' · ');
+  $('#oduhdr').textContent = [D.str.opmode[i], D.str.therm[i] ? 'thermo ' + D.str.therm[i] : null, D.str.etype[i]].filter(Boolean).join(' · ');
+  $('#lineset-note').textContent = running ? (m === 'heat' ? 'HEATING · hot gas → indoor' : 'COOLING · liquid → indoor') : 'COMPRESSOR OFF';
+  TAGS.forEach((tg, k) => {
+    const e = document.getElementById('tag-' + k);
+    const id = tagCh(tg, m);
+    if (!id || (tg.adv && !ADV)){ e.hidden = true; return; } e.hidden = false;
+    const ch = chById[id]; const v = D.num[id][i];
+    e.querySelector('.l').textContent = (pick(tg.label, m) || ch.short) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
+    e.querySelector('.n').textContent = fmt(v, ch);
+    e.querySelector('.v small').textContent = ch.unit;
+    e.querySelector('.tr').innerHTML = trendMark(id, i);
+    const subId = pick(tg.sub, m), tgtId = pick(tg.target, m);
+    const se = e.querySelector('.s');
+    if (se){
+      if (tgtId && isN(D.num[tgtId][i]) && isN(v)){
+        const t = D.num[tgtId][i], d = v - t, dec = (Math.abs(d) >= 100 ? 0 : 1);
+        const cls = Math.abs(d) < 0.05 ? 'off' : d > 0 ? 'up' : 'dn';
+        const txt = cls === 'off' ? '✓' : (d > 0 ? '▲+' : '▼−') + Math.abs(d).toFixed(dec);
+        se.innerHTML = `${tg.targetLabel || 'target'} ${fmt(t, chById[tgtId])} <span class="dv ${cls}">${txt}</span>`; se.hidden = false;
+      } else if (subId && isN(D.num[subId][i])) { const sc = chById[subId]; se.textContent = ((tg.subLabel != null ? tg.subLabel : sc.short) + ' ' + fmt(D.num[subId][i], sc) + (tg.subUnit && sc.unit ? ' ' + sc.unit : '')).trim(); se.hidden = false; }
+      else se.hidden = true;
+    }
+    if (tg.bar){ const b = e.querySelector('.bar i'); b.style.width = (isN(v) && ch.max ? Math.min(100, v/ch.max*100) : 0) + '%'; }
+    // whole-log ghost graph + cursor
+    { const g = e.querySelector('.gsvg'), gp = ghostPts[id];
+      if (gp){ if (e.dataset.gch !== id){ g.querySelector('polyline').setAttribute('points', gp.pts); e.dataset.gch = id; }
+        const gx = ((i/Math.max(1, D.n-1))*100).toFixed(1); const ln = g.querySelector('.cur'); ln.setAttribute('x1', gx); ln.setAttribute('x2', gx);
+        const c = g.querySelector('circle'); if (isN(v)){ c.setAttribute('cx', gx); c.setAttribute('cy', (30 - (v-gp.lo)/(gp.hi-gp.lo)*30).toFixed(1)); c.style.display = ''; } else c.style.display = 'none';
+        g.style.display = ''; }
+      else g.style.display = 'none'; }
+    // view-specific pieces
+    const rg = D.range[id], tg0 = pick(tg.target, m);
+    if (rg){
+      const span = rg.max - rg.min || 1; const frac = isN(v) ? (v - rg.min)/span : 0;
+      e.querySelector('.viz .fill').style.width = (Math.max(0, Math.min(1, frac))*100) + '%';
+      const tm = e.querySelector('.viz .tgt'); const tv = tg0 ? D.num[tg0][i] : null;
+      if (isN(tv)){ tm.style.display = 'block'; tm.style.left = (Math.max(0, Math.min(1, (tv - rg.min)/span))*100) + '%'; } else tm.style.display = 'none';
+      const gh = e.querySelector('.viz .ghost'); const bs = D.base[id];
+      if (bs){ gh.style.display = 'block'; gh.style.left = (Math.max(0, Math.min(1, (bs.med - rg.min)/span))*100) + '%'; } else gh.style.display = 'none';
+      if (VIEW === 'spark'){
+        const k = Math.max(4, Math.round(600 / D.interval)); const pts = []; let lo = Infinity, hi = -Infinity;
+        for (let j = Math.max(0, i-k); j <= i; j++){ const y = D.num[id][j]; if (isN(y)){ lo = Math.min(lo, y); hi = Math.max(hi, y); } }
+        if (bs){ lo = Math.min(lo, bs.med); hi = Math.max(hi, bs.med); }
+        const sp = (hi - lo) || 1; lo -= sp*0.1; hi += sp*0.1;
+        for (let j = Math.max(0, i-k); j <= i; j++){ const y = D.num[id][j]; if (!isN(y)) continue; pts.push(((j-(i-k))/k*100).toFixed(1) + ',' + (30 - (y-lo)/(hi-lo)*30).toFixed(1)); }
+        e.querySelector('.spark .line').setAttribute('points', pts.join(' '));
+        const by = bs ? (30 - (bs.med-lo)/(hi-lo)*30).toFixed(1) : 15; e.querySelector('.spark .base').setAttribute('points', `0,${by} 100,${by}`);
+        const c = e.querySelector('.spark circle'); if (isN(v)){ c.setAttribute('cy', (30 - (v-lo)/(hi-lo)*30).toFixed(1)); c.style.display = ''; } else c.style.display = 'none';
+      }
+    }
+    const bs2 = D.base[id]; const dz = e.querySelector('.dz');
+    if (VIEW === 'dev' && bs2 && isN(v)){
+      const z = (v - bs2.med)/bs2.spread; const az = Math.min(1, Math.abs(z)/4);
+      const hue = z > 0 ? 'var(--hi)' : 'var(--lo)';
+      e.style.setProperty('--devbg', `color-mix(in srgb, ${hue} ${Math.round(az*55)}%, var(--panel))`);
+      e.style.setProperty('--devline', Math.abs(z) >= 2 ? hue : 'var(--line)');
+      dz.textContent = (z > 0 ? '+' : '') + z.toFixed(1) + 'σ';
+    } else { e.style.removeProperty('--devbg'); e.style.removeProperty('--devline'); dz.textContent = ''; }
+    const ids = (tg.states && (Array.isArray(tg.states) ? tg.states : pick(tg.states, m))) || [id];
+    const st = worstOf(ids, i);
+    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + ((ch.calc && !/pct$/.test(id)) ? ' calc' : '') + ' ' + (isN(v) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '');
+    e.title = ch.label + (ch.note ? ' · ' + (typeof ch.note === 'function' ? ch.note(m) : ch.note) : '') + ' · tap to pin trend';
+  });
+}
+// change from the previous row: ▲ green / ▼ red, as a percentage (absolute when the previous value is near zero)
+function trendMark(id, i){
+  if (i <= 0) return '';
+  const ch = chById[id], v = D.num[id][i], p = D.num[id][i-1];
+  if (!isN(v) || !isN(p)) return '';
+  const d = v - p;
+  if (Math.abs(d) < 0.05) return '<span class="flat">▬</span>';
+  const txt = Math.abs(p) >= 1 ? (Math.abs(d/p*100) >= 10 ? (d/p*100).toFixed(0) : (d/p*100).toFixed(1)) + '%' : (d > 0 ? '+' : '−') + fmt(Math.abs(d), ch) + (ch.unit ? ' ' + ch.unit : '');
+  const arrow = d > 0 ? '▲' : '▼';
+  return `<span class="${d > 0 ? 'up' : 'dn'}">${arrow}${txt.replace('-', '')}</span>`;
+}
+function bandText(h){
+  const r = h.rule, ch = chById[h.ch], v = fmt(h.v, ch);
+  if (isN(r.wlo) && h.v < r.wlo) return `${v} low · normal ≥ ${r.wlo}`;
+  if (isN(r.whi) && h.v > r.whi) return `${v} high · normal ≤ ${r.whi}`;
+  if (isN(r.alo) && h.v < r.alo) return `${v} · below ${r.alo}`;
+  return `${v} · above ${r.ahi}`;
+}
+
+/* ---------- now bar + timeline ---------- */
+function renderNow(i){
+  $('#stamp').textContent = fmtTime(D.t[i], true);
+  const wd = String(D.n).length;
+  $('#stampidx').textContent = `row ${String(i+1).padStart(wd, ' ')} of ${D.n}` + (D.runSec[i] >= 0 ? ` · comp running ${String(Math.round(D.runSec[i]/60)).padStart(3, ' ')} min` : ' · comp off          ');
+  const mc = $('#modechips'); mc.innerHTML = '';
+  const m = D.mode[i], e = evalCache[i];
+  const add = (txt, cls, small) => { const c = document.createElement('span'); c.className = 'chip ' + cls; c.textContent = txt; if (small){ const s = document.createElement('small'); s.textContent = ' ' + small; c.appendChild(s); } mc.appendChild(c); };
+  add((D.str.opmode[i] || D.str.imode[i] || 'Mode ?'), m === 'heat' ? 'mode-heat' : m === 'cool' ? 'mode-cool' : '');
+  const rk = D.runOf[i];
+  if (rk >= 0) add(`Run ${rk+1} of ${D.runs.length}`, D.steady[i] ? 'on' : '', D.steady[i] ? 'steady state' : 'settling');
+  const w = e.worst, anyRules = rules.some(r => r.on);
+  if (!anyRules) add(w === 'idle' ? 'Compressor off' : 'Rules off', '');
+  else add(w === 'alarm' ? 'Out of range' : w === 'warn' ? 'Caution' : w === 'idle' ? 'Compressor off' : 'All in range', w === 'alarm' ? 'alarm' : w === 'warn' ? 'warn' : w === 'idle' ? '' : 'on');
+  const items = [...e.hits.map(h => ({st:h.st, label:chById[h.ch].short, r:bandText(h)})), ...e.events.map(x => ({st:x.st, label:x.label, r:''}))];
+  items.sort((a,b) => (SEV[b.st]||0) - (SEV[a.st]||0));
+  for (const it of items) add(it.label, it.st === 'info' ? 'info' : it.st, it.r);
+  const sigs = e.sigs.slice().sort((a,b) => (b.conf||0) - (a.conf||0) || (a.st === 'fault' ? -1 : 1));
+  for (const x of sigs){ if (x.st === 'fault' && !ADV) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
+  $('#scrub').value = i;
+  $('#b-play').textContent = playing ? '❚❚' : '▶';
+}
+function cssVar(k){ return getComputedStyle(document.documentElement).getPropertyValue(k).trim(); }
+function drawTicks(){
+  const c = $('#ticks'), dpr = window.devicePixelRatio || 1;
+  const W = c.clientWidth, H = 24; if (!W) return; c.width = W*dpr; c.height = H*dpr;
+  const g = c.getContext('2d'); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
+  const col = {alarm:cssVar('--alarm'), warn:cssVar('--warn'), sig:cssVar('--accent'), ok:cssVar('--ok-soft'), idle:cssVar('--idle-soft'), settling:cssVar('--idle-soft')};
+  const w = W / D.n;
+  for (let i = 0; i < D.n; i++){ g.fillStyle = col[evalCache[i].worst] || col.ok; g.fillRect(i*w, 3, Math.max(w,1), H-7); }
+  for (let i = 0; i < D.n; i++){ g.fillStyle = D.mode[i] === 'heat' ? cssVar('--hi') : D.mode[i] === 'cool' ? cssVar('--lo') : col.idle; g.fillRect(i*w, H-3, Math.max(w,1), 3); }
+  g.fillStyle = cssVar('--ok'); for (let i = 0; i < D.n; i++) if (D.steady[i]) g.fillRect(i*w, 0, Math.max(w,1), 2);
+  g.fillStyle = cssVar('--ink'); g.fillRect(cur*w + w/2 - 1, 0, 2, H);
+}
+function setCur(i){
+  if (!D) return;
+  cur = Math.max(0, Math.min(D.n-1, i|0));
+  renderNow(cur); renderCycle(cur); drawTicks(); drawAllStrips(); highlightRow();
+}
+function step(d){ setCur(cur + d); }
+function togglePlay(){
+  playing = !playing;
+  if (timer){ clearInterval(timer); timer = null; }
+  if (playing){ if (cur >= D.n-1) cur = 0; timer = setInterval(() => { if (cur >= D.n-1){ togglePlay(); return; } setCur(cur+1); }, 1000 / +$('#speed').value); }
+  $('#b-play').textContent = playing ? '❚❚' : '▶';
+}
+function nextFlag(dir){
+  for (let i = cur + dir; i >= 0 && i < D.n; i += dir){ const w = evalCache[i].worst; if (w === 'alarm' || w === 'warn' || w === 'sig'){ setCur(i); return; } }
+  toast('No more flagged rows in that direction');
+}
+
+/* ---------- strip drawing (shared by the Trends tab and the bottom dock) ---------- */
+function rulesFor(chid, mode){ return rules.filter(r => r.on && r.ch === chid && (r.mode === 'both' || r.mode === mode)); }
+function drawStrip(s, hover){
+  const {c, cv} = s; const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight || 76; if (!W) return; cv.width = W*dpr; cv.height = H*dpr;
+  const g = cv.getContext('2d'); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
+  const P = cssVar;
+  const a = D.num[c.id]; const vals = a.filter(isN); if (!vals.length) return;
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const modeCounts = {}; D.mode.forEach(m => modeCounts[m] = (modeCounts[m]||0)+1);
+  const domMode = Object.keys(modeCounts).sort((x,y) => modeCounts[y]-modeCounts[x])[0];
+  const rs = rulesFor(c.id, domMode);
+  for (const r of rs) for (const k of ['wlo','whi']) if (isN(r[k])){ lo = Math.min(lo, r[k]); hi = Math.max(hi, r[k]); }
+  if (hi === lo){ hi += 1; lo -= 1; }
+  const padv = (hi-lo)*0.08; lo -= padv; hi += padv;
+  const y = v => 5 + (H-10) * (1 - (v-lo)/(hi-lo));
+  const x = i => D.n > 1 ? i/(D.n-1)*W : W/2;
+  g.fillStyle = P('--idle-soft');
+  for (let i = 0; i < D.n; i++) if (D.runSec[i] < 0) g.fillRect(x(i) - W/(D.n-1)/2, 0, W/(D.n-1)+0.5, H);
+  for (const r of rs){
+    if (isN(r.wlo) && isN(r.whi)){ g.fillStyle = P('--ok-soft'); g.fillRect(0, y(r.whi), W, y(r.wlo)-y(r.whi)); }
+    g.lineWidth = 1; g.setLineDash([3,3]); g.strokeStyle = P('--warn');
+    for (const k of ['wlo','whi']) if (isN(r[k])){ g.beginPath(); g.moveTo(0, y(r[k])); g.lineTo(W, y(r[k])); g.stroke(); }
+    g.strokeStyle = P('--alarm');
+    for (const k of ['alo','ahi']) if (isN(r[k]) && r[k] >= lo && r[k] <= hi){ g.beginPath(); g.moveTo(0, y(r[k])); g.lineTo(W, y(r[k])); g.stroke(); }
+    g.setLineDash([]);
+  }
+  g.strokeStyle = P('--ink'); g.lineWidth = 1.6; g.lineJoin = 'round'; g.beginPath(); let pen = false;
+  for (let i = 0; i < D.n; i++){ const v = a[i]; if (!isN(v)){ pen = false; continue; } if (!pen){ g.moveTo(x(i), y(v)); pen = true; } else g.lineTo(x(i), y(v)); }
+  g.stroke();
+  for (let i = 0; i < D.n; i++){ const e = evalCache[i].byCh[c.id]; if (!e || !isN(a[i])) continue; if (e.st === 'warn' || e.st === 'alarm'){ g.fillStyle = P(e.st === 'alarm' ? '--alarm' : '--warn'); g.beginPath(); g.arc(x(i), y(a[i]), 2.4, 0, 7); g.fill(); } }
+  g.fillStyle = P('--muted'); g.font = '10px ' + P('--mono'); g.textBaseline = 'top'; g.fillText(fmt(hi - padv, c), 3, 1); g.textBaseline = 'bottom'; g.fillText(fmt(lo + padv, c), 3, H-1);
+  const ci = hover != null ? hover : cur;
+  g.strokeStyle = P('--accent'); g.lineWidth = hover != null ? 1 : 1.5; g.beginPath(); g.moveTo(x(ci), 0); g.lineTo(x(ci), H); g.stroke();
+  if (isN(a[ci])){ g.fillStyle = P('--accent'); g.beginPath(); g.arc(x(ci), y(a[ci]), 4, 0, 7); g.fill(); g.strokeStyle = P('--panel'); g.lineWidth = 2; g.stroke(); }
+  if (s.valEl) s.valEl.textContent = fmt(a[cur], c) + (c.unit ? ' ' + c.unit : '');
+}
+function wireStrip(s){
+  const {c, cv} = s;
+  const idxAt = ev => { const r = cv.getBoundingClientRect(); const cx = ev.touches ? ev.touches[0].clientX : ev.clientX; return Math.round((cx - r.left) / r.width * (D.n-1)); };
+  const move = ev => { setCur(idxAt(ev)); showTip(ev, c, cur); };
+  cv.addEventListener('mousedown', ev => { move(ev); const mm = e => move(e); const up = () => { window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', up); }; window.addEventListener('mousemove', mm); window.addEventListener('mouseup', up); });
+  cv.addEventListener('mousemove', ev => { if (ev.buttons) return; const i = idxAt(ev); showTip(ev, c, i); drawStrip(s, i); });
+  cv.addEventListener('mouseleave', () => { $('#tip').hidden = true; drawStrip(s); });
+  cv.addEventListener('touchstart', ev => { move(ev); }, {passive:true});
+  cv.addEventListener('touchmove', ev => { move(ev); }, {passive:true});
+  cv.addEventListener('touchend', () => { $('#tip').hidden = true; });
+}
+function showTip(ev, c, i){
+  const t = $('#tip'); const v = D.num[c.id][i];
+  t.textContent = `${fmtTime(D.t[i])}  ${c.short} ${fmt(v,c)}${c.unit ? ' '+c.unit : ''}`;
+  t.hidden = false;
+  const x = (ev.touches ? ev.touches[0].clientX : ev.clientX), y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+  t.style.left = Math.min(window.innerWidth - t.offsetWidth - 8, x + 12) + 'px'; t.style.top = (y - 34) + 'px';
+}
+
+/* ---------- bottom dock: pinned trends ---------- */
+const dockStrips = [];
+function togglePin(id){
+  const k = pins.indexOf(id);
+  if (k >= 0) pins.splice(k, 1); else { pins.push(id); if (pins.length > 3) pins.shift(); }
+  saveJSON('dchk.pins', pins); buildDock(); renderCycle(cur);
+}
+function buildDock(){
+  const host = $('#dock'); host.innerHTML = ''; dockStrips.length = 0;
+  for (const id of pins){
+    const c = chById[id]; if (!c || !D) continue;
+    const row = document.createElement('div'); row.className = 'dstrip';
+    row.innerHTML = `<div class="h"><b>${c.short}</b><span class="num"></span></div><canvas height="58"></canvas><button class="x" type="button" title="Unpin">×</button>`;
+    row.querySelector('.x').addEventListener('click', () => togglePin(id));
+    host.appendChild(row);
+    const s = {c, cv:row.querySelector('canvas'), valEl:row.querySelector('.num')}; dockStrips.push(s); wireStrip(s);
+  }
+  drawDock();
+}
+function drawDock(){ for (const s of dockStrips) drawStrip(s); }
+
+/* ---------- trends tab ---------- */
+const TREND_DEFAULT = ['disch','hp','lp','cond','evap','suct','sh','sc','dsh','rps','ev','oat'];
+let trendSel = null;
+function trendChannels(){ return ALLCH.filter(c => c.present !== false && D.num[c.id] && D.num[c.id].some(isN)); }
+function buildTrendPicker(){
+  if (!trendSel) trendSel = new Set(loadJSON('dchk.trends', TREND_DEFAULT));
+  const host = $('#trendpick'); host.innerHTML = '';
+  for (const c of trendChannels()){
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" id="tp-${c.id}" ${trendSel.has(c.id)?'checked':''}> ${c.label}`;
+    l.querySelector('input').addEventListener('change', e => { if (e.target.checked) trendSel.add(c.id); else trendSel.delete(c.id); saveJSON('dchk.trends', [...trendSel]); buildStrips(); });
+    host.appendChild(l);
+  }
+}
+const strips = [];
+function buildStrips(){
+  const host = $('#strips'); host.innerHTML = ''; strips.length = 0;
+  for (const c of trendChannels()){
+    if (!trendSel.has(c.id)) continue;
+    const row = document.createElement('div'); row.className = 'strip';
+    row.innerHTML = `<div class="h"><b>${c.label}</b><span class="num"></span></div><canvas height="76"></canvas>`;
+    host.appendChild(row);
+    const s = {c, cv:row.querySelector('canvas'), valEl:row.querySelector('.num')}; strips.push(s); wireStrip(s);
+  }
+  drawAllStrips();
+}
+function drawAllStrips(){ if (!$('#panel-trends').hidden) for (const s of strips) drawStrip(s); drawDock(); }
+
+/* ---------- rules table ---------- */
+function buildRulesTable(){
+  const tb = $('#ruletable tbody'); tb.innerHTML = '';
+  const opts = ALLCH.map(c => `<option value="${c.id}">${c.label}${c.unit ? ' ('+c.unit+')' : ''}</option>`).join('');
+  rules.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    const ch = chById[r.ch] || {label:r.ch, unit:''};
+    const numIn = (k, cls) => `<input type="number" step="any" class="${cls}" data-k="${k}" value="${isN(r[k]) ? r[k] : ''}" placeholder="—">`;
+    tr.innerHTML = `<td><input type="checkbox" data-k="on" ${r.on?'checked':''}></td>
+      <td class="chname"><select data-k="ch">${opts}</select><span class="sub">${ch.unit}</span></td>
+      <td><select data-k="mode"><option value="both">Both</option><option value="heat">Heating</option><option value="cool">Cooling</option></select></td>
+      <td>${numIn('alo','alo')}</td><td>${numIn('wlo','lo')}</td><td>${numIn('whi','hi')}</td><td>${numIn('ahi','ahi')}</td>
+      <td><input type="checkbox" data-k="gate" ${r.gate?'checked':''}></td>
+      <td><input type="number" min="0" step="1" data-k="settle" value="${r.settle||0}" style="width:56px"></td>
+      <td><button class="btn small" type="button" data-del="${idx}" title="Delete rule">✕</button></td>`;
+    tr.querySelector('[data-k=ch]').value = r.ch; tr.querySelector('[data-k=mode]').value = r.mode;
+    tr.querySelectorAll('[data-k]').forEach(inp => inp.addEventListener('change', () => {
+      const k = inp.dataset.k;
+      if (inp.type === 'checkbox') r[k] = inp.checked; else if (inp.type === 'number') r[k] = inp.value === '' ? null : +inp.value; else r[k] = inp.value;
+      if (k === 'ch') tr.querySelector('.sub').textContent = (chById[r.ch]||{}).unit || '';
+      onRulesChanged();
+    }));
+    tr.querySelector('[data-del]').addEventListener('click', () => { rules.splice(idx, 1); buildRulesTable(); onRulesChanged(); });
+    tb.appendChild(tr);
+  });
+}
+function onRulesChanged(){ saveRules(); if (D){ evalAll(); setCur(cur); buildDataTable(); } $('#rulejson').value = JSON.stringify(rules, null, 1); }
+
+/* ---------- data table ---------- */
+function buildDataTable(){
+  const host = $('#datawrap');
+  const cols = ALLCH.filter(c => c.present !== false && D.num[c.id] && D.num[c.id].some(isN));
+  let h = '<table><thead><tr><th>Time</th><th>Mode</th>' + cols.map(c => `<th title="${c.label}">${c.short}</th>`).join('') + '</tr></thead><tbody>';
+  for (let i = 0; i < D.n; i++){
+    const e = evalCache[i];
+    h += `<tr data-i="${i}"><td>${fmtTime(D.t[i])}</td><td>${D.mode[i]}</td>` + cols.map(c => { const st = e.byCh[c.id]; const cls = st && (st.st === 'warn' || st.st === 'alarm') ? st.st : ''; return `<td class="${cls}">${fmt(D.num[c.id][i], c)}</td>`; }).join('') + '</tr>';
+  }
+  host.innerHTML = h + '</tbody></table>';
+  host.querySelectorAll('tr[data-i]').forEach(tr => tr.addEventListener('click', () => setCur(+tr.dataset.i)));
+  highlightRow();
+}
+function highlightRow(){ const host = $('#datawrap'); host.querySelectorAll('tr.cur').forEach(t => t.classList.remove('cur')); const tr = host.querySelector(`tr[data-i="${cur}"]`); if (tr){ tr.classList.add('cur'); if (!$('#panel-data').hidden) tr.scrollIntoView({block:'nearest'}); } }
+
+/* ---------- ghost graphs (whole log) behind each tag ---------- */
+let ghostPts = {};
+function buildGhosts(){
+  ghostPts = {};
+  const step = Math.max(1, Math.ceil(D.n / 240));
+  for (const ch of ALLCH){
+    const a = D.num[ch.id], rg = D.range[ch.id]; if (!a || !rg) continue;
+    const span = (rg.max - rg.min) || 1, lo = rg.min - span*0.1, hi = rg.max + span*0.1;
+    const pts = [];
+    for (let j = 0; j < D.n; j += step){ const v = a[j]; if (!isN(v) || D.dropout[j]) continue; pts.push(((j/(D.n-1))*100).toFixed(1) + ',' + (30 - (v-lo)/(hi-lo)*30).toFixed(1)); }
+    ghostPts[ch.id] = {pts:pts.join(' '), lo, hi};
+  }
+}
+
+/* ---------- runs tab ---------- */
+function buildRuns(){
+  const sum = $('#runsum'), tb = $('#runtable tbody'); tb.innerHTML = '';
+  const spanH = (D.t[D.n-1] - D.t[0]) / 3.6e6;
+  const runMin = D.runs.reduce((a, r) => a + r.min, 0);
+  const counts = {}; D.sig.forEach(a => a.forEach(x => { if (x.st === 'sig' || x.st === 'fault') { const L = x.label.replace(/ · \d+\/\d+$/, ''); counts[L] = (counts[L] || 0) + 1; } }));
+  const sigList = Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([l,c]) => `<span><b>${l}</b> · ${c} rows</span>`).join('') || '<span>No signatures detected</span>';
+  const steadyRows = D.steady.filter(Boolean).length;
+  sum.innerHTML = `<span><b>${D.runs.length}</b> run${D.runs.length === 1 ? '' : 's'}</span><span><b>${spanH > 0 ? (D.runs.length/spanH).toFixed(1) : '—'}</b> cycles/hr</span><span><b>${(runMin/(D.n*D.interval/60)*100).toFixed(0)}%</b> run time</span><span><b>${(steadyRows*D.interval/60).toFixed(0)} min</b> steady state</span>` + sigList;
+  const mm = v => v == null ? 'never' : v.toFixed(0) + ' min';
+  D.runs.forEach((r, k) => {
+    const tr = document.createElement('tr'); tr.dataset.i = r.start;
+    const sigs = [...new Set(D.sig.slice(r.start, r.end+1).flat().filter(x => x.st === 'sig').map(x => x.label))].join('; ');
+    tr.innerHTML = `<td>${k+1}${r.short ? ' ⚠' : ''}</td><td>${fmtTime(D.t[r.start])}</td><td>${r.min.toFixed(0)} min</td><td>${r.offBefore == null ? '—' : r.offBefore.toFixed(0) + ' min'}</td><td>${mm(r.tRps)}</td><td>${r.hasTsc ? mm(r.tSc) : '—'}</td><td>${mm(r.tSteady)}</td><td>${r.defrost}${r.defrost ? ' (' + r.defrostMin.toFixed(0) + ' min)' : ''}</td><td>${r.maxDisch == null ? '—' : r.maxDisch.toFixed(0) + ' °F'}</td><td>${r.maxHp == null ? '—' : r.maxHp.toFixed(0) + ' psi'}</td><td>${r.minLp == null ? '—' : r.minLp.toFixed(0) + ' psi'}</td><td>${[...r.drops].join(', ') || '—'}</td><td>${[...r.retries].join(', ') || '—'}</td><td class="sigs">${sigs || '—'}</td>`;
+    tr.addEventListener('click', () => { setCur(r.start); });
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- load ---------- */
+function load(text, name){
+  try { D = buildDataset(text, name); analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
+  if (playing) togglePlay();
+  $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
+  $('#scrub').max = D.n - 1;
+  evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns();
+  $('#rulejson').value = JSON.stringify(rules, null, 1);
+  setCur(0);
+  const nflag = evalCache.filter(e => e.worst==='alarm'||e.worst==='warn'||e.worst==='sig').length;
+  if (nflag) toast(`${nflag} rows flagged or with signatures — use !> to jump`);
+}
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2800); }
+
+/* ---------- wiring ---------- */
+$('#viewsel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
+setView(VIEW);
+$('#thermal').addEventListener('change', e => setThermal(e.target.checked));
+setThermal(THERMAL);
+$('#loadbtn').addEventListener('click', () => $('#csvfile').click());
+$('#csvfile').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => load(rd.result, f.name); rd.readAsText(f); e.target.value = ''; });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f){ const rd = new FileReader(); rd.onload = () => load(rd.result, f.name); rd.readAsText(f); } });
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  document.querySelectorAll('#tabs [role=tab]').forEach(t => t.setAttribute('aria-selected', t === b));
+  document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + b.dataset.tab);
+  if (b.dataset.tab === 'trends') drawAllStrips();
+  if (b.dataset.tab === 'data') highlightRow();
+});
+$('#scrub').addEventListener('input', e => setCur(+e.target.value));
+$('#ticks').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); setCur(Math.floor((e.clientX - r.left) / r.width * D.n)); });
+$('#b-first').addEventListener('click', () => setCur(0));
+$('#b-last').addEventListener('click', () => setCur(D.n-1));
+$('#b-prev').addEventListener('click', () => step(-1));
+$('#b-next').addEventListener('click', () => step(1));
+$('#b-prevflag').addEventListener('click', () => nextFlag(-1));
+$('#b-nextflag').addEventListener('click', () => nextFlag(1));
+$('#b-play').addEventListener('click', togglePlay);
+$('#speed').addEventListener('change', () => { if (playing){ togglePlay(); togglePlay(); } });
+document.addEventListener('keydown', e => {
+  if (!D || /input|select|textarea/i.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight'){ step(e.shiftKey ? 10 : 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft'){ step(e.shiftKey ? -10 : -1); e.preventDefault(); }
+  else if (e.key === ' '){ togglePlay(); e.preventDefault(); }
+  else if (e.key === 'Home') setCur(0); else if (e.key === 'End') setCur(D.n-1);
+});
+
+$('#addrule').addEventListener('click', () => { rules.push({on:true, id:'r'+Date.now(), ch:'disch', mode:'both', alo:null, wlo:null, whi:null, ahi:null, gate:true, settle:0}); buildRulesTable(); onRulesChanged(); });
+$('#resetrules').addEventListener('click', () => { rules = DEFAULT_RULES.map(r => ({...r})); buildRulesTable(); onRulesChanged(); toast('Default rules restored'); });
+$('#exportrules').addEventListener('click', () => { $('#ruleio').classList.toggle('open'); $('#rulejson').value = JSON.stringify(rules, null, 1); });
+$('#copyrules').addEventListener('click', () => { const ta = $('#rulejson'); navigator.clipboard.writeText(ta.value).then(() => toast('Rules copied')).catch(() => { ta.focus(); ta.select(); toast('Select the text and copy it'); }); });
+$('#applyrules').addEventListener('click', () => { try { const r = JSON.parse($('#rulejson').value); if (!Array.isArray(r)) throw 0; rules = r.map((x,i) => ({on:false, id:'r'+i, mode:'both', gate:true, settle:0, ...x})); buildRulesTable(); onRulesChanged(); toast('Rules applied'); } catch(e){ toast('That JSON did not parse'); } });
+window.addEventListener('resize', () => { if (D){ drawTicks(); drawAllStrips(); } });
+if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (D){ drawTicks(); drawAllStrips(); } });
+
+// installable app: register the service worker only on a real host (not inside a sandboxed preview)
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/claude\.ai$/.test(location.hostname)){ window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
+// boot
+buildPipes(); buildCoils(); buildTags();
+$('#physlbl').style.display = ADV ? '' : 'none';
+$('#cmp').addEventListener('click', () => togglePin('rps'));
+const sample = $('#sample-csv').textContent;
+if (sample && sample.length > 100) load(sample, '(REC only)_20251126-090117.csv');
+})();
+</script>
