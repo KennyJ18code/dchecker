@@ -371,8 +371,8 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
 <header class="top"><div class="wrap">
   <div class="brand"><h1>D-Checker Cycle Viewer</h1><small>Daikin inverter log · °F / psig</small></div>
   <div class="file">
-    <input type="file" id="csvfile" accept=".csv,text/csv" hidden>
-    <button class="btn primary" id="loadbtn" type="button">Open CSV…</button>
+    <input type="file" id="csvfile" accept=".csv,.tgz,.gz,.tar,.log,.txt,text/csv,application/gzip,application/x-gzip" multiple hidden>
+    <button class="btn primary" id="loadbtn" type="button">Open log…</button><button class="btn small" id="savecsv" type="button" hidden title="Save the decoded recording as the same CSV the PC app makes">Save CSV</button>
     <span class="dsname" id="dsname"></span>
   </div>
   <div class="tabs" role="tablist" id="tabs">
@@ -2047,6 +2047,99 @@ function buildRuns(){
   });
 }
 
+/* ---------- D-Checker phone recording (.tgz): gzip + tar + binary log decoder ---------- */
+// Record: 'YYYYMMDDHHMMSS' then TLV groups [id][0][len] data..., ended by FF FF. datalabel.txt (in the archive) is the decoding table.
+async function gunzip(buf){
+  if (typeof DecompressionStream !== 'function') throw new Error('this browser cannot unzip .tgz files (needs iOS 16.4+ / Chrome 80+)');
+  return new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+}
+function untar(u8){
+  const files = []; let p = 0; const td = new TextDecoder();
+  while (p + 512 <= u8.length){
+    const name = td.decode(u8.subarray(p, p + 100)).replace(/\0.*$/, ''); if (!name) break;
+    const size = parseInt(td.decode(u8.subarray(p + 124, p + 136)).replace(/\0.*$/, '').trim() || '0', 8);
+    const type = String.fromCharCode(u8[p + 156]);
+    const prefix = td.decode(u8.subarray(p + 345, p + 500)).replace(/\0.*$/, '');
+    p += 512;
+    if (type === '0' || type === '\0' || type === '') files.push({name:(prefix ? prefix + '/' : '') + name, data:u8.subarray(p, p + size)});
+    p += Math.ceil(size / 512) * 512;
+  }
+  return files;
+}
+const DL_OPMODE = {0:'Stop', 1:'Heating', 2:'Cooling', 3:'Fan', 4:'Dry'};   // 1 confirmed on a FIT heat pump; others provisional
+function dlParseLabels(text){
+  return text.replace(/^\uFEFF/, '').split(/\r?\n/).map((line, i) => {
+    const f = line.split(','); if (line.startsWith('#') || f.length < 17) return null;
+    return {n:i + 1, grp:parseInt(f[0], 16), off:+f[1], size:+f[2], type:+f[3], vis:f[6] === '1', label:f[9], kind:+f[16], plot:+(f[18] || 0)};
+  });
+}
+function dlSplit(raw){
+  const recs = []; let p = 48; const td = new TextDecoder();
+  while (p + 14 <= raw.length){
+    const ts = td.decode(raw.subarray(p, p + 14)); p += 14; const groups = {};
+    if (!/^\d{14}$/.test(ts)) break;
+    while (p + 2 <= raw.length){ if (raw[p] === 0xFF && raw[p + 1] === 0xFF){ p += 2; break; } const gid = raw[p], ln = raw[p + 2]; p += 3; groups[gid] = raw.subarray(p, p + ln); p += ln; }
+    recs.push({ts, groups});
+  }
+  return recs;
+}
+function dlValue(l, g){
+  if (!g) return '---'; const o = l.off, t = l.type;
+  const i16 = () => (g[o] | (g[o + 1] << 8)) << 16 >> 16, u16 = () => g[o] | (g[o + 1] << 8);
+  const f1 = v => { const s = v.toFixed(1); return s.endsWith('.0') ? s.slice(0, -2) : s; };
+  if (t === 105 || t === 107){ const v = i16(); if (v === -32768) return '---'; const c = v / 10; return f1(l.kind === 1 ? c * 1.8 + 32 : l.kind === 3 ? c * 1.8 : l.kind === 2 ? c * 14.2233 : c); }
+  if (t === 151) return String(u16());
+  if (t === 152 || t === 220) return String(g[o]);
+  if (t === 211) return g[o] === 0 ? 'OFF' : String(g[o]);
+  if (t === 161) return f1(g[o] / 2);
+  if (t === 164) return String(g[o] * 5);
+  if (t === 217) return DL_OPMODE[g[o]] || ('Mode ' + g[o]);
+  if (t === 313) return DL_OPMODE[g[o] >> 4] || ('Mode ' + (g[o] >> 4));
+  if (t === 203) return g[o] === 0 ? 'Normal' : 'Error ' + g[o];
+  if (t === 215) return g[o].toString(16).toUpperCase().padStart(2, '0');
+  if (t >= 300 && t <= 307) return (g[o] >> (t - 300)) & 1 ? 'ON' : 'OFF';
+  if (t === 310) return String(g[o] >> 4);
+  if (t === 311) return String(g[o] & 15);
+  if (t === 314) return u16().toString(16).toUpperCase().padStart(4, '0');
+  if (t === 801) return 'R410A';
+  return '?';
+}
+function dlToCsv(labels, recs){
+  const cols = labels.filter(l => l && l.vis && l.type !== 995 && l.type !== 998);
+  const unit = l => l.kind === 1 || (l.kind === 3 && l.plot) ? '(F)' : l.kind === 2 ? '(psi)' : '';
+  const q = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const lines = ['DateTime,' + cols.map(l => q(l.n + ':' + l.label + unit(l))).join(',')];
+  for (const r of recs){ const t = r.ts; const stamp = `${+t.slice(4, 6)}/${+t.slice(6, 8)}/${t.slice(0, 4)} ${+t.slice(8, 10)}:${t.slice(10, 12)}:${t.slice(12, 14)}`; lines.push(stamp + ',' + cols.map(l => dlValue(l, r.groups[l.grp])).join(',')); }
+  return lines.join('\n');
+}
+async function openFiles(files){
+  if (!files.length) return;
+  try {
+    const td = new TextDecoder();
+    const byName = n => files.find(f => new RegExp(n + '$', 'i').test(f.name));
+    let arch = files.find(f => /\.(tgz|gz|tar)$/i.test(f.name));
+    if (arch){
+      let u8 = new Uint8Array(await arch.arrayBuffer());
+      if (u8[0] === 0x1f && u8[1] === 0x8b) u8 = await gunzip(u8);
+      const members = untar(u8);
+      const lab = members.find(m => /datalabel\.txt$/i.test(m.name)), log = members.find(m => /\.log$/i.test(m.name)), cust = members.find(m => /customer\.txt$/i.test(m.name));
+      if (!lab || !log) throw new Error('archive has no datalabel.txt + .log inside');
+      const csv = dlToCsv(dlParseLabels(td.decode(lab.data)), dlSplit(log.data));
+      const who = cust ? td.decode(cust.data).split(',').filter(Boolean).slice(0, 2).join(' · ') : '';
+      load(csv, arch.name + (who ? ' — ' + who : '')); $('#savecsv').hidden = false; return;
+    }
+    const log = files.find(f => /\.log$/i.test(f.name)), lab = byName('datalabel\\.txt');
+    if (log){
+      if (!lab) throw new Error('pick datalabel.txt together with the .log (both are in the recording folder)');
+      const csv = dlToCsv(dlParseLabels(await lab.text()), dlSplit(new Uint8Array(await log.arrayBuffer())));
+      load(csv, log.name); $('#savecsv').hidden = false; return;
+    }
+    const csvf = files.find(f => /\.csv$/i.test(f.name)) || files[0];
+    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true;
+  } catch(e){ toast('Could not open: ' + e.message); }
+}
+window.dchkOpen = openFiles;
+
 /* ---------- load ---------- */
 function load(text, name){
   try { D = buildDataset(text, name); D._text = text; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
@@ -2071,9 +2164,10 @@ if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: 
 $('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); applyEquipment(); if (D) renderCycle(cur); });
 setThermal(THERMAL);
 $('#loadbtn').addEventListener('click', () => $('#csvfile').click());
-$('#csvfile').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => load(rd.result, f.name); rd.readAsText(f); e.target.value = ''; });
+$('#csvfile').addEventListener('change', e => { openFiles([...e.target.files]); e.target.value = ''; });
 document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f){ const rd = new FileReader(); rd.onload = () => load(rd.result, f.name); rd.readAsText(f); } });
+document.addEventListener('drop', e => { e.preventDefault(); openFiles([...e.dataTransfer.files]); });
+$('#savecsv').addEventListener('click', () => { if (!D || !D._text) return; try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([D._text], {type:'text/csv'})); a.download = (D.name || 'dchecker').replace(/\.(tgz|gz|tar|log)$/i, '') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); } catch(e){ toast('Could not save here — open the app at its web address to save files'); } });
 $('#tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
   document.querySelectorAll('#tabs [role=tab]').forEach(t => t.setAttribute('aria-selected', t === b));
