@@ -565,11 +565,7 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
         <div id="customlist"></div>
       </section>
       <section class="wide"><h3>Fleet sync (Supabase)</h3>
-        <div class="note">Paste the project URL and anon key from Supabase → Settings → API, then sign in with the tech account Kenny set up. Recordings you open are uploaded to the shop library; usage is logged so the app can be improved.</div>
-        <div class="cform">
-          <input data-s="sbUrl" placeholder="https://xxxx.supabase.co" style="flex:2">
-          <input data-s="sbKey" placeholder="anon key" style="flex:3">
-        </div>
+        <div class="note">Sign in with your Brackett tech account. Recordings you open are saved to the shop library; usage is logged so the app can be improved.</div>
         <div class="cform">
           <input id="sb-email" placeholder="email" type="email" autocomplete="username">
           <input id="sb-pass" placeholder="password" type="password" autocomplete="current-password">
@@ -798,7 +794,7 @@ let VIEW = loadJSON('dchk.view', 'num');
 let LAND = null;   // null = automatic (set from settings)
 const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
-if (!S.sbUrl) S.sbUrl = S_DEF.sbUrl; if (!S.sbKey) S.sbKey = S_DEF.sbKey;
+S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
 function applySettings(){
   saveJSON('dchk.settings', S);
   const b = document.body;
@@ -2042,7 +2038,7 @@ async function openFiles(files){
 window.dchkOpen = openFiles;
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v30';
+const APP_VERSION = 'v31';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -2065,7 +2061,7 @@ async function sbFetch(path, opts = {}){
 }
 const sbInsert = (table, row) => sbFetch('/rest/v1/' + table, {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=representation'}, body:JSON.stringify(row)}).then(r => r.json());
 function sbUi(){
-  const on = !!SB; $('#sb-status').textContent = on ? ('signed in as ' + SB.user.email) : (sbReady() ? 'not signed in' : 'enter project URL and key first');
+  const on = !!SB; $('#sb-status').textContent = on ? ('signed in as ' + SB.user.email) : 'not signed in';
   $('#sb-signin').hidden = on; $('#sb-signout').hidden = !on; $('#tab-fleet').hidden = !on;
   if (!on && !$('#panel-fleet').hidden) $('#tab-cycle').click();
 }
