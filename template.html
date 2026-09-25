@@ -72,7 +72,7 @@ button{cursor:pointer}
 .nowbar .stamp{font-size:19px;font-weight:700;white-space:nowrap;line-height:28px}
 .nowbar .idx{color:var(--muted);font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;line-height:28px}
 .nowbar .chips{grid-column:1 / -1}
-@media (max-width:600px){.nowbar{grid-template-columns:1fr;grid-template-rows:24px 18px 100px;row-gap:4px}.nowbar .stamp{line-height:24px}.nowbar .idx{line-height:18px}}
+@media (max-width:600px){.nowbar{grid-template-columns:1fr;grid-template-rows:24px 18px 100px;row-gap:4px}body.no-chips .nowbar{grid-template-rows:24px 18px 0px}.nowbar .stamp{line-height:24px}.nowbar .idx{line-height:18px}}
 .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:var(--panel2);color:var(--ink2);border:1px solid transparent;white-space:nowrap}
 .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--idle);flex:none}
 .chip.on::before{background:var(--ok)}
@@ -96,7 +96,7 @@ button{cursor:pointer}
 .card h2{margin:0;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 14px 0}
 .diagwrap{padding:6px}
 .diag{--k:1;position:relative;width:100%;max-width:760px;margin:0 auto;aspect-ratio:780/1520;container-type:inline-size;touch-action:pan-y;user-select:none;-webkit-user-select:none}
-.diag.land{--k:0.5;max-width:none;aspect-ratio:1560/1010}
+.diag.land{--k:0.44;max-width:none;aspect-ratio:1600/900}
 body.landpage .wrap{max-width:1600px}
 .diag > svg{position:absolute;inset:0;width:100%;height:100%}
 .hint{text-align:center;font-size:12px;color:var(--muted);padding:0 14px 10px}
@@ -221,9 +221,12 @@ body.landpage .wrap{max-width:1600px}
 .tag .s[hidden]{display:none}
 .tag .s .dv{font-weight:700;margin-left:calc(.4cqw * var(--k))}
 .tag .s .dv.off{color:var(--ok)}.tag .s .dv.up{color:var(--warn)}.tag .s .dv.dn{color:var(--alarm)}
-.tag .bar{display:block;height:calc(.6cqw * var(--k));border-radius:calc(.3cqw * var(--k));background:var(--panel2);margin-top:calc(.25cqw * var(--k));overflow:hidden}
+.tag .bar{display:block;height:calc(.5cqw * var(--k));border-radius:calc(.25cqw * var(--k));background:var(--panel2);margin-top:calc(.1cqw * var(--k));overflow:hidden}
 .tag .bar i{display:block;height:100%;background:var(--accent);width:0}
 .tag.calc{background:var(--accent-soft);border-style:dashed}
+.tag.custom{border-color:var(--hi);border-style:dashed;background:var(--hi-soft);cursor:grab;touch-action:none}
+.tag.custom .l{color:var(--hi)}
+.tag.custom:active{cursor:grabbing}
 .tag.calc .l{color:var(--accent)}
 .tag.ok{border-color:var(--ok)}
 .tag.warn{border-color:var(--warn);background:var(--warn-soft)}
@@ -316,6 +319,35 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .datawrap td.alarm{color:var(--alarm);font-weight:700}
 .datawrap tr{cursor:pointer}
 .panel[hidden]{display:none}
+.settings{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow:auto}
+.settings[hidden]{display:none}
+.spanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);width:min(920px,100%);padding:14px 16px 18px}
+.shead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.shead b{font-size:15px}.shead .note{flex:1}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 22px}
+.sgrid section.wide{grid-column:1 / -1}
+.cform{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.cform input{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;font-size:13px;flex:1;min-width:12ch}
+.crow{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.crow code{font-family:var(--mono);font-size:12px;color:var(--ink2);flex:1}
+.chelp{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;padding:6px 0;max-height:220px;overflow:auto}
+.chelp code{font-family:var(--mono);color:var(--accent)}
+.sgrid h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.sgrid label{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+.sgrid label input[type=checkbox]{margin:0;accent-color:var(--accent)}
+.sgrid label input[type=range]{flex:1;accent-color:var(--accent)}
+.sgrid label select{margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;font-size:12px}
+.sgrid label .num{min-width:4ch;text-align:right;color:var(--ink2);font-size:12px}
+body.no-leaders #leaders,body.no-leaders #markers{display:none}
+body.no-ghosts .tag .gsvg{display:none}
+body.no-arrows .tag .tr{display:none}
+body.no-air .air{display:none}
+body.no-flow .flow{display:none}
+body.no-sv #svsym,body.no-sv #svpipe,body.no-sv #svstate,body.no-sv #svlbl{display:none}
+body.no-legend .legend,body.no-legend .hint{display:none}
+body.no-chips .nowbar{grid-template-rows:28px 0px}body.no-chips .chips{display:none}
+body.no-dock .dock{display:none}
+body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet #indoor-var .flames,body.no-cabinet #indoor-var .burner,body.no-cabinet #indoor-var .strips{display:none}
 .toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 </style>
@@ -355,7 +387,7 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
           <button type="button" data-view="dev" aria-pressed="false" title="Deviation: tinted by how far each reading is from this log's steady-state norm">Deviation</button>
         </div>
         <label class="thermtog"><input type="checkbox" id="thermal"> Thermal pipes</label>
-        <label class="thermtog"><input type="checkbox" id="landtog"> Landscape</label>
+        <button class="btn small" id="settingsbtn" type="button">⚙ Settings</button>
         <label class="eqtog">Equipment <select id="eqsel">
           <option value="auto">Auto-detect</option>
           <option value="hp-furnace">Heat pump + gas furnace</option>
@@ -371,37 +403,7 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
       <div class="diagwrap"><div class="diag" id="diag">
         <svg viewBox="0 0 780 1520" aria-hidden="true" id="dsvg">
           <defs><linearGradient id="g-oc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient><linearGradient id="g-ic" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient></defs>
-          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
-          <g id="g-in">
-            <rect class="box" x="16" y="40" width="748" height="400" rx="14"/>
-            <text class="boxlbl" x="32" y="76">INDOOR UNIT</text>
-            <text class="hdrtxt" x="748" y="76" text-anchor="end" id="iduhdr"></text>
-            <g id="coils-in"></g>
-            <g id="indoor-var"></g>
-            <g id="ifan"></g>
-            <g class="valve" id="iev-sym"><path d="M176 288 L190 300 L176 312 Z M204 288 L190 300 L204 312 Z"/><rect class="motor" x="180" y="272" width="20" height="14" rx="2"/><path d="M190 286 V300" fill="none"/><line x1="184" y1="276" x2="196" y2="276"/><line x1="184" y1="280" x2="196" y2="280"/></g>
-          </g>
-          <!-- OUTDOOR UNIT -->
-          <g id="g-out">
-            <rect class="box" x="16" y="540" width="748" height="960" rx="14"/>
-            <text class="boxlbl" x="32" y="576">OUTDOOR UNIT</text>
-            <text class="hdrtxt" x="748" y="576" text-anchor="end" id="oduhdr"></text>
-            <text class="sublbl" x="86" y="611" text-anchor="middle">COMP · INVERTER</text>
-            <text class="sublbl" x="86" y="1134" text-anchor="middle" id="physlbl">PHYSICS CHECKS</text>
-            <g id="coils-out"></g>
-            <g id="ofan"></g>
-            <g class="valve" id="ev-sym"><path d="M176 733 L190 745 L176 757 Z M204 733 L190 745 L204 757 Z"/><rect class="motor" x="180" y="717" width="20" height="14" rx="2"/><path d="M190 731 V745" fill="none"/><line x1="184" y1="721" x2="196" y2="721"/><line x1="184" y1="725" x2="196" y2="725"/></g>
-            <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="460" cy="830" r="62"/><text class="cmplbl" x="460" y="806">COMP</text><text class="cmpbig" x="460" y="830" id="cmpsub">—</text><text class="cmpsub" x="460" y="848" id="cmptgt"></text><text class="cmpsub cmpdev" x="460" y="866" id="cmpdev"></text><text class="hold" x="460" y="790" text-anchor="middle" id="cmphold"></text></g>
-            <g class="acc"><rect x="662" y="980" width="36" height="100" rx="16"/><rect class="acc-lvl" x="666" y="1040" width="28" height="36" rx="10"/><path d="M680 980 V1010" fill="none"/></g>
-            <text class="sublbl" x="708" y="1034">ACC</text>
-            <g id="fourway"><rect class="fw-body" x="425" y="1195" width="70" height="70" rx="10"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
-            <text class="sublbl" x="506" y="1292" id="fwlbl">4-WAY VALVE</text>
-            <text class="state" x="506" y="1308" id="fwstate">—</text>
-            <path class="pipe-o" d="M460 1120 H412"/><path class="pipe off" id="svpipe" d="M460 1120 H412"/>
-            <g id="svsym" class="valve"><rect class="sv" x="382" y="1108" width="30" height="24" rx="4"/><rect class="motor" x="389" y="1094" width="16" height="12" rx="2"/><line x1="392" y1="1098" x2="402" y2="1098"/><line x1="392" y1="1102" x2="402" y2="1102"/></g>
-            <text class="sublbl" x="397" y="1150" text-anchor="middle">HOT GAS SV</text>
-            <text class="state" x="397" y="1165" text-anchor="middle" id="svstate">—</text>
-          </g>
+          <g id="scene"></g>
           <!-- pipes and the line set are drawn in canvas coordinates by JS -->
           <g id="pipes"></g>
           <g id="g-line"></g>
@@ -491,6 +493,48 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
   <canvas class="ticks" id="ticks" height="24"></canvas>
   <input type="range" class="scrub" id="scrub" min="0" max="0" value="0" step="1" aria-label="Time position">
 </div></div>
+<div class="settings" id="settings" hidden>
+  <div class="spanel">
+    <div class="shead"><b>Settings</b><span class="note">what is on screen · saved in this browser</span><button class="btn small" id="settingsreset" type="button">Defaults</button><button class="btn small" id="settingsclose" type="button">Done</button></div>
+    <div class="sgrid">
+      <section><h3>Layout</h3>
+        <label>Landscape (desktop) <select data-s="land"><option value="auto">Auto by screen</option><option value="on">Always</option><option value="off">Never</option></select></label>
+        <label>Tag size · portrait <input type="range" data-s="kPort" min="0.7" max="1.2" step="0.02"><span class="num" id="kportv"></span></label>
+        <label>Tag size · landscape <input type="range" data-s="kLand" min="0.3" max="0.7" step="0.02"><span class="num" id="klandv"></span></label>
+      </section>
+      <section><h3>On the diagram</h3>
+        <label><input type="checkbox" data-s="leaders"> Sensor markers and leader lines</label>
+        <label><input type="checkbox" data-s="ghosts"> Ghost graphs behind readings</label>
+        <label><input type="checkbox" data-s="arrows"> Change arrows (▲▼ vs previous row)</label>
+        <label><input type="checkbox" data-s="air"> Air streams through the coils</label>
+        <label><input type="checkbox" data-s="flow"> Refrigerant flow dashes</label>
+        <label><input type="checkbox" data-s="sv"> Hot-gas bypass valve</label>
+        <label><input type="checkbox" data-s="cabinet"> Indoor cabinet (furnace / air handler)</label>
+        <label><input type="checkbox" data-s="physics"> Physics checks (isentropic, lift, capacity, efficiency)</label>
+        <label><input type="checkbox" data-s="legend"> Legend and hints</label>
+      </section>
+      <section class="wide"><h3>Custom tags</h3>
+        <div class="note">Name a metric, write its formula from channel ids, and it appears as an orange tag you can drag anywhere on the diagram. Tap it to pin its trend. Formulas can use + − × ÷, parentheses, Math.abs(), Math.max()… and <code>mode</code> ('heat' / 'cool').</div>
+        <div class="cform">
+          <input id="c-name" placeholder="Name (e.g. Disch − ID gas)">
+          <input id="c-expr" placeholder="Formula (e.g. disch - igas)">
+          <input id="c-unit" placeholder="Unit" style="width:6ch">
+          <input id="c-dec" type="number" min="0" max="3" value="1" title="Decimals" style="width:5ch">
+          <button class="btn small primary" id="customadd" type="button">Add tag</button>
+        </div>
+        <div id="customlist"></div>
+        <details><summary class="note">Channel ids you can use</summary><div class="chelp" id="customhelp"></div></details>
+      </section>
+      <section><h3>Header and bottom bar</h3>
+        <label><input type="checkbox" data-s="chips"> Status chip band</label>
+        <label><input type="checkbox" data-s="events"> Control-event chips (startup, defrost, demand…)</label>
+        <label><input type="checkbox" data-s="sigs"> Signature chips (blue)</label>
+        <label><input type="checkbox" data-s="faults"> Fault-library chips (amber, with confidence)</label>
+        <label><input type="checkbox" data-s="dock"> Pinned trend strips</label>
+      </section>
+    </div>
+  </div>
+</div>
 <div class="tip" id="tip" hidden></div>
 <div class="toast" id="toast"></div>
 
@@ -564,7 +608,7 @@ const DERIVED = [
   {id:'apr',   label:'INV current per rps', short:'Amps / rps', unit:'A/rps', dec:3, calc:r => (isN(r.inv1)&&isN(r.rps)&&r.rps>0) ? r.inv1/r.rps : null, note:'INV current ÷ comp speed'},
   {id:'tcchk', label:'Tc check vs PT table', short:'Tc − PT(HP)', unit:'°F', calc:r => (isN(r.hp)&&r.hp>30&&isN(r.cond)) ? r.cond - satF(r.hp) : null, note:'logged Tc − R-410A sat temp at HP'},
   {id:'techk', label:'Te check vs PT table', short:'Te − PT(LP)', unit:'°F', calc:r => (isN(r.lp)&&r.lp>20&&isN(r.evap)) ? r.evap - satF(r.lp) : null, note:'logged Te − R-410A sat temp at LP'},
-  {id:'hpip',  label:'HP vs indoor pressure', short:'HP − ID press', unit:'psi', calc:r => sub(r.hp, r.ipress), note:'outdoor HP sensor − indoor pressure'},
+  {id:'hpip',  label:'Pressure sensor check', short:'PS check', unit:'psi', calc:(r,m) => m === 'heat' ? sub(r.hp, r.ipress) : sub(r.lp, r.ipress), note:'indoor pressure sensor (on the gas pipe) vs outdoor HP in heating / LP in cooling'},
   {id:'lift',  label:'Lift (Tc − Te)', short:'Lift', unit:'°F', calc:r => sub(r.cond, r.evap), note:'condensing − evaporating sat temp'},
   {id:'isod',  label:'Discharge vs isentropic', short:'Disch − isen', unit:'°F', calc:r => { const t = isoDisch(r.lp, r.hp, r.suct); return isN(t) ? r.disch - t : null; }, note:'actual discharge − ideal compression estimate (k=1.2); high = compressor heat/wear, negative = wet suction or 4-way bypass'},
   {id:'mflow', label:'Mass flow index', short:'Flow idx', unit:'', dec:0, calc:r => { const d = rhoSuction(r.lp, r.suct); return (isN(d) && isN(r.rps)) ? r.rps * d : null; }, note:'rps × suction gas density (relative)'},
@@ -586,6 +630,17 @@ const STAT = [
 ];
 const ALLCH = [...NUM, ...DERIVED];
 const chById = Object.fromEntries(ALLCH.map(c => [c.id, c]));
+// user-defined channels: name + formula over channel ids (e.g. "disch - cond", "(igas + iliq) / 2")
+function compileExpr(expr){
+  const ids = ALLCH.map(c => c.id);
+  const fn = new Function(...ids, 'mode', 'Math', '"use strict"; return (' + expr + ');');
+  return r => { const v = fn(...ids.map(id => (r[id] == null ? NaN : r[id])), r.mode, Math); return Number.isFinite(v) ? v : null; };
+}
+function registerCustom(c){
+  if (chById[c.id]) return;
+  const ch = {id:c.id, label:c.name, short:c.name, unit:c.unit || '', dec:c.dec == null ? 1 : c.dec, calc:compileExpr(c.expr), custom:true, note:c.expr};
+  DERIVED.push(ch); ALLCH.push(ch); chById[ch.id] = ch;
+}
 const isN = v => typeof v === 'number' && Number.isFinite(v);
 const sub = (a,b) => (isN(a)&&isN(b)) ? a-b : null;
 
@@ -613,16 +668,100 @@ const DEFAULT_RULES = [
 ].map((r,i) => ({on:false, id:'r'+i, ...r}));
 
 /* ---------- state ---------- */
-const ADV = false; // fault-library chips + physics-check tags: computed, shown later
 let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
 let pins = loadJSON('dchk.pins', []);
+const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
+          <g id="g-in">
+            <rect class="box" x="16" y="40" width="748" height="400" rx="14"/>
+            <text class="boxlbl" x="32" y="76">INDOOR UNIT</text>
+            <text class="hdrtxt" x="748" y="76" text-anchor="end" id="iduhdr"></text>
+            <g id="coils-in"></g>
+            <g id="indoor-var"></g>
+            <g id="ifan"></g>
+            <g class="valve" id="iev-sym"><path d="M176 288 L190 300 L176 312 Z M204 288 L190 300 L204 312 Z"/><rect class="motor" x="180" y="272" width="20" height="14" rx="2"/><path d="M190 286 V300" fill="none"/><line x1="184" y1="276" x2="196" y2="276"/><line x1="184" y1="280" x2="196" y2="280"/></g>
+          </g>
+          <!-- OUTDOOR UNIT -->
+          <g id="g-out">
+            <rect class="box" x="16" y="540" width="748" height="960" rx="14"/>
+            <text class="boxlbl" x="32" y="576">OUTDOOR UNIT</text>
+            <text class="hdrtxt" x="748" y="576" text-anchor="end" id="oduhdr"></text>
+            <text class="sublbl" x="86" y="611" text-anchor="middle">COMP · INVERTER</text>
+            <text class="sublbl" x="86" y="1134" text-anchor="middle" id="physlbl">PHYSICS CHECKS</text>
+            <g id="coils-out"></g>
+            <g id="ofan"></g>
+            <g class="valve" id="ev-sym"><path d="M176 733 L190 745 L176 757 Z M204 733 L190 745 L204 757 Z"/><rect class="motor" x="180" y="717" width="20" height="14" rx="2"/><path d="M190 731 V745" fill="none"/><line x1="184" y1="721" x2="196" y2="721"/><line x1="184" y1="725" x2="196" y2="725"/></g>
+            <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="460" cy="830" r="62"/><text class="cmplbl" x="460" y="806">COMP</text><text class="cmpbig" x="460" y="830" id="cmpsub">—</text><text class="cmpsub" x="460" y="848" id="cmptgt"></text><text class="cmpsub cmpdev" x="460" y="866" id="cmpdev"></text><text class="hold" x="460" y="790" text-anchor="middle" id="cmphold"></text></g>
+            <g class="acc"><rect x="662" y="980" width="36" height="100" rx="16"/><rect class="acc-lvl" x="666" y="1040" width="28" height="36" rx="10"/><path d="M680 980 V1010" fill="none"/></g>
+            <text class="sublbl" x="708" y="1034">ACC</text>
+            <g id="fourway"><rect class="fw-body" x="425" y="1195" width="70" height="70" rx="10"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
+            <text class="sublbl" x="506" y="1292" id="fwlbl">4-WAY VALVE</text>
+            <text class="state" x="506" y="1308" id="fwstate">—</text>
+            <path class="pipe-o" d="M460 1120 H412"/><path class="pipe off" id="svpipe" d="M460 1120 H412"/>
+            <g id="svsym" class="valve"><rect class="sv" x="382" y="1108" width="30" height="24" rx="4"/><rect class="motor" x="389" y="1094" width="16" height="12" rx="2"/><line x1="392" y1="1098" x2="402" y2="1098"/><line x1="392" y1="1102" x2="402" y2="1102"/></g>
+            <text class="sublbl" x="397" y="1150" text-anchor="middle" id="svlbl">HOT GAS SV</text>
+            <text class="state" x="397" y="1165" text-anchor="middle" id="svstate">—</text>
+          </g>
+`;
+const SCENE_LAND = `
+          <g id="g-in">
+            <rect class="box" x="20" y="60" width="580" height="780" rx="14"/>
+            <text class="boxlbl" x="36" y="92">INDOOR UNIT</text>
+            <text class="hdrtxt" x="584" y="92" text-anchor="end" id="iduhdr"></text>
+            <g id="coils-in"></g>
+            <g id="indoor-var"></g>
+            <g id="ifan"></g>
+            <g class="valve" id="iev-sym"><path d="M288 686 L300 700 L288 714 Z M312 686 L300 700 L312 714 Z"/><rect class="motor" x="290" y="668" width="20" height="14" rx="2"/><path d="M300 682 V700" fill="none"/><line x1="294" y1="672" x2="306" y2="672"/><line x1="294" y1="676" x2="306" y2="676"/></g>
+          </g>
+          <g id="g-out">
+            <rect class="box" x="640" y="60" width="940" height="780" rx="14"/>
+            <text class="boxlbl" x="656" y="92">OUTDOOR UNIT</text>
+            <text class="hdrtxt" x="1564" y="92" text-anchor="end" id="oduhdr"></text>
+            <text class="sublbl" x="980" y="612">COMP · INVERTER</text>
+            <text class="sublbl" x="1000" y="78" id="physlbl">PHYSICS CHECKS</text>
+            <g id="coils-out"></g>
+            <g id="ofan"></g>
+            <g class="valve" id="ev-sym"><path d="M1088 686 L1100 700 L1088 714 Z M1112 686 L1100 700 L1112 714 Z"/><rect class="motor" x="1090" y="668" width="20" height="14" rx="2"/><path d="M1100 682 V700" fill="none"/><line x1="1094" y1="672" x2="1106" y2="672"/><line x1="1094" y1="676" x2="1106" y2="676"/></g>
+            <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="1040" cy="520" r="55"/><text class="cmplbl" x="1040" y="498">COMP</text><text class="cmpbig" x="1040" y="521" id="cmpsub">—</text><text class="cmpsub" x="1040" y="538" id="cmptgt"></text><text class="cmpsub cmpdev" x="1040" y="555" id="cmpdev"></text><text class="hold" x="1040" y="483" text-anchor="middle" id="cmphold"></text></g>
+            <g class="acc"><rect x="832" y="470" width="36" height="100" rx="16"/><rect class="acc-lvl" x="836" y="530" width="28" height="36" rx="10"/><path d="M850 470 V500" fill="none"/></g>
+            <text class="sublbl" x="878" y="524">ACC</text>
+            <g id="fourway"><rect class="fw-body" x="910" y="140" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
+            <text class="sublbl" x="896" y="214" text-anchor="end" id="fwlbl">4-WAY VALVE</text>
+            <text class="state" x="896" y="230" text-anchor="end" id="fwstate">—</text>
+            <path class="pipe-o" d="M1040 400 H1098"/><path class="pipe off" id="svpipe" d="M1040 400 H1098"/>
+            <g id="svsym" class="valve"><rect class="sv" x="1098" y="388" width="30" height="24" rx="4"/><rect class="motor" x="1105" y="374" width="16" height="12" rx="2"/><line x1="1108" y1="378" x2="1118" y2="378"/><line x1="1108" y1="382" x2="1118" y2="382"/></g>
+            <text class="sublbl" x="1113" y="430" text-anchor="middle" id="svlbl">HOT GAS SV</text>
+            <text class="state" x="1113" y="445" text-anchor="middle" id="svstate">—</text>
+          </g>
+`;
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
-let LAND = loadJSON('dchk.land', null);   // null = automatic
+let LAND = null;   // null = automatic (set from settings)
+const S_DEF = {land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true};
+let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
+function applySettings(){
+  saveJSON('dchk.settings', S);
+  const b = document.body;
+  for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet']) b.classList.toggle('no-' + k, !S[k]);
+  LAND = S.land === 'auto' ? null : S.land === 'on';
+  $('#diag').style.setProperty('--k', (LAY === LAYOUTS.land ? S.kLand : S.kPort));
+  const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
+  document.querySelectorAll('#settings [data-s]').forEach(inp => { const k = inp.dataset.s; if (inp.type === 'checkbox') inp.checked = !!S[k]; else inp.value = S[k]; });
+  document.getElementById('kportv').textContent = Math.round(S.kPort*100) + '%'; document.getElementById('klandv').textContent = Math.round(S.kLand*100) + '%';
+}
 const LAYOUTS = {
   port: {W:780, H:1520, in:[0,0], out:[0,0]},
-  land: {W:1560, H:1010, in:[0,300], out:[780,-500]},
+  land: {W:1600, H:900, in:[0,0], out:[0,0]},
 };
+// component geometry per layout (coils, cabinet, fans, air streams)
+const GEO = {
+  port: {ic:[300,110,220,60,'h'], oc:[160,802,60,260,'v'],
+         cab:{x:372,y:190,w:156,h:236,lbl:[450,207],cells:[408,450,492],cy0:242,cy1:300,burner:[392,302,116],flame:[302,268],strips:{ys:[244,266,288],x0:388,x1:512},fan:[450,372],fanAh:[450,330],aux:[450,418]},
+         fanOut:[88,948,34], airOut:{ys:[830,872,914,956,998,1040],x0:126,x1:262}, airIn:{xs:[395,430,465,500],y0:'fan',y1:78}, gIc:[0,0,0,1]},
+  land: {ic:[130,220,60,320,'v'], oc:[1350,170,60,390,'v'],
+         cab:{x:260,y:250,w:210,h:350,lbl:[365,268],cells:[300,340,380],cy0:282,cy1:345,burner:[287,347,106],flame:[347,313],strips:{ys:[300,322,344],x0:275,x1:405},fan:[440,420],fanAh:[440,420],aux:[365,585]},
+         fanOut:[1240,330,34], airOut:{ys:[220,270,320,370,420,470,520],x0:1312,x1:1430}, airIn:{ys:[290,335,380,425,470,515],x0:405,x1:100}, gIc:[1,0,0,0]},
+};
+const geo = () => LAY === LAYOUTS.land ? GEO.land : GEO.port;
 let LAY = LAYOUTS.port;
 const isLand = () => LAND === null ? (window.matchMedia && window.matchMedia('(min-width: 1100px) and (orientation: landscape)').matches) : !!LAND;
 // map a local point to canvas coordinates: indoor points have local y < 540
@@ -713,7 +852,8 @@ function buildDataset(text, name){
   for (const c of STAT){ const ix = colIdx(c); const a = new Array(n).fill(null); if (ix >= 0) for (let i = 0; i < n; i++){ const v = (rows[i+1][ix]||'').trim(); a[i] = (v && v !== '---') ? v : null; } str[c.id] = a; c.present = ix >= 0; }
   const mode = new Array(n);
   for (let i = 0; i < n; i++){ const m = ((str.opmode[i] || str.imode[i] || '')).toLowerCase(); mode[i] = /heat/.test(m) ? 'heat' : /cool|dry/.test(m) ? 'cool' : 'other'; }
-  for (const d of DERIVED){ const a = new Array(n); for (let i = 0; i < n; i++){ const r = {}; for (const c of NUM) r[c.id] = num[c.id][i]; a[i] = d.calc(r, mode[i]); } num[d.id] = a; }
+  for (const d of DERIVED) num[d.id] = new Array(n).fill(null);
+  for (let i = 0; i < n; i++){ const r = {}; for (const c of NUM) r[c.id] = num[c.id][i]; for (const d of DERIVED){ let v = null; try { v = d.calc(r, mode[i]); } catch(e){ v = null; } num[d.id][i] = isN(v) ? v : null; r[d.id] = num[d.id][i]; } }
   for (const d of DERIVED) if (d.post){ for (let i = 0; i < n; i++){ const r = {}; for (const c of ALLCH) r[c.id] = num[c.id] ? num[c.id][i] : null; num[d.id][i] = d.post(r, mode[i]); } }
   const valid = t.filter(Boolean);
   const span = valid.length > 1 ? (valid[valid.length-1] - valid[0]) / 1000 : n * 30;
@@ -945,7 +1085,7 @@ function analyze(){
     if (drops.length && isN(num.rps[i]) && isN(num.trps[i]) && num.rps[i] <= num.trps[i]-SIG.rpsHold) out.push({code:'held', label:'Capacity limited: ' + drops.join(', '), detail:`${num.rps[i].toFixed(0)} of ${num.trps[i].toFixed(0)} rps`, st:'sig', hold:drops.join(', ')});
     if (isN(num.tcchk[i]) && Math.abs(num.tcchk[i]) > SIG.ptTol) out.push({code:'pt-tc', label:'Tc disagrees with HP', detail:`logged Tc is ${num.tcchk[i] > 0 ? '+' : ''}${num.tcchk[i].toFixed(1)}°F from R-410A saturation at ${num.hp[i].toFixed(0)} psi — transducer or refrigerant mismatch`, st:'sig'});
     if (isN(num.techk[i]) && Math.abs(num.techk[i]) > SIG.ptTol) out.push({code:'pt-te', label:'Te disagrees with LP', detail:`logged Te is ${num.techk[i] > 0 ? '+' : ''}${num.techk[i].toFixed(1)}°F from R-410A saturation at ${num.lp[i].toFixed(0)} psi`, st:'sig'});
-    if (m === 'heat' && rs >= 3 && isN(num.hpip[i]) && Math.abs(num.hpip[i]) > SIG.hpipTol) out.push({code:'hp-ip', label:'HP and indoor pressure disagree', detail:`${num.hpip[i] > 0 ? '+' : ''}${num.hpip[i].toFixed(0)} psi between the outdoor and indoor sensors`, st:'sig'});
+    if (rs >= 3 && isN(num.hpip[i]) && Math.abs(num.hpip[i]) > SIG.hpipTol) out.push({code:'hp-ip', label:'Pressure sensors disagree', detail:`${num.hpip[i] > 0 ? '+' : ''}${num.hpip[i].toFixed(0)} psi between the outdoor ${m === 'heat' ? 'HP' : 'LP'} sensor and the indoor gas-pipe sensor`, st:'sig'});
     if (D.steady[i] && isN(num.odsat[i]) && num.odsat[i] > SIG.odsatHi) out.push({code:'od-coil', label:'Outdoor coil far from saturation', detail:`${num.odsat[i].toFixed(1)}°F between coil sensor and sat temp — airflow or fouling`, st:'sig'});
     if (aprRef && D.steady[i] && isN(num.apr[i]) && num.apr[i] > aprRef*SIG.aprRise) out.push({code:'amps', label:'Current per rps above norm', detail:`${num.apr[i].toFixed(3)} vs ${aprRef.toFixed(3)} A/rps steady-state median for this log`, st:'sig'});
     // thermistor ordering (physics says these must hold once settled; a violation is a sensor or a real reversal)
@@ -1005,16 +1145,28 @@ const PIPES_AC = [
   {id:'ic-in',  d:'M190 300 V140 H300',              cool:'lo', heat:'lo'},
   {id:'gas',    d:'M520 140 H750 V1230 H680 V1080',  cool:'lo', heat:'lo'},
 ];
+// landscape (Daikin-style): indoor left, gas line along the top into the reversing valve, liquid line along the bottom through the EEV, coil + fan on the right
+const PIPES_HP_L = [
+  {id:'disch',  d:'M1040 465 V230 H940 V200',                      hi:true},
+  {id:'suct',   d:'M940 140 V100 H850 V470 M850 570 V600 H1040 V575', lo:true},
+  {id:'oc-in',  d:'M970 170 H1380',                                cool:'hi', heat:'lo', rev:true},
+  {id:'oc-out', d:'M1380 560 V700 H1118',                          cool:'hi', heat:'lo', rev:true},
+  {id:'liq',    d:'M1082 700 H318',                                cool:'hi', heat:'hi', rev:true},
+  {id:'ic-in',  d:'M282 700 H160 V540',                            cool:'lo', heat:'hi', rev:true},
+  {id:'gas',    d:'M160 220 V170 H910',                            cool:'lo', heat:'hi', rev:true},
+];
+const PIPES_AC_L = [
+  {id:'disch',  d:'M1040 465 V170 H1380',                          hi:true},
+  {id:'suct',   d:'M850 570 V600 H1040 V575',                      lo:true},
+  {id:'oc-out', d:'M1380 560 V700 H1118',                          cool:'hi', heat:'hi'},
+  {id:'liq',    d:'M1082 700 H318',                                cool:'hi', heat:'hi'},
+  {id:'ic-in',  d:'M282 700 H160 V540',                            cool:'lo', heat:'lo'},
+  {id:'gas',    d:'M160 220 V170 H850 V470',                       cool:'lo', heat:'lo'},
+];
 function buildPipes(){
-  const base = EQ.out === 'ac' ? PIPES_AC : PIPES_HP;
   const land = LAY === LAYOUTS.land;
-  PIPES = base.map(p => {
-    const q = {...p};
-    if (p.id === 'liq') q.d = land ? 'M970 245 V90 H788 V800 H190 V600' : p.d;
-    else if (p.id === 'gas') q.d = land ? (EQ.out === 'ac' ? 'M520 440 H750 V770 H772 V52 H1530 V730 H1460 V580' : 'M520 440 H750 V770 H772 V52 H1530 V730 H1472 A12 12 0 0 0 1448 730 H1275') : p.d;
-    else { const o = /^M\d+ (\d+)/.exec(p.d); const y0 = o ? +o[1] : 600; const off = y0 < 540 ? LAY.in : LAY.out; q.d = tx(p.d, off[0], off[1]); }
-    return q;
-  });
+  const base = land ? (EQ.out === 'ac' ? PIPES_AC_L : PIPES_HP_L) : (EQ.out === 'ac' ? PIPES_AC : PIPES_HP);
+  PIPES = base.map(p => ({...p}));
   const g = $('#pipes'); g.innerHTML = '';
   for (const p of PIPES) el('path', {class:'pipe-o', d:p.d}, g);
   for (const p of PIPES) el('path', {class:'pipe off', d:p.d, id:'p-'+p.id}, g);
@@ -1052,40 +1204,45 @@ function zig(x0, y, x1, amp, step){ let d = `M${x0} ${y}`; let k = 0; for (let x
 // indoor cabinet below the coil: gas furnace (heat-exchanger cells + burners), air handler with electric strips, or plain air handler
 function buildIndoor(){
   const g = $('#indoor-var'); g.innerHTML = '';
-  const cx = 450, x0 = 372, x1 = 528;
-  el('rect', {class:'cab', x:x0, y:190, width:x1-x0, height:236, rx:8}, g);
-  const t = el('text', {class:'sublbl', x:cx, y:207, 'text-anchor':'middle'}, g);
+  const c = geo().cab;
+  el('rect', {class:'cab', x:c.x, y:c.y, width:c.w, height:c.h, rx:8}, g);
+  const t = el('text', {class:'sublbl', x:c.lbl[0], y:c.lbl[1], 'text-anchor':'middle'}, g);
   t.textContent = {furnace:'GAS FURNACE', strips:'AIR HANDLER · STRIPS', ah:'AIR HANDLER'}[EQ.in];
   if (EQ.in === 'furnace'){
-    el('rect', {class:'burner', x:392, y:302, width:116, height:5, rx:2}, g);
+    el('rect', {class:'burner', x:c.burner[0], y:c.burner[1], width:c.burner[2], height:5, rx:2}, g);
+    const [yb, yt] = c.flame, dy = yb - yt;
     const fl = el('g', {class:'flames', id:'flames'}, g);
-    for (const x of [408, 450, 492]) el('path', {d:`M${x} 302 C${x-9} 290 ${x-8} 278 ${x} 268 C${x+8} 278 ${x+9} 290 ${x} 302 Z`}, fl);
+    for (const x of c.cells) el('path', {d:`M${x} ${yb} C${x-9} ${yb-dy*0.35} ${x-8} ${yb-dy*0.7} ${x} ${yt} C${x+8} ${yb-dy*0.7} ${x+9} ${yb-dy*0.35} ${x} ${yb} Z`}, fl);
     const hx = el('g', {class:'hx', id:'hx'}, g);
-    for (const x of [408, 450, 492]) el('path', {d:`M${x-13} 300 V242 A13 13 0 0 1 ${x+13} 242 V300`}, hx);
+    for (const x of c.cells) el('path', {d:`M${x-13} ${c.cy1} V${c.cy0} A13 13 0 0 1 ${x+13} ${c.cy0} V${c.cy1}`}, hx);
   } else if (EQ.in === 'strips'){
     const st = el('g', {class:'strips', id:'strips'}, g);
-    for (const y of [244, 266, 288]) el('path', {d:zig(388, y, 512, 5, 10)}, st);
+    for (const y of c.strips.ys) el('path', {d:zig(c.strips.x0, y, c.strips.x1, 5, 10)}, st);
   }
-  const fy = EQ.in === 'ah' ? 330 : 372;
-  fan($('#ifan'), cx, fy, 26, 'ifanb');
-  el('text', {class:'state', x:cx, y:418, 'text-anchor':'middle', id:'auxstate'}, g);
-  return fy;
+  const f = EQ.in === 'ah' ? c.fanAh : c.fan;
+  fan($('#ifan'), f[0], f[1], 26, 'ifanb');
+  el('text', {class:'state', x:c.aux[0], y:c.aux[1], 'text-anchor':'middle', id:'auxstate'}, g);
+  return f;
 }
 function buildCoils(){
+  const G = geo();
   const gi = $('#coils-in'), go = $('#coils-out'); gi.innerHTML = ''; go.innerHTML = '';
-  coil(gi, 'ic', 300, 110, 220, 60, 'h'); coil(go, 'oc', 160, 802, 60, 260, 'v');
-  const fy = buildIndoor();
-  const oc = el('g', {id:'air-oc', class:'air'}, go); for (const y of [830, 872, 914, 956, 998, 1040]) el('path', {d:wave(126, y, 262, y, 3.5, 14), stroke:'url(#g-oc)'}, oc);
-  const ic = el('g', {id:'air-ic', class:'air'}, gi); for (const x of [395, 430, 465, 500]) el('path', {d:wave(x, fy - 32, x, 78, 3.5, 14), stroke:'url(#g-ic)'}, ic);
-  fan($('#ofan'), 88, 948, 34, 'ofanb');
+  coil(gi, 'ic', ...G.ic); coil(go, 'oc', ...G.oc);
+  const f = buildIndoor();
+  const oc = el('g', {id:'air-oc', class:'air'}, go); for (const y of G.airOut.ys) el('path', {d:wave(G.airOut.x0, y, G.airOut.x1, y, 3.5, 14), stroke:'url(#g-oc)'}, oc);
+  const ic = el('g', {id:'air-ic', class:'air'}, gi);
+  if (G.airIn.xs){ const y0 = G.airIn.y0 === 'fan' ? f[1] - 32 : G.airIn.y0; for (const x of G.airIn.xs) el('path', {d:wave(x, y0, x, G.airIn.y1, 3.5, 14), stroke:'url(#g-ic)'}, ic); }
+  else for (const y of G.airIn.ys) el('path', {d:wave(G.airIn.x0, y, G.airIn.x1, y, 3.5, 14), stroke:'url(#g-ic)'}, ic);
+  const gr = document.getElementById('g-ic'); ['x1','y1','x2','y2'].forEach((k, j) => gr.setAttribute(k, G.gIc[j]));
+  fan($('#ofan'), ...G.fanOut, 'ofanb');
 }
 function buildLineSet(){
   const g = $('#g-line'); g.innerHTML = '';
   const valve = (x, y) => { const v = el('g', {class:'valve'}, g); el('circle', {cx:x, cy:y, r:10}, v); el('path', {d:`M${x} ${y-10} V${y-22} M${x-10} ${y-22} H${x+10}`}, v); };
   const txt = (x, y, t, anchor, id) => { const e = el('text', {class:'sublbl', x, y, 'text-anchor':anchor || 'start'}, g); if (id) e.id = id; e.textContent = t; return e; };
   if (LAY === LAYOUTS.land){
-    valve(796, 90); valve(796, 52);
-    txt(200, 822, 'LIQUID LINE'); txt(600, 764, 'GAS LINE'); txt(480, 845, '', 'middle', 'lineset-note');
+    valve(640, 170); valve(640, 700);
+    txt(560, 158, 'GAS LINE', 'end'); txt(560, 688, 'LIQUID LINE', 'end'); txt(800, 878, '', 'middle', 'lineset-note');
   } else {
     valve(190, 540); valve(750, 540);
     txt(206, 494, 'LIQUID LINE'); txt(734, 494, 'GAS LINE', 'end'); txt(470, 490, '', 'middle', 'lineset-note');
@@ -1095,12 +1252,13 @@ function setLayout(){
   LAY = isLand() ? LAYOUTS.land : LAYOUTS.port;
   const land = LAY === LAYOUTS.land;
   $('#dsvg').setAttribute('viewBox', `0 0 ${LAY.W} ${LAY.H}`);
+  $('#scene').innerHTML = land ? SCENE_LAND : SCENE_PORT;
+  TAGS = [...(land ? TAGS_LAND : TAGS_PORT), ...customTagDefs()];
   $('#diag').classList.toggle('land', land); document.body.classList.toggle('landpage', land);
-  $('#g-in').setAttribute('transform', `translate(${LAY.in[0]} ${LAY.in[1]})`);
-  $('#g-out').setAttribute('transform', `translate(${LAY.out[0]} ${LAY.out[1]})`);
-  $('#landtog').checked = land;
+  $('#diag').style.setProperty('--k', land ? S.kLand : S.kPort);
+  const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
   buildDiagram(); buildTags();
-  if (D) renderCycle(cur);
+    if (D) renderCycle(cur);
 }
 function buildDiagram(){
   buildPipes(); buildCoils(); buildLineSet();
@@ -1111,7 +1269,7 @@ function buildDiagram(){
 
 // Tags: x,y in diagram units; anchor left (default) / right / ctr. `from` = sensor point on the pipe (leader + marker).
 // `ch` may be per-mode; null hides the tag in that mode.
-const TAGS = [
+const TAGS_PORT = [
   // indoor unit
   {ch:'iliq',  x:175, y:200, anchor:'right', from:[190,200], mk:'temp'},
   {ch:'ievpct', x:175, y:300, anchor:'right', bar:true, sub:'iev', subLabel:'', subUnit:true},
@@ -1149,6 +1307,50 @@ const TAGS = [
   {ch:'cond',  x:530, y:1146},
   {ch:'dsh',   x:530, y:1208},
 ];
+// landscape placements (Daikin drawing): Ts/LP/Te on the suction side left of the accumulator, Td/HP on the discharge riser,
+// Tm/Tb beside the coil, Ta by the fan, Ti on the liquid line, Tgi/PS on the indoor gas pipe, Tli at the indoor coil outlet
+const TAGS_LAND = [
+  {ch:'igas',  x:200, y:115, from:[240,170], mk:'temp'},
+  {ch:'ipress',x:360, y:115, from:[400,170], mk:'press'},
+  {ch:'iliq',  x:200, y:640, from:[160,600], mk:'temp'},
+  {ch:{heat:'scid', cool:'coildt'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:40, y:760, sub:{heat:'linedt'}, subLabel:'line loss', target:{cool:'tsh'}},
+  {ch:'ievpct', x:300, y:760, anchor:'ctr', bar:true, sub:'iev', subLabel:'', subUnit:true},
+  {ch:'cfm',   x:590, y:640, anchor:'right', target:'reqcfm', targetLabel:'req'},
+  {ch:'suct',  x:794, y:300, anchor:'right', from:[850,300], mk:'temp'},
+  {ch:'lp',    x:794, y:356, anchor:'right', from:[850,356], mk:'press'},
+  {ch:'evap',  x:794, y:412, anchor:'right'},
+  {ch:'sh',    x:794, y:475, anchor:'right', target:'tsh'},
+  {ch:'cr',    x:794, y:545, anchor:'right'},
+  {ch:'dsh',   x:1020, y:300, anchor:'right'},
+  {ch:'cond',  x:1020, y:360, anchor:'right'},
+  {ch:'disch', x:1060, y:280, from:[1040,280], mk:'temp'},
+  {ch:'hp',    x:1060, y:340, from:[1040,340], mk:'press'},
+  {ch:'rpserr', x:980, y:650, sub:'trps', subLabel:'target'},
+  {ch:'inv1',  x:1130, y:650},
+  {ch:'fin',   x:1200, y:760},
+  {ch:'oat',   x:1240, y:400, anchor:'ctr'},
+  {ch:'fan',   x:1240, y:466, anchor:'ctr', target:'tfan'},
+  {ch:'liq',   x:760, y:650, from:[900,700], mk:'temp'},
+  {ch:'sc',    label:'Subcooling', x:760, y:760, target:'tsc', states:['sc','scerr']},
+  {ch:'evpct', x:1100, y:760, anchor:'ctr', bar:true, sub:'ev', subLabel:'', subUnit:true},
+  {ch:'ochex', x:1430, y:540, from:[1380,540], mk:'temp'},
+  {ch:'ocmid', x:1430, y:365, from:[1380,365], mk:'temp'},
+  {ch:'appr',  x:1430, y:440},
+  {ch:'isod',  x:1000, y:110, adv:true},
+  {ch:'lift',  x:1150, y:110, adv:true},
+  {ch:'capidx',x:1300, y:110, adv:true},
+  {ch:'copidx',x:1440, y:110, adv:true},
+];
+let CUSTOM = loadJSON('dchk.custom', []);
+CUSTOM.forEach(c => { try { registerCustom(c); } catch(e){} });
+function customTagDefs(){
+  const land = LAY === LAYOUTS.land;
+  return CUSTOM.filter(c => chById[c.id]).map((c, k) => {
+    const pos = (c.pos && c.pos[land ? 'land' : 'port']) || (land ? [700 + (k % 4) * 150, 30] : [90 + (k % 4) * 160, 22]);
+    return {ch:c.id, x:pos[0], y:pos[1], custom:c, anchor:'ctr'};
+  });
+}
+let TAGS = TAGS_PORT;
 const pick = (v, m) => (v && typeof v === 'object' && !Array.isArray(v)) ? v[m] : v;
 function tagCh(tg, m){ return pick(tg.ch, m); }
 function buildTags(){
@@ -1162,7 +1364,19 @@ function buildTags(){
     e.style.left = (px / LAY.W * 100) + '%'; e.style.top = (py / LAY.H * 100) + '%';
     e.id = 'tag-' + k;
     e.innerHTML = `<span class="l"></span><span class="v"><span class="n">—</span><small></small><span class="tr"></span><span class="dz"></span></span><span class="viz"><i class="fill"></i><i class="ghost"></i><i class="tgt"></i></span><svg class="gsvg" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""></polyline><line class="cur" x1="0" y1="0" x2="0" y2="30"></line><circle r="1.8" cx="0" cy="15"></circle></svg><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="base" points="0,15 100,15"></polyline><polyline class="line" points=""></polyline><circle r="2.2" cx="100" cy="15"></circle></svg>` + ((tg.sub || tg.target) ? `<span class="s"></span>` : '') + (tg.bar ? `<span class="bar"><i></i></span>` : '');
-    e.addEventListener('click', () => { const id = tagCh(tg, D ? (D.mode[cur] === 'cool' ? 'cool' : 'heat') : 'heat'); if (id) togglePin(id); });
+    if (tg.custom){
+      e.classList.add('custom');
+      let drag = null;
+      e.addEventListener('pointerdown', ev => { drag = {x:ev.clientX, y:ev.clientY, moved:false}; e.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+      e.addEventListener('pointermove', ev => { if (!drag) return; const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; if (!drag.moved && Math.hypot(dx, dy) < 4) return; drag.moved = true;
+        const R = $('#diag').getBoundingClientRect(); const ux = (ev.clientX - R.left) / R.width * LAY.W, uy = (ev.clientY - R.top) / R.height * LAY.H;
+        tg.x = Math.max(60, Math.min(LAY.W - 60, ux)); tg.y = Math.max(20, Math.min(LAY.H - 20, uy));
+        e.style.left = (tg.x / LAY.W * 100) + '%'; e.style.top = (tg.y / LAY.H * 100) + '%'; });
+      e.addEventListener('pointerup', ev => { if (!drag) return; const moved = drag.moved; drag = null;
+        if (moved){ const key = LAY === LAYOUTS.land ? 'land' : 'port'; tg.custom.pos = tg.custom.pos || {}; tg.custom.pos[key] = [Math.round(tg.x), Math.round(tg.y)]; saveJSON('dchk.custom', CUSTOM); }
+        else togglePin(tg.ch); });
+      e.addEventListener('pointercancel', () => { drag = null; });
+    } else e.addEventListener('click', () => { const id = tagCh(tg, D ? (D.mode[cur] === 'cool' ? 'cool' : 'heat') : 'heat'); if (id) togglePin(id); });
     host.appendChild(e);
     if (tg.from){
       const [fx, fy] = P(tg.from[0], tg.from[1]);
@@ -1175,6 +1389,10 @@ function stateOf(chid, i){ const e = evalCache[i].byCh[chid]; return e ? e.st : 
 function worstOf(ids, i){ let w = 'none', ws = -1; for (const id of ids){ const st = stateOf(id, i); const sv = SEV[st] ?? -1; if (sv > ws){ ws = sv; w = st; } } return w; }
 function tagClass(st){ return st === 'ok' ? 'ok' : st === 'warn' ? 'warn' : st === 'alarm' ? 'alarm' : (st === 'idle' || st === 'settling') ? 'idle' : ''; }
 // 4-way internal links: top port = discharge in, bottom = suction out, left = outdoor coil, right = gas line
+const FW_L = {
+  cool: {a:['M940 195 Q940 170 965 170', 'hi'], b:['M915 170 Q940 170 940 145', 'lo']},
+  heat: {a:['M940 195 Q940 170 915 170', 'hi'], b:['M965 170 Q940 170 940 145', 'lo']},
+};
 const FW = {
   cool: {a:['M460 1200 Q460 1230 430 1230', 'hi'], b:['M460 1260 Q460 1230 490 1230', 'lo']},
   heat: {a:['M460 1200 Q460 1230 490 1230', 'hi'], b:['M460 1260 Q460 1230 430 1230', 'lo']},
@@ -1215,7 +1433,7 @@ function renderCycle(i){
   for (const p of PIPES) paint(document.getElementById('p-' + p.id), p.id);
   paint(document.getElementById('oc'), 'oc'); paint(document.getElementById('ic'), 'ic');
   paint(document.getElementById('svpipe'), D.str.svhot[i] === 'ON' ? 'sv' : null);
-  const fw = FW[m];
+  const fw = (LAY === LAYOUTS.land ? FW_L : FW)[m];
   if (EQ.out === 'hp') for (const k of ['a','b']){ const pth = document.getElementById('fw-' + k); pth.setAttribute('d', fw[k][0]); pth.classList.remove('hi','lo','off'); pth.classList.add(running ? fw[k][1] : 'off'); pth.style.stroke = (THERMAL && running) ? (thermColor(fw[k][1] === 'hi' ? D.num.disch[i] : D.num.suct[i]) || '') : ''; }
   const fwv = D.str.fourway[i];
   $('#fwstate').textContent = fwv ? (fwv === 'ON' ? 'ON · de-energized' : 'OFF · energized') : '—';
@@ -1262,7 +1480,7 @@ function renderCycle(i){
   TAGS.forEach((tg, k) => {
     const e = document.getElementById('tag-' + k);
     const id = tagCh(tg, m);
-    if (!id || (tg.adv && !ADV)){ e.hidden = true; return; } e.hidden = false;
+    if (!id || (tg.adv && !S.physics)){ e.hidden = true; return; } e.hidden = false;
     const ch = chById[id]; const v = D.num[id][i];
     e.querySelector('.l').textContent = (pick(tg.label, m) || ch.short) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
     e.querySelector('.n').textContent = fmt(v, ch);
@@ -1317,7 +1535,7 @@ function renderCycle(i){
     } else { e.style.removeProperty('--devbg'); e.style.removeProperty('--devline'); dz.textContent = ''; }
     const ids = (tg.states && (Array.isArray(tg.states) ? tg.states : pick(tg.states, m))) || [id];
     const st = worstOf(ids, i);
-    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + ((ch.calc && !/pct$/.test(id)) ? ' calc' : '') + ' ' + (isN(v) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '');
+    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + ((ch.calc && !/pct$/.test(id) && !ch.custom) ? ' calc' : '') + (ch.custom ? ' custom' : '') + ' ' + (isN(v) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '');
     e.title = ch.label + (ch.note ? ' · ' + (typeof ch.note === 'function' ? ch.note(m) : ch.note) : '') + ' · tap to pin trend';
   });
 }
@@ -1356,9 +1574,9 @@ function renderNow(i){
   else add(w === 'alarm' ? 'Out of range' : w === 'warn' ? 'Caution' : w === 'idle' ? 'Compressor off' : 'All in range', w === 'alarm' ? 'alarm' : w === 'warn' ? 'warn' : w === 'idle' ? '' : 'on');
   const items = [...e.hits.map(h => ({st:h.st, label:chById[h.ch].short, r:bandText(h)})), ...e.events.map(x => ({st:x.st, label:x.label, r:''}))];
   items.sort((a,b) => (SEV[b.st]||0) - (SEV[a.st]||0));
-  for (const it of items) add(it.label, it.st === 'info' ? 'info' : it.st, it.r);
+  for (const it of items){ if (it.st === 'info' && !S.events) continue; add(it.label, it.st === 'info' ? 'info' : it.st, it.r); }
   const sigs = e.sigs.slice().sort((a,b) => (b.conf||0) - (a.conf||0) || (a.st === 'fault' ? -1 : 1));
-  for (const x of sigs){ if (x.st === 'fault' && !ADV) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
+  for (const x of sigs){ if (x.st === 'fault' && !S.faults) continue; if (x.st === 'sig' && !S.sigs) continue; if (x.st === 'info' && !S.events) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
   // always-visible demand / call readout
   { const dm = D.num.demand[i], op = (D.str.opmode[i] || D.str.imode[i] || '—'), th = D.str.therm[i];
     const s = D.str, ph = s.defrost[i] === 'ON' ? 'DEFROST' : s.oilret[i] === 'ON' ? 'OIL RETURN' : s.startup[i] === 'ON' ? 'STARTUP' : s.restart[i] === 'ON' ? 'RESTART STANDBY' : s.freeze[i] === 'ON' ? 'FREEZE PROTECT' : ['dropDisch','dropInv','dropHp','dropLp','dropFin'].some(id => s[id][i] === 'ON') ? 'DROP CTRL' : (D.runSec[i] >= 0 ? (D.steady[i] ? 'STEADY' : 'RUNNING') : 'OFF');
@@ -1558,6 +1776,33 @@ function buildGhosts(){
   }
 }
 
+/* ---------- custom tags: settings UI ---------- */
+function refreshAfterCustom(){
+  if (D){ const text = D._text, keep = D.aux; D = buildDataset(text, D.name); D._text = text; D.aux = keep; analyze(); evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
+  setLayout(); renderCustomList();
+}
+function renderCustomList(){
+  const host = $('#customlist'); host.innerHTML = '';
+  if (!CUSTOM.length){ host.innerHTML = '<div class="note">No custom tags yet.</div>'; }
+  for (const c of CUSTOM){
+    const row = document.createElement('div'); row.className = 'crow';
+    row.innerHTML = `<b>${c.name}</b><code>${c.expr}</code><span class="note">${c.unit || ''}</span><button class="btn small" type="button">✕</button>`;
+    row.querySelector('button').addEventListener('click', () => { CUSTOM = CUSTOM.filter(x => x !== c); saveJSON('dchk.custom', CUSTOM); const k = DERIVED.findIndex(d => d.id === c.id); if (k >= 0) DERIVED.splice(k, 1); const k2 = ALLCH.findIndex(d => d.id === c.id); if (k2 >= 0) ALLCH.splice(k2, 1); delete chById[c.id]; pins = pins.filter(p => p !== c.id); saveJSON('dchk.pins', pins); refreshAfterCustom(); });
+    host.appendChild(row);
+  }
+  const help = $('#customhelp'); if (help && !help.dataset.done){ help.dataset.done = 1; help.innerHTML = ALLCH.filter(c => !c.custom).map(c => `<span><code>${c.id}</code> ${c.label}</span>`).join(''); }
+}
+$('#customadd').addEventListener('click', () => {
+  const name = $('#c-name').value.trim(), expr = $('#c-expr').value.trim(), unit = $('#c-unit').value.trim(), dec = +$('#c-dec').value;
+  if (!name || !expr){ toast('Give the tag a name and a formula'); return; }
+  const id = 'u_' + name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') + '_' + Date.now().toString(36);
+  const c = {id, name, expr, unit, dec:Number.isFinite(dec) ? dec : 1};
+  try { registerCustom(c); } catch(e){ toast('Formula did not parse: ' + e.message); return; }
+  CUSTOM.push(c); saveJSON('dchk.custom', CUSTOM);
+  $('#c-name').value = ''; $('#c-expr').value = '';
+  refreshAfterCustom(); toast(`Added "${name}" — drag it where you want it`);
+});
+
 /* ---------- runs tab ---------- */
 function buildRuns(){
   const sum = $('#runsum'), tb = $('#runtable tbody'); tb.innerHTML = '';
@@ -1579,7 +1824,7 @@ function buildRuns(){
 
 /* ---------- load ---------- */
 function load(text, name){
-  try { D = buildDataset(text, name); analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
+  try { D = buildDataset(text, name); D._text = text; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
   if (playing) togglePlay();
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
@@ -1596,7 +1841,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 $('#viewsel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
 setView(VIEW);
 $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
-$('#landtog').addEventListener('change', e => { LAND = e.target.checked; saveJSON('dchk.land', LAND); setLayout(); });
+
 if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: landscape)').addEventListener('change', () => { if (LAND === null) setLayout(); });
 $('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); applyEquipment(); if (D) renderCycle(cur); });
 setThermal(THERMAL);
@@ -1645,9 +1890,21 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/cla
   let paths = null; const t0 = Date.now();
   setInterval(() => { if (!paths || !paths.length) paths = document.querySelectorAll('.air path'); const off = -(((Date.now() - t0) / 900) * 14 % 14).toFixed(2) + 'px'; for (const p of paths) p.style.strokeDashoffset = off; }, 40);
 })();
+// settings panel wiring
+$('#settingsbtn').addEventListener('click', () => { $('#settings').hidden = false; });
+$('#settingsclose').addEventListener('click', () => { $('#settings').hidden = true; });
+$('#settings').addEventListener('click', e => { if (e.target === e.currentTarget) $('#settings').hidden = true; });
+$('#settingsreset').addEventListener('click', () => { S = Object.assign({}, S_DEF); applySettings(); setLayout(); });
+document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListener('input', () => {
+  const k = inp.dataset.s; S[k] = inp.type === 'checkbox' ? inp.checked : (inp.type === 'range' ? +inp.value : inp.value);
+  applySettings();
+  if (k === 'land') setLayout(); else if (D) renderCycle(cur);
+}));
 // boot
+applySettings();
 setLayout();
-$('#physlbl').style.display = ADV ? '' : 'none';
+renderCustomList();
+
 $('#cmp').addEventListener('click', () => togglePin('rps'));
 const sample = $('#sample-csv').textContent;
 if (sample && sample.length > 100) load(sample, '(REC only)_20251126-090117.csv');
