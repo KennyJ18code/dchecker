@@ -1117,8 +1117,8 @@ function buildCoils(){
   // air streams sit behind the coils
   coil(g, 'ic', 300, 110, 220, 60, 'h'); coil(g, 'oc', 160, 802, 60, 260, 'v');
   const air = el('g', {id:'air'}, g);
-  const oc = el('g', {id:'air-oc', class:'air'}, air); for (const y of [830, 872, 914, 956, 998, 1040]) el('path', {d:wave(232, y, 128, y, 3.5, 14), stroke:'url(#g-oc)'}, oc);
-  const ic = el('g', {id:'air-ic', class:'air'}, air); for (const x of [395, 430, 465, 500]) el('path', {d:wave(x, 86, x, 194, 3.5, 14), stroke:'url(#g-ic)'}, ic);
+  const oc = el('g', {id:'air-oc', class:'air'}, air); for (const y of [830, 872, 914, 956, 998, 1040]) el('path', {d:wave(126, y, 262, y, 3.5, 14), stroke:'url(#g-oc)'}, oc);
+  const ic = el('g', {id:'air-ic', class:'air'}, air); for (const x of [395, 430, 465, 500]) el('path', {d:wave(x, 214, x, 78, 3.5, 14), stroke:'url(#g-ic)'}, ic);
   fan($('#ifan'), 450, 250, 30, 'ifanb'); fan($('#ofan'), 88, 948, 34, 'ofanb');
 }
 
@@ -1243,12 +1243,17 @@ function renderCycle(i){
   const ofOn = isN(D.num.fan[i]) ? D.num.fan[i] > 0 : running, ifOn = isN(D.num.cfm[i]) ? D.num.cfm[i] > 0 : running;
   $('#ofanb').classList.toggle('on', ofOn); $('#ifanb').classList.toggle('on', ifOn);
   // air through the coils: entering-air color → leaving-air color (leaving air lands most of the way to the coil temperature)
-  const oat = D.num.oat[i], oc = D.num.ochex[i], icT = avg(D.num.igas[i], D.num.iliq[i]);
+  const oat = D.num.oat[i], oc = D.num.ochex[i];
   const gOc = document.querySelectorAll('#g-oc stop'), gIc = document.querySelectorAll('#g-ic stop');
   const grey = cssVar('--muted') || '#888';
+  // outdoor: air enters at ambient (fan side, left) and leaves most of the way toward the coil temperature (right)
   const outOd = (isN(oat) && isN(oc)) ? oat + 0.75*(oc - oat) : null;
-  gOc[1].setAttribute('stop-color', thermColor(oat) || grey); gOc[0].setAttribute('stop-color', thermColor(outOd) || grey);
-  gIc[0].setAttribute('stop-color', grey); gIc[1].setAttribute('stop-color', thermColor(icT) || grey);
+  gOc[0].setAttribute('stop-color', thermColor(oat) || grey); gOc[1].setAttribute('stop-color', thermColor(outOd) || grey);
+  // indoor: counter-flow — air enters where the refrigerant leaves the coil and leaves where it enters
+  // heating: refrigerant in = ID gas, out = ID liquid  →  air in ≈ ID liquid, air out ≈ ID gas
+  // cooling: refrigerant in = ID liquid, out = ID gas  →  air in ≈ ID gas, air out ≈ ID liquid
+  const airIn = m === 'heat' ? D.num.iliq[i] : D.num.igas[i], airOut = m === 'heat' ? D.num.igas[i] : D.num.iliq[i];
+  gIc[1].setAttribute('stop-color', thermColor(airIn) || grey); gIc[0].setAttribute('stop-color', thermColor(airOut) || grey);
   $('#air-oc').classList.toggle('off', !ofOn); $('#air-ic').classList.toggle('off', !ifOn);
   const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
