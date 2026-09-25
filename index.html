@@ -95,7 +95,9 @@ button{cursor:pointer}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
 .card h2{margin:0;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 14px 0}
 .diagwrap{padding:6px}
-.diag{position:relative;width:100%;max-width:760px;margin:0 auto;aspect-ratio:780/1520;container-type:inline-size;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.diag{--k:1;position:relative;width:100%;max-width:760px;margin:0 auto;aspect-ratio:780/1520;container-type:inline-size;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.diag.land{--k:0.5;max-width:none;aspect-ratio:1560/1010}
+body.landpage .wrap{max-width:1600px}
 .diag > svg{position:absolute;inset:0;width:100%;height:100%}
 .hint{text-align:center;font-size:12px;color:var(--muted);padding:0 14px 10px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:0 14px 12px;font-size:12px;color:var(--ink2);justify-content:center}
@@ -133,8 +135,8 @@ button{cursor:pointer}
 .tag .l,.tag .v,.tag .s,.tag .bar{position:relative;z-index:1}
 .tag .viz{display:none;position:absolute;inset:0;z-index:0;pointer-events:none}
 .tag .viz .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);opacity:.22;width:0;transition:width .25s}
-.tag .viz .tgt{position:absolute;top:0;bottom:0;width:.4cqw;background:var(--ink);opacity:.85;display:none}
-.tag .viz .ghost{position:absolute;top:0;bottom:0;width:.3cqw;background:var(--muted);opacity:.6;display:none}
+.tag .viz .tgt{position:absolute;top:0;bottom:0;width:calc(.4cqw * var(--k));background:var(--ink);opacity:.85;display:none}
+.tag .viz .ghost{position:absolute;top:0;bottom:0;width:calc(.3cqw * var(--k));background:var(--muted);opacity:.6;display:none}
 .tag .spark{display:none;position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.55}
 .tag .gsvg{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.26}
 .tag .gsvg polyline{fill:none;stroke:var(--ink);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round}
@@ -152,7 +154,7 @@ button{cursor:pointer}
 .diag.view-dev .tag .tr{display:none}
 .diag.view-dev .tag .dv{display:none}
 .diag.view-dev .tag .dz{display:inline}
-.tag .dz{display:none;font-family:var(--mono);font-weight:700;font-size:1.8cqw;margin-left:.6cqw;color:var(--ink2)}
+.tag .dz{display:none;font-family:var(--mono);font-weight:700;font-size:calc(1.8cqw * var(--k));margin-left:calc(.6cqw * var(--k));color:var(--ink2)}
 .flow{animation-duration:var(--flowdur,1.1s)}
 /* svg */
 .box{fill:var(--panel2);fill-opacity:.35;stroke:var(--line);stroke-width:1.5}
@@ -205,27 +207,27 @@ button{cursor:pointer}
 .state.on{fill:var(--ok)}
 
 /* sensor tags (HTML over svg) */
-.tag{position:absolute;transform:translate(0,-50%);background:var(--panel);border:1.5px solid var(--line);border-radius:1cqw;padding:.5cqw .8cqw;box-shadow:var(--shadow);width:19cqw;height:7.4cqw;box-sizing:border-box;line-height:1.1;z-index:2;cursor:pointer;transition:box-shadow .15s}
-.tag.tall{height:10.2cqw}
-.tag .l{line-height:2.2cqw}.tag .v{line-height:3.4cqw}.tag .s{line-height:2.1cqw;margin-top:0}
+.tag{position:absolute;transform:translate(0,-50%);background:var(--panel);border:1.5px solid var(--line);border-radius:calc(1cqw * var(--k));padding:calc(.5cqw * var(--k)) calc(.8cqw * var(--k));box-shadow:var(--shadow);width:calc(19cqw * var(--k));height:calc(7.4cqw * var(--k));box-sizing:border-box;line-height:1.1;z-index:2;cursor:pointer;transition:box-shadow .15s}
+.tag.tall{height:calc(10.4cqw * var(--k))}
+.tag .l{line-height:calc(2.2cqw * var(--k))}.tag .v{line-height:calc(3.4cqw * var(--k))}.tag .s{line-height:calc(2.1cqw * var(--k));margin-top:0}
 .tag:hover{border-color:var(--accent)}
 .tag.pinned{outline:2px solid var(--accent);outline-offset:1px}
-.tag .l{display:block;font-size:2cqw;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-.tag .v{display:block;font-family:var(--mono);font-weight:700;font-size:3.1cqw;color:var(--ink);white-space:nowrap;margin-top:.15cqw}
-.tag .v small{font-family:var(--sans);font-weight:600;font-size:1.8cqw;color:var(--muted);margin-left:.35cqw}
-.tag .tr{font-family:var(--mono);font-weight:700;font-size:1.8cqw;margin-left:.7cqw;letter-spacing:-.02em}
+.tag .l{display:block;font-size:calc(2cqw * var(--k));font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.tag .v{display:block;font-family:var(--mono);font-weight:700;font-size:calc(3.1cqw * var(--k));color:var(--ink);white-space:nowrap;margin-top:calc(.15cqw * var(--k))}
+.tag .v small{font-family:var(--sans);font-weight:600;font-size:calc(1.8cqw * var(--k));color:var(--muted);margin-left:calc(.35cqw * var(--k))}
+.tag .tr{font-family:var(--mono);font-weight:700;font-size:calc(1.8cqw * var(--k));margin-left:calc(.7cqw * var(--k));letter-spacing:-.02em}
 .tag .tr .up{color:var(--ok)}.tag .tr .dn{color:var(--alarm)}.tag .tr .flat{color:var(--muted);opacity:.6}
-.tag .s{display:block;font-family:var(--mono);font-size:1.8cqw;color:var(--ink2);white-space:nowrap;margin-top:.2cqw}
+.tag .s{display:block;font-family:var(--mono);font-size:calc(1.8cqw * var(--k));color:var(--ink2);white-space:nowrap;margin-top:calc(.2cqw * var(--k))}
 .tag .s[hidden]{display:none}
-.tag .s .dv{font-weight:700;margin-left:.4cqw}
+.tag .s .dv{font-weight:700;margin-left:calc(.4cqw * var(--k))}
 .tag .s .dv.off{color:var(--ok)}.tag .s .dv.up{color:var(--warn)}.tag .s .dv.dn{color:var(--alarm)}
-.tag .bar{display:block;height:.6cqw;border-radius:.3cqw;background:var(--panel2);margin-top:.25cqw;overflow:hidden}
+.tag .bar{display:block;height:calc(.6cqw * var(--k));border-radius:calc(.3cqw * var(--k));background:var(--panel2);margin-top:calc(.25cqw * var(--k));overflow:hidden}
 .tag .bar i{display:block;height:100%;background:var(--accent);width:0}
 .tag.calc{background:var(--accent-soft);border-style:dashed}
 .tag.calc .l{color:var(--accent)}
 .tag.ok{border-color:var(--ok)}
 .tag.warn{border-color:var(--warn);background:var(--warn-soft)}
-.tag.alarm{border-color:var(--alarm);background:var(--alarm-soft);box-shadow:0 0 0 .6cqw var(--alarm-soft),var(--shadow)}
+.tag.alarm{border-color:var(--alarm);background:var(--alarm-soft);box-shadow:0 0 0 calc(.6cqw * var(--k)) var(--alarm-soft),var(--shadow)}
 .tag.alarm .v{color:var(--alarm)}
 .tag.warn .v{color:var(--warn)}
 .tag.idle{opacity:.72}
@@ -234,7 +236,7 @@ button{cursor:pointer}
 .tag.ctr{transform:translate(-50%,-50%)}
 .tag[hidden]{display:none}
 @media (prefers-reduced-motion:no-preference){.tag.alarm{animation:pulse 1.6s ease-in-out infinite}}
-@keyframes pulse{50%{box-shadow:0 0 0 1.4cqw var(--alarm-soft),var(--shadow)}}
+@keyframes pulse{50%{box-shadow:0 0 0 calc(1.4cqw * var(--k)) var(--alarm-soft),var(--shadow)}}
 
 /* timeline dock (sticky bottom) */
 .timeline{position:sticky;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);margin-top:14px;padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -252,6 +254,9 @@ button{cursor:pointer}
 .transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .transport .btn{min-width:38px;text-align:center;font-family:var(--mono)}
 .transport .grow{flex:1}
+.demand{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;white-space:nowrap;min-width:19ch;color:var(--ink)}
+.demand b{font-size:14px}
+.demand .m-heat{color:var(--hi)}.demand .m-cool{color:var(--lo)}.demand .ph{color:var(--ink2);font-weight:600}
 .transport select{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 8px;font-size:12px;font-weight:700}
 .ticks{width:100%;height:24px;display:block;border-radius:4px;cursor:pointer}
 input[type=range].scrub{width:100%;margin:0;accent-color:var(--accent);height:22px}
@@ -350,6 +355,7 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
           <button type="button" data-view="dev" aria-pressed="false" title="Deviation: tinted by how far each reading is from this log's steady-state norm">Deviation</button>
         </div>
         <label class="thermtog"><input type="checkbox" id="thermal"> Thermal pipes</label>
+        <label class="thermtog"><input type="checkbox" id="landtog"> Landscape</label>
         <label class="eqtog">Equipment <select id="eqsel">
           <option value="auto">Auto-detect</option>
           <option value="hp-furnace">Heat pump + gas furnace</option>
@@ -363,57 +369,42 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
       </div>
       <div class="diagwrap"><div class="diag" id="diag">
-        <svg viewBox="0 0 780 1520" aria-hidden="true">
-          <!-- unit enclosures -->
-          <rect class="box" x="16" y="40" width="748" height="400" rx="14"/>
-          <rect class="box" x="16" y="540" width="748" height="960" rx="14"/>
-          <text class="boxlbl" x="32" y="76">INDOOR UNIT</text>
-          <text class="hdrtxt" x="748" y="76" text-anchor="end" id="iduhdr"></text>
-          <text class="boxlbl" x="32" y="576">OUTDOOR UNIT</text>
-          <text class="hdrtxt" x="748" y="576" text-anchor="end" id="oduhdr"></text>
-          <text class="sublbl" x="86" y="611" text-anchor="middle">COMP · INVERTER</text>
-          <text class="sublbl" x="86" y="1134" text-anchor="middle" id="physlbl">PHYSICS CHECKS</text>
-          <text class="sublbl" x="206" y="494">LIQUID LINE</text>
-          <text class="sublbl" x="734" y="494" text-anchor="end">GAS LINE</text>
-          <text class="sublbl" x="470" y="490" text-anchor="middle" id="lineset-note"></text>
-
+        <svg viewBox="0 0 780 1520" aria-hidden="true" id="dsvg">
           <defs><linearGradient id="g-oc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient><linearGradient id="g-ic" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient></defs>
+          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
+          <g id="g-in">
+            <rect class="box" x="16" y="40" width="748" height="400" rx="14"/>
+            <text class="boxlbl" x="32" y="76">INDOOR UNIT</text>
+            <text class="hdrtxt" x="748" y="76" text-anchor="end" id="iduhdr"></text>
+            <g id="coils-in"></g>
+            <g id="indoor-var"></g>
+            <g id="ifan"></g>
+            <g class="valve" id="iev-sym"><path d="M176 288 L190 300 L176 312 Z M204 288 L190 300 L204 312 Z"/><rect class="motor" x="180" y="272" width="20" height="14" rx="2"/><path d="M190 286 V300" fill="none"/><line x1="184" y1="276" x2="196" y2="276"/><line x1="184" y1="280" x2="196" y2="280"/></g>
+          </g>
+          <!-- OUTDOOR UNIT -->
+          <g id="g-out">
+            <rect class="box" x="16" y="540" width="748" height="960" rx="14"/>
+            <text class="boxlbl" x="32" y="576">OUTDOOR UNIT</text>
+            <text class="hdrtxt" x="748" y="576" text-anchor="end" id="oduhdr"></text>
+            <text class="sublbl" x="86" y="611" text-anchor="middle">COMP · INVERTER</text>
+            <text class="sublbl" x="86" y="1134" text-anchor="middle" id="physlbl">PHYSICS CHECKS</text>
+            <g id="coils-out"></g>
+            <g id="ofan"></g>
+            <g class="valve" id="ev-sym"><path d="M176 733 L190 745 L176 757 Z M204 733 L190 745 L204 757 Z"/><rect class="motor" x="180" y="717" width="20" height="14" rx="2"/><path d="M190 731 V745" fill="none"/><line x1="184" y1="721" x2="196" y2="721"/><line x1="184" y1="725" x2="196" y2="725"/></g>
+            <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="460" cy="830" r="62"/><text class="cmplbl" x="460" y="806">COMP</text><text class="cmpbig" x="460" y="830" id="cmpsub">—</text><text class="cmpsub" x="460" y="848" id="cmptgt"></text><text class="cmpsub cmpdev" x="460" y="866" id="cmpdev"></text><text class="hold" x="460" y="790" text-anchor="middle" id="cmphold"></text></g>
+            <g class="acc"><rect x="662" y="980" width="36" height="100" rx="16"/><rect class="acc-lvl" x="666" y="1040" width="28" height="36" rx="10"/><path d="M680 980 V1010" fill="none"/></g>
+            <text class="sublbl" x="708" y="1034">ACC</text>
+            <g id="fourway"><rect class="fw-body" x="425" y="1195" width="70" height="70" rx="10"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
+            <text class="sublbl" x="506" y="1292" id="fwlbl">4-WAY VALVE</text>
+            <text class="state" x="506" y="1308" id="fwstate">—</text>
+            <path class="pipe-o" d="M460 1120 H412"/><path class="pipe off" id="svpipe" d="M460 1120 H412"/>
+            <g id="svsym" class="valve"><rect class="sv" x="382" y="1108" width="30" height="24" rx="4"/><rect class="motor" x="389" y="1094" width="16" height="12" rx="2"/><line x1="392" y1="1098" x2="402" y2="1098"/><line x1="392" y1="1102" x2="402" y2="1102"/></g>
+            <text class="sublbl" x="397" y="1150" text-anchor="middle">HOT GAS SV</text>
+            <text class="state" x="397" y="1165" text-anchor="middle" id="svstate">—</text>
+          </g>
+          <!-- pipes and the line set are drawn in canvas coordinates by JS -->
           <g id="pipes"></g>
-          <g id="coils"></g>
-
-          <!-- service (stop) valves -->
-          <g class="valve"><circle cx="190" cy="540" r="10"/><path d="M190 530 V518 M180 518 H200"/></g>
-          <g class="valve"><circle cx="750" cy="540" r="10"/><path d="M750 530 V518 M740 518 H760"/></g>
-
-          <!-- indoor cabinet (furnace / air handler) + blower -->
-          <g id="indoor-var"></g>
-          <g id="ifan"></g>
-          <!-- indoor EV -->
-          <g class="valve" id="iev-sym"><path d="M176 288 L190 300 L176 312 Z M204 288 L190 300 L204 312 Z"/><rect class="motor" x="180" y="272" width="20" height="14" rx="2"/><path d="M190 286 V300" fill="none"/><line x1="184" y1="276" x2="196" y2="276"/><line x1="184" y1="280" x2="196" y2="280"/></g>
-
-          <!-- outdoor fan -->
-          <g id="ofan"></g>
-          <!-- outdoor EV -->
-          <g class="valve" id="ev-sym"><path d="M176 733 L190 745 L176 757 Z M204 733 L190 745 L204 757 Z"/><rect class="motor" x="180" y="717" width="20" height="14" rx="2"/><path d="M190 731 V745" fill="none"/><line x1="184" y1="721" x2="196" y2="721"/><line x1="184" y1="725" x2="196" y2="725"/></g>
-
-          <!-- compressor -->
-          <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="460" cy="830" r="62"/><text class="cmplbl" x="460" y="806">COMP</text><text class="cmpbig" x="460" y="830" id="cmpsub">—</text><text class="cmpsub" x="460" y="848" id="cmptgt"></text><text class="cmpsub cmpdev" x="460" y="866" id="cmpdev"></text><text class="hold" x="460" y="790" text-anchor="middle" id="cmphold"></text></g>
-
-          <!-- accumulator -->
-          <g class="acc"><rect x="662" y="980" width="36" height="100" rx="16"/><rect class="acc-lvl" x="666" y="1040" width="28" height="36" rx="10"/><path d="M680 980 V1010" fill="none"/></g>
-          <text class="sublbl" x="708" y="1034">ACC</text>
-
-          <!-- 4-way valve -->
-          <g id="fourway"><rect class="fw-body" x="425" y="1195" width="70" height="70" rx="10"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
-          <text class="sublbl" x="506" y="1292" id="fwlbl">4-WAY VALVE</text>
-          <text class="state" x="506" y="1308" id="fwstate">—</text>
-
-          <!-- hot gas bypass solenoid (stub off discharge) -->
-          <path class="pipe-o" d="M460 1120 H412"/><path class="pipe off" id="svpipe" d="M460 1120 H412"/>
-          <g id="svsym" class="valve"><rect class="sv" x="382" y="1108" width="30" height="24" rx="4"/><rect class="motor" x="389" y="1094" width="16" height="12" rx="2"/><line x1="392" y1="1098" x2="402" y2="1098"/><line x1="392" y1="1102" x2="402" y2="1102"/></g>
-          <text class="sublbl" x="397" y="1150" text-anchor="middle">HOT GAS SV</text>
-          <text class="state" x="397" y="1165" text-anchor="middle" id="svstate">—</text>
-
+          <g id="g-line"></g>
           <g id="leaders"></g>
           <g id="markers"></g>
         </svg>
@@ -493,6 +484,7 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
     <button class="btn" id="b-nextflag" type="button" title="Next flagged row">!&gt;</button>
     <button class="btn" id="b-last" type="button" title="Last row">&gt;|</button>
     <select id="speed" title="Playback speed"><option value="1" selected>1 row/s</option><option value="2">2 rows/s</option><option value="3">3 rows/s</option></select>
+    <span class="demand num" id="demand">—</span>
     <span class="grow"></span>
     <span class="tickkey"><span class="a">red</span><span class="w">yellow</span><span class="s">signature</span><span class="o">ok</span><span>comp off</span></span>
   </div>
@@ -762,6 +754,26 @@ const ADV = false; // fault-library chips + physics-check tags: computed, shown 
 let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
 let pins = loadJSON('dchk.pins', []);
 let VIEW = loadJSON('dchk.view', 'num');
+// layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
+let LAND = loadJSON('dchk.land', null);   // null = automatic
+const LAYOUTS = {
+  port: {W:780, H:1520, in:[0,0], out:[0,0]},
+  land: {W:1560, H:1010, in:[0,300], out:[780,-500]},
+};
+let LAY = LAYOUTS.port;
+const isLand = () => LAND === null ? (window.matchMedia && window.matchMedia('(min-width: 1100px) and (orientation: landscape)').matches) : !!LAND;
+// map a local point to canvas coordinates: indoor points have local y < 540
+const P = (x, y) => { const o = y < 540 ? LAY.in : LAY.out; return [x + o[0], y + o[1]]; };
+// translate an absolute SVG path (M L H V Q C A) by dx,dy
+function tx(d, dx, dy){
+  return d.replace(/([MLHVQCA])([^MLHVQCAZ]*)/g, (m, c, rest) => {
+    const n = rest.trim().split(/[\s,]+/).filter(x => x !== '').map(Number);
+    if (c === 'H') return c + n.map(v => v + dx).join(' ');
+    if (c === 'V') return c + n.map(v => v + dy).join(' ');
+    if (c === 'A'){ const out = []; for (let k = 0; k < n.length; k += 7) out.push(n[k], n[k+1], n[k+2], n[k+3], n[k+4], n[k+5]+dx, n[k+6]+dy); return c + out.join(' '); }
+    const out = []; for (let k = 0; k < n.length; k += 2) out.push(n[k]+dx, n[k+1]+dy); return c + out.join(' ');
+  });
+}
 // equipment profile: outdoor 'hp' | 'ac', indoor 'furnace' | 'strips' | 'ah'
 let EQ = {out:'hp', in:'furnace', auto:true, guess:''};
 function detectEquipment(){
@@ -1131,7 +1143,15 @@ const PIPES_AC = [
   {id:'gas',    d:'M520 140 H750 V1230 H680 V1080',  cool:'lo', heat:'lo'},
 ];
 function buildPipes(){
-  PIPES = EQ.out === 'ac' ? PIPES_AC : PIPES_HP;
+  const base = EQ.out === 'ac' ? PIPES_AC : PIPES_HP;
+  const land = LAY === LAYOUTS.land;
+  PIPES = base.map(p => {
+    const q = {...p};
+    if (p.id === 'liq') q.d = land ? 'M970 245 V90 H788 V800 H190 V600' : p.d;
+    else if (p.id === 'gas') q.d = land ? (EQ.out === 'ac' ? 'M520 440 H750 V770 H772 V52 H1530 V730 H1460 V580' : 'M520 440 H750 V770 H772 V52 H1530 V730 H1472 A12 12 0 0 0 1448 730 H1275') : p.d;
+    else { const o = /^M\d+ (\d+)/.exec(p.d); const y0 = o ? +o[1] : 600; const off = y0 < 540 ? LAY.in : LAY.out; q.d = tx(p.d, off[0], off[1]); }
+    return q;
+  });
   const g = $('#pipes'); g.innerHTML = '';
   for (const p of PIPES) el('path', {class:'pipe-o', d:p.d}, g);
   for (const p of PIPES) el('path', {class:'pipe off', d:p.d, id:'p-'+p.id}, g);
@@ -1189,16 +1209,38 @@ function buildIndoor(){
   return fy;
 }
 function buildCoils(){
-  const g = $('#coils'); g.innerHTML = '';
-  coil(g, 'ic', 300, 110, 220, 60, 'h'); coil(g, 'oc', 160, 802, 60, 260, 'v');
+  const gi = $('#coils-in'), go = $('#coils-out'); gi.innerHTML = ''; go.innerHTML = '';
+  coil(gi, 'ic', 300, 110, 220, 60, 'h'); coil(go, 'oc', 160, 802, 60, 260, 'v');
   const fy = buildIndoor();
-  const air = el('g', {id:'air'}, g);
-  const oc = el('g', {id:'air-oc', class:'air'}, air); for (const y of [830, 872, 914, 956, 998, 1040]) el('path', {d:wave(126, y, 262, y, 3.5, 14), stroke:'url(#g-oc)'}, oc);
-  const ic = el('g', {id:'air-ic', class:'air'}, air); for (const x of [395, 430, 465, 500]) el('path', {d:wave(x, fy - 32, x, 78, 3.5, 14), stroke:'url(#g-ic)'}, ic);
+  const oc = el('g', {id:'air-oc', class:'air'}, go); for (const y of [830, 872, 914, 956, 998, 1040]) el('path', {d:wave(126, y, 262, y, 3.5, 14), stroke:'url(#g-oc)'}, oc);
+  const ic = el('g', {id:'air-ic', class:'air'}, gi); for (const x of [395, 430, 465, 500]) el('path', {d:wave(x, fy - 32, x, 78, 3.5, 14), stroke:'url(#g-ic)'}, ic);
   fan($('#ofan'), 88, 948, 34, 'ofanb');
 }
+function buildLineSet(){
+  const g = $('#g-line'); g.innerHTML = '';
+  const valve = (x, y) => { const v = el('g', {class:'valve'}, g); el('circle', {cx:x, cy:y, r:10}, v); el('path', {d:`M${x} ${y-10} V${y-22} M${x-10} ${y-22} H${x+10}`}, v); };
+  const txt = (x, y, t, anchor, id) => { const e = el('text', {class:'sublbl', x, y, 'text-anchor':anchor || 'start'}, g); if (id) e.id = id; e.textContent = t; return e; };
+  if (LAY === LAYOUTS.land){
+    valve(796, 90); valve(796, 52);
+    txt(200, 822, 'LIQUID LINE'); txt(600, 764, 'GAS LINE'); txt(480, 845, '', 'middle', 'lineset-note');
+  } else {
+    valve(190, 540); valve(750, 540);
+    txt(206, 494, 'LIQUID LINE'); txt(734, 494, 'GAS LINE', 'end'); txt(470, 490, '', 'middle', 'lineset-note');
+  }
+}
+function setLayout(){
+  LAY = isLand() ? LAYOUTS.land : LAYOUTS.port;
+  const land = LAY === LAYOUTS.land;
+  $('#dsvg').setAttribute('viewBox', `0 0 ${LAY.W} ${LAY.H}`);
+  $('#diag').classList.toggle('land', land); document.body.classList.toggle('landpage', land);
+  $('#g-in').setAttribute('transform', `translate(${LAY.in[0]} ${LAY.in[1]})`);
+  $('#g-out').setAttribute('transform', `translate(${LAY.out[0]} ${LAY.out[1]})`);
+  $('#landtog').checked = land;
+  buildDiagram(); buildTags();
+  if (D) renderCycle(cur);
+}
 function buildDiagram(){
-  buildPipes(); buildCoils();
+  buildPipes(); buildCoils(); buildLineSet();
   const ac = EQ.out === 'ac';
   for (const id of ['fourway','fwlbl','fwstate']) document.getElementById(id).classList.toggle('hidden-eq', ac);
   document.getElementById('ev-sym').classList.toggle('hidden-eq', false);
@@ -1253,14 +1295,16 @@ function buildTags(){
     const e = document.createElement('div');
     tg.tall = !!(tg.sub || tg.target || tg.bar);
     e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '');
-    e.style.left = (tg.x/7.8) + '%'; e.style.top = (tg.y/15.2) + '%';
+    const [px, py] = P(tg.x, tg.y);
+    e.style.left = (px / LAY.W * 100) + '%'; e.style.top = (py / LAY.H * 100) + '%';
     e.id = 'tag-' + k;
     e.innerHTML = `<span class="l"></span><span class="v"><span class="n">—</span><small></small><span class="tr"></span><span class="dz"></span></span><span class="viz"><i class="fill"></i><i class="ghost"></i><i class="tgt"></i></span><svg class="gsvg" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""></polyline><line class="cur" x1="0" y1="0" x2="0" y2="30"></line><circle r="1.8" cx="0" cy="15"></circle></svg><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="base" points="0,15 100,15"></polyline><polyline class="line" points=""></polyline><circle r="2.2" cx="100" cy="15"></circle></svg>` + ((tg.sub || tg.target) ? `<span class="s"></span>` : '') + (tg.bar ? `<span class="bar"><i></i></span>` : '');
     e.addEventListener('click', () => { const id = tagCh(tg, D ? (D.mode[cur] === 'cool' ? 'cool' : 'heat') : 'heat'); if (id) togglePin(id); });
     host.appendChild(e);
     if (tg.from){
-      el('line', {class:'leader', x1:tg.from[0], y1:tg.from[1], x2:tg.x, y2:tg.y}, L);
-      el('circle', {class:'tp ' + (tg.mk||'temp'), cx:tg.from[0], cy:tg.from[1], r:tg.mk === 'press' ? 6 : 5.5}, M);
+      const [fx, fy] = P(tg.from[0], tg.from[1]);
+      el('line', {class:'leader', x1:fx, y1:fy, x2:px, y2:py}, L);
+      el('circle', {class:'tp ' + (tg.mk||'temp'), cx:fx, cy:fy, r:tg.mk === 'press' ? 6 : 5.5}, M);
     }
   });
 }
@@ -1452,6 +1496,11 @@ function renderNow(i){
   for (const it of items) add(it.label, it.st === 'info' ? 'info' : it.st, it.r);
   const sigs = e.sigs.slice().sort((a,b) => (b.conf||0) - (a.conf||0) || (a.st === 'fault' ? -1 : 1));
   for (const x of sigs){ if (x.st === 'fault' && !ADV) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
+  // always-visible demand / call readout
+  { const dm = D.num.demand[i], op = (D.str.opmode[i] || D.str.imode[i] || '—'), th = D.str.therm[i];
+    const s = D.str, ph = s.defrost[i] === 'ON' ? 'DEFROST' : s.oilret[i] === 'ON' ? 'OIL RETURN' : s.startup[i] === 'ON' ? 'STARTUP' : s.restart[i] === 'ON' ? 'RESTART STANDBY' : s.freeze[i] === 'ON' ? 'FREEZE PROTECT' : ['dropDisch','dropInv','dropHp','dropLp','dropFin'].some(id => s[id][i] === 'ON') ? 'DROP CTRL' : (D.runSec[i] >= 0 ? (D.steady[i] ? 'STEADY' : 'RUNNING') : 'OFF');
+    const cls = m === 'heat' ? 'm-heat' : m === 'cool' ? 'm-cool' : '';
+    $('#demand').innerHTML = `<span>DEMAND <b>${isN(dm) ? dm.toFixed(0) + '%' : '—'}</b></span><span class="${cls}">${String(op).toUpperCase()}</span><span class="ph">${th ? (th === 'ON' ? 'CALL' : 'NO CALL') + ' · ' : ''}${ph}</span>`; }
   $('#scrub').value = i;
   $('#b-play').textContent = playing ? '❚❚' : '▶';
 }
@@ -1684,6 +1733,8 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 $('#viewsel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
 setView(VIEW);
 $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
+$('#landtog').addEventListener('change', e => { LAND = e.target.checked; saveJSON('dchk.land', LAND); setLayout(); });
+if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: landscape)').addEventListener('change', () => { if (LAND === null) setLayout(); });
 $('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); applyEquipment(); if (D) renderCycle(cur); });
 setThermal(THERMAL);
 $('#loadbtn').addEventListener('click', () => $('#csvfile').click());
@@ -1732,7 +1783,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/cla
   setInterval(() => { if (!paths || !paths.length) paths = document.querySelectorAll('.air path'); const off = -(((Date.now() - t0) / 900) * 14 % 14).toFixed(2) + 'px'; for (const p of paths) p.style.strokeDashoffset = off; }, 40);
 })();
 // boot
-buildDiagram(); buildTags();
+setLayout();
 $('#physlbl').style.display = ADV ? '' : 'none';
 $('#cmp').addEventListener('click', () => togglePin('rps'));
 const sample = $('#sample-csv').textContent;
