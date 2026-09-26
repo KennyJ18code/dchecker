@@ -203,6 +203,14 @@ body.landpage .wrap{max-width:1600px}
 .acc-lvl{fill:var(--lo-soft);stroke:none}
 .sv{fill:var(--panel);stroke:var(--ink2);stroke-width:2}
 .sv.on{fill:var(--ok);stroke:var(--ok)}
+.part{fill:var(--panel);stroke:var(--ink2);stroke-width:1.6}
+.part.mesh{fill:var(--panel2)}
+.part.solid{fill:var(--ink2)}
+.partln{stroke:var(--ink2);stroke-width:1;fill:none}
+.bypass{fill:none;stroke:var(--ink2);stroke-width:2.5;stroke-linejoin:round}
+.partlbl{font:600 9px var(--sans);fill:var(--muted);letter-spacing:.08em}
+body.no-parts #parts{display:none}
+.legend svg{width:22px;height:14px;vertical-align:-2px}
 .state{font:700 11px var(--mono);fill:var(--ink2)}
 .state.on{fill:var(--ok)}
 
@@ -429,6 +437,7 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
           <!-- pipes and the line set are drawn in canvas coordinates by JS -->
           <g id="pipes"></g>
           <g id="g-line"></g>
+          <g id="parts"></g>
           <g id="leaders"></g>
           <g id="markers"></g>
         </svg>
@@ -443,6 +452,10 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
         <span><i class="sw" style="background:var(--warn-soft);border:2px solid var(--warn)"></i>Caution</span>
         <span><i class="sw" style="background:var(--alarm-soft);border:2px solid var(--alarm)"></i>Out of range</span>
         <span><i class="sw" style="border:2px solid var(--idle)"></i>Not evaluated</span>
+        <span><svg viewBox="0 0 22 14"><rect x="4" y="1" width="14" height="12" rx="2" fill="var(--panel2)" stroke="var(--ink2)" stroke-width="1.4"/><path d="M6 12 L16 2 M6 8 L12 2 M10 12 L16 6" stroke="var(--ink2)" stroke-width="1"/></svg>Strainer / filter</span>
+        <span><svg viewBox="0 0 22 14"><rect x="1" y="3" width="20" height="8" rx="4" fill="var(--panel)" stroke="var(--ink2)" stroke-width="1.4"/><circle cx="7" cy="7" r="1.3" fill="var(--ink2)"/><circle cx="11" cy="7" r="1.3" fill="var(--ink2)"/><circle cx="15" cy="7" r="1.3" fill="var(--ink2)"/></svg>Filter drier</span>
+        <span><svg viewBox="0 0 22 14"><path d="M4 2 V12 L16 7 Z" fill="var(--panel)" stroke="var(--ink2)" stroke-width="1.4"/><path d="M17 2 V12" stroke="var(--ink2)" stroke-width="2"/></svg>Check valve</span>
+        <span><svg viewBox="0 0 22 14"><rect x="1" y="2" width="20" height="10" rx="5" fill="var(--panel)" stroke="var(--ink2)" stroke-width="1.4"/><path d="M6 5 H16 M6 9 H16" stroke="var(--ink2)" stroke-width="1"/></svg>Muffler</span>
       </div>
     </div>
   </section>
@@ -543,6 +556,7 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
         <label><input type="checkbox" data-s="air"> Air streams through the coils</label>
         <label><input type="checkbox" data-s="flow"> Refrigerant flow dashes</label>
         <label><input type="checkbox" data-s="sv"> Hot-gas bypass valve</label>
+        <label><input type="checkbox" data-s="parts"> Circuit components (strainers, drier, check valves, muffler, HPS, ports)</label>
         <label><input type="checkbox" data-s="cabinet"> Indoor cabinet (furnace / air handler)</label>
         <label><input type="checkbox" data-s="physics"> Physics checks (isentropic, lift, capacity, efficiency)</label>
         <label><input type="checkbox" data-s="legend"> Legend and hints</label>
@@ -792,13 +806,13 @@ const SCENE_LAND = `
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
 function applySettings(){
   saveJSON('dchk.settings', S);
   const b = document.body;
-  for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet']) b.classList.toggle('no-' + k, !S[k]);
+  for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet','parts']) b.classList.toggle('no-' + k, !S[k]);
   LAND = S.land === 'auto' ? null : S.land === 'on';
   $('#diag').style.setProperty('--k', (LAY === LAYOUTS.land ? S.kLand : S.kPort));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
@@ -1317,8 +1331,59 @@ function setLayout(){
   buildDiagram(); buildTags();
     if (D) renderCycle(cur);
 }
+// circuit components as on the Daikin FIT drawing: strainers, filter drier, check valves, muffler, HPS, service port, fusible plug
+function partSym(g, it){
+  const {t, x, y} = it, v = it.o !== 'h';       // v = pipe runs vertically through the part
+  const grp = el('g', {class:'partg'}, g);
+  const R = (w, h, cls, rx) => el('rect', {class:cls, x:x - w/2, y:y - h/2, width:w, height:h, rx:rx == null ? 2 : rx}, grp);
+  if (t === 'strainer'){ R(v ? 14 : 22, v ? 22 : 14, 'part mesh'); for (const k of [-6, 0, 6]) el('line', v ? {class:'partln', x1:x-7, y1:y+k+5, x2:x+7, y2:y+k-5} : {class:'partln', x1:x+k-5, y1:y-7, x2:x+k+5, y2:y+7}, grp); }
+  else if (t === 'drier'){ R(v ? 16 : 40, v ? 40 : 16, 'part', 8); for (const k of [-10, 0, 10]) el('circle', v ? {cx:x, cy:y+k, r:1.8, class:'part solid'} : {cx:x+k, cy:y, r:1.8, class:'part solid'}, grp); }
+  else if (t === 'muffler'){ R(v ? 18 : 40, v ? 40 : 18, 'part', 9); el('line', v ? {class:'partln', x1:x-4, y1:y-12, x2:x-4, y2:y+12} : {class:'partln', x1:x-12, y1:y-4, x2:x+12, y2:y-4}, grp); el('line', v ? {class:'partln', x1:x+4, y1:y-12, x2:x+4, y2:y+12} : {class:'partln', x1:x-12, y1:y+4, x2:x+12, y2:y+4}, grp); }
+  else if (t === 'check'){ // triangle points in the flow direction it allows, bar on the far side
+    const d = it.dir || 'up', s = 8;
+    const tri = {up:`M${x-s} ${y+s} L${x+s} ${y+s} L${x} ${y-s} Z`, down:`M${x-s} ${y-s} L${x+s} ${y-s} L${x} ${y+s} Z`, left:`M${x+s} ${y-s} L${x+s} ${y+s} L${x-s} ${y} Z`, right:`M${x-s} ${y-s} L${x-s} ${y+s} L${x+s} ${y} Z`}[d];
+    el('path', {class:'part', d:tri}, grp);
+    const bar = {up:`M${x-s} ${y-s} H${x+s}`, down:`M${x-s} ${y+s} H${x+s}`, left:`M${x-s} ${y-s} V${y+s}`, right:`M${x+s} ${y-s} V${y+s}`}[d];
+    el('path', {class:'partln', d:bar, 'stroke-width':2.2}, grp); }
+  else if (t === 'hps'){ R(18, 18, 'part', 3); const tx = el('text', {class:'partlbl', x, y:y+3, 'text-anchor':'middle'}, grp); tx.textContent = 'HPS'; if (it.to) el('line', {class:'leader', x1:x, y1:y, x2:it.to[0], y2:it.to[1]}, grp); }
+  else if (t === 'port'){ // Schrader service port: short stub off the pipe with a cap
+    const dx = it.side === 'left' ? -1 : it.side === 'right' ? 1 : 0, dy = it.side === 'up' ? -1 : it.side === 'down' ? 1 : 0;
+    el('line', {class:'partln', 'stroke-width':2.5, x1:x, y1:y, x2:x + dx*14, y2:y + dy*14}, grp); el('circle', {class:'part', cx:x + dx*17, cy:y + dy*17, r:4}, grp); }
+  else if (t === 'plug'){ // fusible plug: stub ending in a small filled triangle
+    const dx = it.side === 'left' ? -1 : it.side === 'right' ? 1 : 0, dy = it.side === 'up' ? -1 : it.side === 'down' ? 1 : 0;
+    el('line', {class:'partln', 'stroke-width':2.5, x1:x, y1:y, x2:x + dx*12, y2:y + dy*12}, grp);
+    const px = x + dx*12, py = y + dy*12; el('path', {class:'part solid', d:dx ? `M${px} ${py-5} L${px+dx*9} ${py} L${px} ${py+5} Z` : `M${px-5} ${py} L${px} ${py+dy*9} L${px+5} ${py} Z`}, grp); }
+  if (it.label){ const tx = el('text', {class:'partlbl', x:it.lx != null ? it.lx : x, y:it.ly != null ? it.ly : y + 18, 'text-anchor':it.anchor || 'middle'}, grp); tx.textContent = it.label; }
+  if (it.bypass) el('path', {class:'bypass', d:it.bypass}, g);
+  const title = el('title', {}, grp); title.textContent = it.title || it.label || t;
+}
+const PARTS = {
+  port: [
+    // indoor liquid line: stop valve → filter drier → strainer → indoor EEV → strainer → coil
+    {t:'drier', x:190, y:400, o:'v', title:'Filter drier'}, {t:'strainer', x:190, y:352, o:'v', title:'Filter'}, {t:'strainer', x:190, y:250, o:'v', title:'Filter'},
+    // outdoor gas line: stop valve → service port / fusible plug → muffler → reversing valve
+    {t:'port', x:750, y:598, side:'left', label:'SERVICE PORT', lx:728, ly:602, anchor:'end'}, {t:'plug', x:750, y:625, side:'left', title:'Fusible plug'},
+    {t:'muffler', x:750, y:668, o:'v', label:'MUFFLER', lx:728, ly:672, anchor:'end'},
+    // discharge: compressor → check valve → Td → HPS → HP sensor → 4-way
+    {t:'check', x:460, y:948, dir:'down', title:'Check valve (discharge)'}, {t:'hps', x:425, y:1050, to:[460,1050], title:'High pressure switch'},
+    {t:'strainer', x:436, y:1120, o:'h', title:'Strainer (hot-gas bypass)'},
+    // liquid side: coil → strainer → EEV (check-valve bypass) → strainer → Ti → stop valve
+    {t:'strainer', x:190, y:782, o:'v', title:'Strainer'}, {t:'strainer', x:190, y:706, o:'v', title:'Strainer'},
+    {t:'check', x:160, y:745, dir:'up', title:'Check valve (bypasses the EEV in cooling)', bypass:'M190 772 H160 V718 H190'},
+  ],
+  land: [
+    {t:'drier', x:570, y:700, o:'h', label:'DRIER', ly:722}, {t:'strainer', x:430, y:700, o:'h', title:'Filter'}, {t:'strainer', x:230, y:700, o:'h', title:'Filter'},
+    {t:'port', x:790, y:170, side:'up', label:'SERVICE PORT', ly:146}, {t:'plug', x:830, y:170, side:'up', title:'Fusible plug'},
+    {t:'muffler', x:700, y:170, o:'h', label:'MUFFLER', ly:196},
+    {t:'check', x:1040, y:447, dir:'up', title:'Check valve (discharge)'}, {t:'hps', x:990, y:205, to:[990,230], title:'High pressure switch'},
+    {t:'strainer', x:1072, y:400, o:'h', title:'Strainer (hot-gas bypass)'},
+    {t:'strainer', x:1250, y:700, o:'h', title:'Strainer'}, {t:'strainer', x:980, y:700, o:'h', title:'Strainer'},
+    {t:'check', x:1100, y:735, dir:'left', title:'Check valve (bypasses the EEV in cooling)', bypass:'M1130 700 V735 H1070 V700'},
+  ],
+};
+function buildParts(){ const g = $('#parts'); g.innerHTML = ''; for (const it of (LAY === LAYOUTS.land ? PARTS.land : PARTS.port)) partSym(g, it); }
 function buildDiagram(){
-  buildPipes(); buildCoils(); buildLineSet();
+  buildPipes(); buildCoils(); buildLineSet(); buildParts();
   const ac = EQ.out === 'ac';
   for (const id of ['fourway','fwlbl','fwstate']) document.getElementById(id).classList.toggle('hidden-eq', ac);
   document.getElementById('ev-sym').classList.toggle('hidden-eq', false);
@@ -2038,7 +2103,7 @@ async function openFiles(files){
 window.dchkOpen = openFiles;
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v31';
+const APP_VERSION = 'v32';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
