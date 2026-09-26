@@ -1,1 +1,4 @@
 .claude/
+
+# research PDFs are large; keep only rendered pages and notes in git
+docs/manuals/*.pdf
