@@ -6,8 +6,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="D-Checker">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/dchk-v2-apple.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=2">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/dchk-v2-64.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 :root{
@@ -2223,7 +2224,7 @@ async function openFiles(files){
 window.dchkOpen = openFiles;
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v35';
+const APP_VERSION = 'v36';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);

@@ -1,6 +1,6 @@
 // D-Checker Cycle Viewer service worker: cache the app shell so it opens offline
-const CACHE = 'dchecker-v35';
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
+const CACHE = 'dchecker-v36';
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/dchk-v2-192.png', './icons/dchk-v2-512.png', './icons/dchk-v2-maskable-512.png', './icons/dchk-v2-apple.png', './icons/dchk-v2-64.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 // network first (so updates land), cache fallback (so it still opens with no signal)

@@ -1,17 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" fill="#0F151C"/>
-  <!-- refrigerant loop: high side right (orange-red), low side left (blue) -->
-  <path d="M50 24 H62 A10 10 0 0 1 72 34 V70 A10 10 0 0 1 62 80 H50" fill="none" stroke="#F0673F" stroke-width="7.5" stroke-linecap="butt"/>
-  <path d="M50 24 H38 A10 10 0 0 0 28 34 V70 A10 10 0 0 0 38 80 H50" fill="none" stroke="#5FA0E0" stroke-width="7.5" stroke-linecap="butt"/>
-  <!-- flow dashes -->
-  <g stroke="#FFFFFF" stroke-opacity=".85" stroke-width="1.8" stroke-linecap="round">
-    <path d="M72 40 V45 M72 52 V57 M72 64 V69"/>
-    <path d="M28 40 V45 M28 52 V57 M28 64 V69"/>
-    <path d="M56 24 H61 M39 24 H44 M56 80 H61 M39 80 H44"/>
+  <!-- solid fills only: the app rasterizes this with PyMuPDF, which ignores gradients and clip paths -->
+  <rect width="100" height="100" rx="22" fill="#131C27"/>
+  <rect x="3" y="3" width="94" height="94" rx="19.5" fill="none" stroke="#FFFFFF" stroke-opacity=".06" stroke-width="1"/>
+  <!-- faint diagram grid, like the app's canvas -->
+  <g stroke="#FFFFFF" stroke-opacity=".045" stroke-width=".6">
+    <path d="M6 25 H94 M6 50 H94 M6 75 H94 M25 6 V94 M50 6 V94 M75 6 V94"/>
   </g>
-  <!-- expansion valve -->
-  <path d="M41 74 L50 80 L41 86 Z M59 74 L50 80 L59 86 Z" fill="#FFFFFF"/>
-  <!-- compressor -->
-  <circle cx="50" cy="24" r="12.5" fill="#F0673F" stroke="#0F151C" stroke-width="2.5"/>
-  <circle cx="50" cy="24" r="4" fill="none" stroke="#0F151C" stroke-width="2"/>
+
+  <!-- refrigerant loop: discharge/high side on the right (hot), suction/low side on the left (cold) -->
+  <path d="M50 20 H66 A9 9 0 0 1 75 29 V71 A9 9 0 0 1 66 80 H50" fill="none" stroke="#08111A" stroke-width="10"/>
+  <path d="M50 20 H34 A9 9 0 0 0 25 29 V71 A9 9 0 0 0 34 80 H50" fill="none" stroke="#08111A" stroke-width="10"/>
+  <path d="M50 20 H66 A9 9 0 0 1 75 29 V71 A9 9 0 0 1 66 80 H50" fill="none" stroke="#F0673F" stroke-width="6.5"/>
+  <path d="M50 20 H34 A9 9 0 0 0 25 29 V71 A9 9 0 0 0 34 80 H50" fill="none" stroke="#5FA0E0" stroke-width="6.5"/>
+  <!-- flow dashes -->
+  <g stroke="#FFFFFF" stroke-opacity=".9" stroke-width="1.7" stroke-linecap="round">
+    <path d="M75 36 V40 M75 46 V50 M75 56 V60 M75 66 V70"/>
+    <path d="M25 36 V40 M25 46 V50 M25 56 V60 M25 66 V70"/>
+    <path d="M57 20 H61 M39 20 H43 M57 80 H61 M39 80 H43"/>
+  </g>
+
+  <!-- outdoor coil on the hot side, indoor coil on the cold side -->
+  <rect x="68.5" y="40" width="13" height="20" rx="2.5" fill="#0F151C" stroke="#FF8A50" stroke-width="1.6"/>
+  <path d="M71.5 43 V57 M75 43 V57 M78.5 43 V57" stroke="#FF8A50" stroke-width="1.2" stroke-opacity=".9"/>
+  <rect x="18.5" y="40" width="13" height="20" rx="2.5" fill="#0F151C" stroke="#7DB8F0" stroke-width="1.6"/>
+  <path d="M21.5 43 V57 M25 43 V57 M28.5 43 V57" stroke="#7DB8F0" stroke-width="1.2" stroke-opacity=".9"/>
+
+  <!-- expansion valve at the bottom -->
+  <path d="M42 74.5 L50 80 L42 85.5 Z M58 74.5 L50 80 L58 85.5 Z" fill="#FFFFFF"/>
+  <rect x="46.5" y="68" width="7" height="4.5" rx="1" fill="#FFFFFF"/>
+
+  <!-- compressor at the top -->
+  <circle cx="50" cy="20" r="13" fill="#08111A"/>
+  <circle cx="50" cy="20" r="11" fill="#F0673F"/>
+  <circle cx="50" cy="20" r="6.2" fill="none" stroke="#08111A" stroke-width="2"/>
+  <circle cx="50" cy="20" r="1.8" fill="#08111A"/>
+
+  <!-- two reading tags with trend lines, as on the diagram -->
+  <rect x="35" y="35" width="30" height="13" rx="2.5" fill="#1C2836" stroke="#3C7BC0" stroke-width="1.2"/>
+  <polyline points="38,44 42,43 46,45 50,40 54,41 58,38 62,39" fill="none" stroke="#7DB8F0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="62" cy="39" r="1.7" fill="#7DB8F0"/>
+  <rect x="35" y="52" width="30" height="13" rx="2.5" fill="#1C2836" stroke="#C25A2E" stroke-width="1.2"/>
+  <polyline points="38,56 42,58 46,57 50,61 54,60 58,62 62,61" fill="none" stroke="#FF8A50" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="62" cy="61" r="1.7" fill="#FF8A50"/>
 </svg>
