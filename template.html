@@ -41,8 +41,8 @@
   --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -68,11 +68,19 @@ button{cursor:pointer}
 
 /* now bar */
 /* locked layout: timestamp row, status row, chip band — nothing reflows as the text changes */
-.nowbar{display:grid;grid-template-columns:auto 1fr;grid-template-rows:28px 100px;align-items:center;column-gap:14px;row-gap:6px;padding-block:10px 6px}
-.nowbar .stamp{font-size:19px;font-weight:700;white-space:nowrap;line-height:28px}
-.nowbar .idx{color:var(--muted);font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;line-height:28px}
-.nowbar .chips{grid-column:1 / -1}
-@media (max-width:600px){.nowbar{grid-template-columns:1fr;grid-template-rows:24px 18px 100px;row-gap:4px}body.no-chips .nowbar{grid-template-rows:24px 18px 0px}.nowbar .stamp{line-height:24px}.nowbar .idx{line-height:18px}}
+.stamprow{display:flex;align-items:center;gap:14px;height:28px;padding-top:10px}
+.stamp{font-size:19px;font-weight:700;white-space:nowrap;line-height:28px}
+.idx{color:var(--muted);font-size:12px;white-space:pre;overflow:hidden;text-overflow:ellipsis;line-height:28px;min-width:0}
+.nowbar{padding-block:6px 6px}
+.nowbar .chips{height:100px}
+body.no-chips .nowbar .chips{height:0}
+/* phones: the title bar scrolls away and the timestamp row sticks at the top in its place; the chip band scrolls with the page */
+@media (max-width:600px){
+  .top{position:static}
+  .stamprow{display:block;height:auto;position:sticky;top:env(safe-area-inset-top,0px);z-index:19;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:-16px;padding:6px 16px 4px}
+  .stamp{display:block;line-height:24px}
+  .idx{display:block;line-height:18px}
+}
 .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:var(--panel2);color:var(--ink2);border:1px solid transparent;white-space:nowrap}
 .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--idle);flex:none}
 .chip.on::before{background:var(--ok)}
@@ -274,7 +282,7 @@ input[type=range].scrub{width:100%;margin:0;accent-color:var(--accent);height:22
 .tickkey{display:flex;gap:12px;font-size:11px;color:var(--muted)}
 .tickkey span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--idle)}
 .tickkey .s::before{background:var(--accent)}.tickkey .a::before{background:var(--alarm)}.tickkey .w::before{background:var(--warn)}.tickkey .o::before{background:var(--ok-soft);border:1px solid var(--ok)}
-@media (max-width:600px){.tickkey{display:none}.brand small{display:none}.tabs{margin-left:0;width:100%;justify-content:space-between}.tabs button{flex:1;padding:6px 4px}.nowbar .stamp{font-size:17px}.transport .btn{min-width:34px;padding:6px 8px}}
+@media (max-width:600px){.tickkey{display:none}.brand small{display:none}.tabs{margin-left:0;width:100%;justify-content:space-between}.tabs button{flex:1;padding:6px 4px}.stamp{font-size:17px}.transport .btn{min-width:30px;padding:6px 5px}.transport select{padding:4px 5px}.transport .grow{display:none}.demand{flex:1 1 100%;min-width:0}.timeline{margin-top:8px}.timeline .wrap{gap:4px}}
 
 /* trends */
 .trendbar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px}
@@ -374,7 +382,7 @@ body.no-air .air{display:none}
 body.no-flow .flow{display:none}
 body.no-sv #svsym,body.no-sv #svpipe,body.no-sv #svstate,body.no-sv #svlbl{display:none}
 body.no-legend .legend,body.no-legend .hint{display:none}
-body.no-chips .nowbar{grid-template-rows:28px 0px}body.no-chips .chips{display:none}
+body.no-chips .chips{display:none}
 body.no-dock .dock{display:none}
 body.no-cabinet #indoor-var .cab{display:none}
 .toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
@@ -399,9 +407,8 @@ body.no-cabinet #indoor-var .cab{display:none}
 </div></header>
 
 <main class="wrap">
+  <div class="stamprow"><span class="stamp num" id="stamp">—</span><span class="idx num" id="stampidx"></span></div>
   <div class="nowbar">
-    <span class="stamp num" id="stamp">—</span>
-    <span class="idx num" id="stampidx"></span>
     <div class="chips" id="modechips"></div>
   </div>
 
@@ -2079,7 +2086,7 @@ async function openFiles(files){
 window.dchkOpen = openFiles;
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v34';
+const APP_VERSION = 'v35';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
