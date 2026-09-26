@@ -376,7 +376,7 @@ body.no-sv #svsym,body.no-sv #svpipe,body.no-sv #svstate,body.no-sv #svlbl{displ
 body.no-legend .legend,body.no-legend .hint{display:none}
 body.no-chips .nowbar{grid-template-rows:28px 0px}body.no-chips .chips{display:none}
 body.no-dock .dock{display:none}
-body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet #indoor-var .flames,body.no-cabinet #indoor-var .burner,body.no-cabinet #indoor-var .strips{display:none}
+body.no-cabinet #indoor-var .cab{display:none}
 .toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 </style>
@@ -420,12 +420,8 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
         <button class="btn small" id="settingsbtn" type="button">⚙ Settings</button>
         <label class="eqtog">Equipment <select id="eqsel">
           <option value="auto">Auto-detect</option>
-          <option value="hp-furnace">Heat pump + gas furnace</option>
-          <option value="hp-strips">Heat pump + air handler (strips)</option>
-          <option value="hp-ah">Heat pump + air handler</option>
-          <option value="ac-furnace">AC + gas furnace</option>
-          <option value="ac-strips">AC + air handler (strips)</option>
-          <option value="ac-ah">AC + air handler</option>
+          <option value="hp">Heat pump (DZ / DH)</option>
+          <option value="ac">Air conditioner (DX / DC)</option>
         </select></label>
         <span class="viewnote" id="viewnote"></span>
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
@@ -557,7 +553,7 @@ body.no-cabinet #indoor-var .cab,body.no-cabinet #indoor-var .hx,body.no-cabinet
         <label><input type="checkbox" data-s="flow"> Refrigerant flow dashes</label>
         <label><input type="checkbox" data-s="sv"> Hot-gas bypass valve</label>
         <label><input type="checkbox" data-s="parts"> Circuit components (strainers, drier, check valves, muffler, HPS, ports)</label>
-        <label><input type="checkbox" data-s="cabinet"> Indoor cabinet (furnace / air handler)</label>
+        <label><input type="checkbox" data-s="cabinet"> Indoor blower cabinet</label>
         <label><input type="checkbox" data-s="physics"> Physics checks (isentropic, lift, capacity, efficiency)</label>
         <label><input type="checkbox" data-s="legend"> Legend and hints</label>
       </section>
@@ -766,7 +762,7 @@ const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a gr
             <g id="fourway"><rect class="fw-body" x="425" y="1195" width="70" height="70" rx="10"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
             <text class="sublbl" x="506" y="1292" id="fwlbl">4-WAY VALVE</text>
             <text class="state" x="506" y="1308" id="fwstate">—</text>
-            <path class="pipe-o" d="M460 1116 H510 V1310"/><path class="pipe off" id="svpipe" d="M460 1116 H510 V1310"/>
+            <path class="pipe-o" id="svpipe-o" d="M460 1116 H510 V1310"/><path class="pipe off" id="svpipe" d="M460 1116 H510 V1310"/>
             <g id="svsym" class="valve"><rect class="sv" x="498" y="1168" width="24" height="30" rx="4"/><rect class="motor" x="524" y="1175" width="12" height="16" rx="2"/><line x1="528" y1="1179" x2="528" y2="1187"/><line x1="532" y1="1179" x2="532" y2="1187"/></g>
             <text class="sublbl" x="492" y="1158" text-anchor="end" id="svlbl">HOT GAS SV</text>
             <text class="state" x="492" y="1172" text-anchor="end" id="svstate">—</text>
@@ -797,7 +793,7 @@ const SCENE_LAND = `
             <g id="fourway"><rect class="fw-body" x="910" y="140" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
             <text class="sublbl" x="896" y="214" text-anchor="end" id="fwlbl">4-WAY VALVE</text>
             <text class="state" x="896" y="230" text-anchor="end" id="fwstate">—</text>
-            <path class="pipe-o" d="M1040 420 H853"/><path class="pipe off" id="svpipe" d="M1040 420 H853"/>
+            <path class="pipe-o" id="svpipe-o" d="M1040 420 H853"/><path class="pipe off" id="svpipe" d="M1040 420 H853"/>
             <g id="svsym" class="valve"><rect class="sv" x="915" y="408" width="30" height="24" rx="4"/><rect class="motor" x="922" y="394" width="16" height="12" rx="2"/><line x1="925" y1="398" x2="935" y2="398"/><line x1="925" y1="402" x2="935" y2="402"/></g>
             <text class="sublbl" x="930" y="447" text-anchor="middle" id="svlbl">HOT GAS SV</text>
             <text class="state" x="930" y="461" text-anchor="middle" id="svstate">—</text>
@@ -826,10 +822,10 @@ const LAYOUTS = {
 // component geometry per layout (coils, cabinet, fans, air streams)
 const GEO = {
   port: {ic:[300,110,220,60,'h'], oc:[160,802,60,260,'v'],
-         cab:{x:372,y:190,w:156,h:236,lbl:[450,207],cells:[408,450,492],cy0:242,cy1:300,burner:[392,302,116],flame:[302,268],strips:{ys:[244,266,288],x0:388,x1:512},fan:[450,372],fanAh:[450,330],aux:[450,418]},
+         cab:{x:372,y:190,w:156,h:236,lbl:[450,207],fan:[450,330]},
          fanOut:[88,948,34], airOut:{ys:[830,872,914,956,998,1040],x0:126,x1:262}, airIn:{xs:[395,430,465,500],y0:'fan',y1:78}, gIc:[0,0,0,1]},
   land: {ic:[130,220,60,320,'v'], oc:[1350,170,60,390,'v'],
-         cab:{x:260,y:250,w:210,h:350,lbl:[365,268],cells:[300,340,380],cy0:282,cy1:345,burner:[287,347,106],flame:[347,313],strips:{ys:[300,322,344],x0:275,x1:405},fan:[440,420],fanAh:[440,420],aux:[365,585]},
+         cab:{x:260,y:250,w:210,h:350,lbl:[365,268],fan:[440,420]},
          fanOut:[1240,330,34], airOut:{ys:[220,270,320,370,420,470,520],x0:1312,x1:1430}, airIn:{ys:[290,335,380,425,470,515],x0:405,x1:100}, gIc:[1,0,0,0]},
 };
 const geo = () => LAY === LAYOUTS.land ? GEO.land : GEO.port;
@@ -847,25 +843,29 @@ function tx(d, dx, dy){
     const out = []; for (let k = 0; k < n.length; k += 2) out.push(n[k]+dx, n[k+1]+dy); return c + out.join(' ');
   });
 }
-// equipment profile: outdoor 'hp' | 'ac', indoor 'furnace' | 'strips' | 'ah'
-let EQ = {out:'hp', in:'furnace', auto:true, guess:''};
+// equipment profile: outdoor unit type only — 'hp' (DZ/DH/GZ/AZ) or 'ac' (DX/DC/GX/AX). No indoor / auxiliary-heat data exists in D-Checker logs.
+let EQ = {out:'hp', auto:true, guess:''};
 function detectEquipment(){
+  // 1) model file named in the phone recording's header.txt (INV_Unitary_DZ6VS → DZ = heat pump)
+  const mdl = (D.model || '').replace(/^INV_Unitary_/i, '');
+  const mm = /^([DGA])([XCZH])/i.exec(mdl);
+  if (mm){ const hp = /[ZH]/i.test(mm[2]); return {out: hp ? 'hp' : 'ac', why: `model ${mdl}`}; }
+  // 2) otherwise the data: a live 4-way valve column or heating rows mean a heat pump
   const fw = STAT.find(x => x.id === 'fourway');
   const hp = (fw && fw.present && D.str.fourway.some(v => v != null)) || D.mode.some(m => m === 'heat');
-  const hasF = D.aux.some(a => a.kind === 'furnace'), hasS = D.aux.some(a => a.kind === 'strips');
-  const ind = hasF ? 'furnace' : hasS ? 'strips' : 'furnace';
-  return {out: hp ? 'hp' : 'ac', in: ind, why: hp ? (fw && fw.present ? '4-way valve column present' : 'heating rows present') : 'no 4-way valve / heating', why2: hasF ? 'furnace columns present' : hasS ? 'strip-heat columns present' : 'no indoor heat columns — furnace assumed'};
+  return {out: hp ? 'hp' : 'ac', why: hp ? (fw && fw.present ? '4-way valve column present' : 'heating rows present') : 'no 4-way valve column, no heating rows'};
 }
 function applyEquipment(){
-  const saved = D ? loadJSON('dchk.eq.' + D.name, 'auto') : 'auto';
-  const det = D ? detectEquipment() : {out:'hp', in:'furnace', why:'', why2:''};
-  if (saved === 'auto'){ EQ = {out:det.out, in:det.in, auto:true, guess:`${det.why} · ${det.why2}`}; }
-  else { const [o, i2] = saved.split('-'); EQ = {out:o, in:i2, auto:false, guess:''}; }
+  let saved = D ? loadJSON('dchk.eq.' + D.name, 'auto') : 'auto';
+  if (saved !== 'auto') saved = saved.split('-')[0];            // older saves were "hp-furnace" style
+  const det = D ? detectEquipment() : {out:'hp', why:''};
+  if (saved === 'auto') EQ = {out:det.out, auto:true, guess:det.why};
+  else EQ = {out:saved, auto:false, guess:''};
   $('#eqsel').value = saved;
-  const names = {hp:'Heat pump', ac:'AC', furnace:'gas furnace', strips:'air handler + strips', ah:'air handler'};
-  $('#eqsel').options[0].textContent = D ? `Auto: ${names[det.out]} + ${names[det.in]}` : 'Auto-detect';
+  const names = {hp:'Heat pump', ac:'Air conditioner'};
+  $('#eqsel').options[0].textContent = D ? `Auto: ${names[det.out]}${det.why.startsWith('model') ? ' · ' + det.why.slice(6) : ''}` : 'Auto-detect';
   $('#eqsel').title = EQ.auto ? EQ.guess : 'set by hand';
-  buildDiagram();
+  buildDiagram(); buildTags();
 }
 let THERMAL = !!loadJSON('dchk.thermal', false);
 function setThermal(on){ if (THERMAL !== !!on) logEvent('thermal', {on:!!on}); THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
@@ -931,11 +931,7 @@ function buildDataset(text, name){
   const interval = n > 1 ? Math.max(1, span / (n - 1)) : 30;
   const runSec = new Array(n); let startIdx = -1;
   for (let i = 0; i < n; i++){ const on = isN(num.rps[i]) ? num.rps[i] > 0 : (str.compcmd[i] === 'ON'); if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
-  // furnace / electric-strip columns, if the export has any (names vary by model; matched by keyword)
-  const AUXRX = {furnace:/furnace|gas valve|burner|flame|ignit|combust|\bW[12]\b/i, strips:/\bstrip|electric heat|elec\w* heat|aux\w* heat|\bEH\b|heat kit|backup heat/i};
-  const aux = [];
-  head.forEach((h, ix) => { const k = AUXRX.furnace.test(h) ? 'furnace' : AUXRX.strips.test(h) ? 'strips' : null; if (k) aux.push({label:h.replace(/^\d+\s*:\s*/, ''), kind:k, vals:rows.slice(1).map(r => (r[ix] || '').trim())}); });
-  return {name, n, t, num, str, mode, runSec, interval, head, aux};
+  return {name, n, t, num, str, mode, runSec, interval, head};
 }
 
 /* ---------- rule evaluation ---------- */
@@ -1272,28 +1268,15 @@ function wave(x0, y0, x1, y1, amp, len){
   return d;
 }
 function zig(x0, y, x1, amp, step){ let d = `M${x0} ${y}`; let k = 0; for (let x = x0 + step; x <= x1; x += step, k++) d += ` L${x} ${y + (k % 2 ? amp : -amp)}`; return d; }
-// indoor cabinet below the coil: gas furnace (heat-exchanger cells + burners), air handler with electric strips, or plain air handler
+// indoor cabinet below the coil: a blower box, as on the Daikin drawing (the log carries no furnace / strip-heat data)
 function buildIndoor(){
   const g = $('#indoor-var'); g.innerHTML = '';
   const c = geo().cab;
   el('rect', {class:'cab', x:c.x, y:c.y, width:c.w, height:c.h, rx:8}, g);
   const t = el('text', {class:'sublbl', x:c.lbl[0], y:c.lbl[1], 'text-anchor':'middle'}, g);
-  t.textContent = {furnace:'GAS FURNACE', strips:'AIR HANDLER · STRIPS', ah:'AIR HANDLER'}[EQ.in];
-  if (EQ.in === 'furnace'){
-    el('rect', {class:'burner', x:c.burner[0], y:c.burner[1], width:c.burner[2], height:5, rx:2}, g);
-    const [yb, yt] = c.flame, dy = yb - yt;
-    const fl = el('g', {class:'flames', id:'flames'}, g);
-    for (const x of c.cells) el('path', {d:`M${x} ${yb} C${x-9} ${yb-dy*0.35} ${x-8} ${yb-dy*0.7} ${x} ${yt} C${x+8} ${yb-dy*0.7} ${x+9} ${yb-dy*0.35} ${x} ${yb} Z`}, fl);
-    const hx = el('g', {class:'hx', id:'hx'}, g);
-    for (const x of c.cells) el('path', {d:`M${x-13} ${c.cy1} V${c.cy0} A13 13 0 0 1 ${x+13} ${c.cy0} V${c.cy1}`}, hx);
-  } else if (EQ.in === 'strips'){
-    const st = el('g', {class:'strips', id:'strips'}, g);
-    for (const y of c.strips.ys) el('path', {d:zig(c.strips.x0, y, c.strips.x1, 5, 10)}, st);
-  }
-  const f = EQ.in === 'ah' ? c.fanAh : c.fan;
-  fan($('#ifan'), f[0], f[1], 26, 'ifanb');
-  el('text', {class:'state', x:c.aux[0], y:c.aux[1], 'text-anchor':'middle', id:'auxstate'}, g);
-  return f;
+  t.textContent = 'BLOWER';
+  fan($('#ifan'), c.fan[0], c.fan[1], 26, 'ifanb');
+  return c.fan;
 }
 function buildCoils(){
   const G = geo();
@@ -1363,30 +1346,30 @@ const PARTS = {
     {t:'drier', x:190, y:400, o:'v', title:'Filter drier'}, {t:'strainer', x:190, y:352, o:'v', title:'Filter'}, {t:'strainer', x:190, y:250, o:'v', title:'Filter'},
     // outdoor gas line: stop valve → service port / fusible plug → muffler → reversing valve
     {t:'port', x:750, y:598, side:'left', label:'SERVICE PORT', lx:728, ly:602, anchor:'end'}, {t:'plug', x:750, y:625, side:'left', title:'Fusible plug'},
-    {t:'muffler', x:750, y:668, o:'v', label:'MUFFLER', lx:728, ly:672, anchor:'end'},
+    {t:'muffler', x:750, y:668, o:'v', label:'MUFFLER', lx:728, ly:672, anchor:'end', hp:true},
     // discharge: compressor → check valve → Td → HPS → HP sensor → 4-way
-    {t:'check', x:460, y:948, dir:'down', title:'Check valve (discharge)'}, {t:'hps', x:425, y:1050, to:[460,1050], title:'High pressure switch'},
-    {t:'strainer', x:484, y:1116, o:'h', title:'Strainer (hot-gas bypass)'},
+    {t:'check', x:460, y:948, dir:'down', title:'Check valve (discharge)', hp:true}, {t:'hps', x:425, y:1050, to:[460,1050], title:'High pressure switch'},
+    {t:'strainer', x:484, y:1116, o:'h', title:'Strainer (hot-gas bypass)', hp:true},
     // liquid side: coil → strainer → EEV (check-valve bypass) → strainer → Ti → stop valve
-    {t:'strainer', x:190, y:782, o:'v', title:'Strainer'}, {t:'strainer', x:190, y:706, o:'v', title:'Strainer'},
-    {t:'check', x:160, y:745, dir:'up', title:'Check valve (bypasses the EEV in cooling)', bypass:'M190 772 H160 V718 H190'},
+    {t:'strainer', x:190, y:782, o:'v', title:'Strainer', hp:true}, {t:'strainer', x:190, y:706, o:'v', title:'Strainer', hp:true},
+    {t:'check', x:160, y:745, dir:'up', title:'Check valve (bypasses the EEV in cooling)', bypass:'M190 772 H160 V718 H190', hp:true},
   ],
   land: [
     {t:'drier', x:570, y:700, o:'h', label:'DRIER', ly:722}, {t:'strainer', x:430, y:700, o:'h', title:'Filter'}, {t:'strainer', x:230, y:700, o:'h', title:'Filter'},
     {t:'port', x:790, y:170, side:'up', label:'SERVICE PORT', ly:146}, {t:'plug', x:830, y:170, side:'up', title:'Fusible plug'},
-    {t:'muffler', x:700, y:170, o:'h', label:'MUFFLER', ly:196},
-    {t:'check', x:1040, y:447, dir:'up', title:'Check valve (discharge)'}, {t:'hps', x:990, y:205, to:[990,230], title:'High pressure switch'},
-    {t:'strainer', x:1000, y:420, o:'h', title:'Strainer (hot-gas bypass)'},
-    {t:'strainer', x:1250, y:700, o:'h', title:'Strainer'}, {t:'strainer', x:980, y:700, o:'h', title:'Strainer'},
-    {t:'check', x:1100, y:735, dir:'left', title:'Check valve (bypasses the EEV in cooling)', bypass:'M1130 700 V735 H1070 V700'},
+    {t:'muffler', x:700, y:170, o:'h', label:'MUFFLER', ly:196, hp:true},
+    {t:'check', x:1040, y:447, dir:'up', title:'Check valve (discharge)', hp:true}, {t:'hps', x:990, y:205, to:[990,230], title:'High pressure switch'},
+    {t:'strainer', x:1000, y:420, o:'h', title:'Strainer (hot-gas bypass)', hp:true},
+    {t:'strainer', x:1250, y:700, o:'h', title:'Strainer', hp:true}, {t:'strainer', x:980, y:700, o:'h', title:'Strainer', hp:true},
+    {t:'check', x:1100, y:735, dir:'left', title:'Check valve (bypasses the EEV in cooling)', bypass:'M1130 700 V735 H1070 V700', hp:true},
   ],
 };
-function buildParts(){ const g = $('#parts'); g.innerHTML = ''; for (const it of (LAY === LAYOUTS.land ? PARTS.land : PARTS.port)) partSym(g, it); }
+function buildParts(){ const g = $('#parts'); g.innerHTML = ''; for (const it of (LAY === LAYOUTS.land ? PARTS.land : PARTS.port)) if (!(it.hp && EQ.out === 'ac')) partSym(g, it); }
 function buildDiagram(){
   buildPipes(); buildCoils(); buildLineSet(); buildParts();
+  // per the FIT AC service drawing: no reversing valve, no hot-gas solenoid, no outdoor EEV (the muffler, check valves and their strainers go with them)
   const ac = EQ.out === 'ac';
-  for (const id of ['fourway','fwlbl','fwstate']) document.getElementById(id).classList.toggle('hidden-eq', ac);
-  document.getElementById('ev-sym').classList.toggle('hidden-eq', false);
+  for (const id of ['fourway','fwlbl','fwstate','svsym','svpipe','svpipe-o','svlbl','svstate','ev-sym']){ const e = document.getElementById(id); if (e) e.classList.toggle('hidden-eq', ac); }
 }
 
 // Tags: x,y in diagram units; anchor left (default) / right / ctr. `from` = sensor point on the pipe (leader + marker).
@@ -1414,7 +1397,7 @@ const TAGS_PORT = [
   // outdoor: liquid side & coil
   {ch:'liq',   x:212, y:606, from:[190,606], mk:'temp'},
   {ch:'sc',    label:'Subcooling', x:212, y:676, target:'tsc', states:['sc','scerr']},
-  {ch:'evpct', x:212, y:758, bar:true, sub:'ev', subLabel:'', subUnit:true},
+  {ch:'evpct', x:212, y:758, bar:true, sub:'ev', subLabel:'', subUnit:true, hp:true},
   {ch:'ochex', x:236, y:880, from:[220,880], mk:'temp'},
   {ch:'ocmid', x:236, y:950, from:[220,950], mk:'temp'},
   {ch:'appr',  x:236, y:1020},
@@ -1454,7 +1437,7 @@ const TAGS_LAND = [
   {ch:'fan',   x:1240, y:466, anchor:'ctr', target:'tfan'},
   {ch:'liq',   x:760, y:650, from:[900,700], mk:'temp'},
   {ch:'sc',    label:'Subcooling', x:760, y:760, target:'tsc', states:['sc','scerr']},
-  {ch:'evpct', x:1100, y:760, anchor:'ctr', bar:true, sub:'ev', subLabel:'', subUnit:true},
+  {ch:'evpct', x:1100, y:760, anchor:'ctr', bar:true, sub:'ev', subLabel:'', subUnit:true, hp:true},
   {ch:'ochex', x:1430, y:540, from:[1380,540], mk:'temp'},
   {ch:'ocmid', x:1430, y:365, from:[1380,365], mk:'temp'},
   {ch:'appr',  x:1430, y:440},
@@ -1499,8 +1482,9 @@ function buildTags(){
         else togglePin(tg.ch); });
       e.addEventListener('pointercancel', () => { drag = null; });
     } else e.addEventListener('click', () => { const id = tagCh(tg, D ? (D.mode[cur] === 'cool' ? 'cool' : 'heat') : 'heat'); if (id) togglePin(id); });
+    const eqHidden = !!(tg.hp && EQ.out === 'ac'); e.hidden = eqHidden;
     host.appendChild(e);
-    if (tg.from){
+    if (tg.from && !eqHidden){
       const [fx, fy] = P(tg.from[0], tg.from[1]);
       el('line', {class:'leader', x1:fx, y1:fy, x2:px, y2:py}, L);
       el('circle', {class:'tp ' + (tg.mk||'temp'), cx:fx, cy:fy, r:tg.mk === 'press' ? 6 : 5.5}, M);
@@ -1585,15 +1569,6 @@ function renderCycle(i){
   const airIn = m === 'heat' ? D.num.iliq[i] : D.num.igas[i], airOut = m === 'heat' ? D.num.igas[i] : D.num.iliq[i];
   gIc[1].setAttribute('stop-color', thermColor(airIn) || grey); gIc[0].setAttribute('stop-color', thermColor(airOut) || grey);
   $('#air-oc').classList.toggle('off', !ofOn); $('#air-ic').classList.toggle('off', !ifOn);
-  // furnace / strip heat: light the glyph from any aux-heat column the export carries
-  { const on = v => /^(on|1|open|yes|high|low|w1|w2|stage ?[12]|true)$/i.test(v) || (parseFloat(v) > 0);
-    const rel = D.aux.filter(a => a.kind === (EQ.in === 'strips' ? 'strips' : 'furnace'));
-    const active = rel.some(a => on(a.vals[i]));
-    const fl = document.getElementById('flames'), hx = document.getElementById('hx'), st = document.getElementById('strips');
-    if (fl) fl.classList.toggle('on', active); if (hx) hx.classList.toggle('on', active); if (st) st.classList.toggle('on', active);
-    const ax = document.getElementById('auxstate');
-    if (ax){ if (EQ.in === 'ah') ax.textContent = ''; else if (!rel.length) ax.textContent = 'no ' + (EQ.in === 'strips' ? 'strip' : 'furnace') + ' data in log'; else ax.textContent = rel.map(a => a.label + ': ' + (a.vals[i] || '—')).join(' · ').slice(0, 40); ax.classList.toggle('on', active); }
-  }
   const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
   $('#iduhdr').textContent = [im, ia != null ? 'addr ' + ia : null, ie != null ? 'err ' + ie : null].filter(Boolean).join(' · ');
@@ -1602,7 +1577,7 @@ function renderCycle(i){
   TAGS.forEach((tg, k) => {
     const e = document.getElementById('tag-' + k);
     const id = tagCh(tg, m);
-    if (!id || (tg.adv && !S.physics)){ e.hidden = true; return; } e.hidden = false;
+    if (!id || (tg.adv && !S.physics) || (tg.hp && EQ.out === 'ac')){ e.hidden = true; return; } e.hidden = false;
     const ch = chById[id]; const v = D.num[id][i];
     e.querySelector('.l').textContent = (pick(tg.label, m) || ch.short) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
     e.querySelector('.n').textContent = fmt(v, ch);
@@ -1901,7 +1876,7 @@ function buildGhosts(){
 
 /* ---------- custom tags: settings UI ---------- */
 function refreshAfterCustom(){
-  if (D){ const text = D._text, keep = D.aux; D = buildDataset(text, D.name); D._text = text; D.aux = keep; analyze(); evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
+  if (D){ const text = D._text, model = D.model; D = buildDataset(text, D.name); D._text = text; D.model = model; analyze(); evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
   setLayout(); renderCustomList();
   document.querySelectorAll('#cbuild .chan').forEach(o => { const v = o.value; const n = chanSelect(v); o.replaceWith(n); n.addEventListener('change', () => { n.nextElementSibling.hidden = n.value !== '__const'; updatePreview(); }); });
 }
@@ -2086,9 +2061,10 @@ async function openFiles(files){
       if (!lab || !log) throw new Error('archive has no datalabel.txt + .log inside');
       const csv = dlToCsv(dlParseLabels(td.decode(lab.data)), dlSplit(log.data));
       const who = cust ? td.decode(cust.data).split(',').filter(Boolean).slice(0, 2).join(' · ') : '';
-      load(csv, arch.name + (who ? ' — ' + who : '')); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname);
       const hdr = members.find(m => /header\.txt$/i.test(m.name)); const hf = hdr ? td.decode(hdr.data).split(',') : []; const cf = cust ? td.decode(cust.data).split(',') : [];
-      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D) queueUpload(arch, {site:cf[1] || cf[0] || null, customer:cf[3] || null, tech_name:cf[7] || null, model:(hf[2] || '').replace(/\.txt$/i, '') || null}); return;
+      const model = (hf[2] || '').replace(/\.txt$/i, '') || null;
+      load(csv, arch.name + (who ? ' — ' + who : ''), model); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname);
+      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D) queueUpload(arch, {site:cf[1] || cf[0] || null, customer:cf[3] || null, tech_name:cf[7] || null, model}); return;
     }
     const log = files.find(f => /\.log$/i.test(f.name)), lab = byName('datalabel\\.txt');
     if (log){
@@ -2103,7 +2079,7 @@ async function openFiles(files){
 window.dchkOpen = openFiles;
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v33';
+const APP_VERSION = 'v34';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -2163,7 +2139,7 @@ async function queueUpload(file, meta){
   try {
     const buf = await file.arrayBuffer(); const sha = await sha256(buf);
     CURRENT_REC = {sha, id:null};
-    await qPut({sha, name:file.name, type:file.type || 'application/octet-stream', blob:new Blob([buf]), meta:Object.assign({}, meta, {row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, in:EQ.in, auto:EQ.auto}, summary:recordingSummary(), app_version:APP_VERSION})});
+    await qPut({sha, name:file.name, type:file.type || 'application/octet-stream', blob:new Blob([buf]), meta:Object.assign({}, meta, {row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, auto:EQ.auto}, summary:recordingSummary(), app_version:APP_VERSION})});
     flushQueue();
   } catch(e){ console.warn('queue', e); }
 }
@@ -2200,7 +2176,7 @@ async function fleetRefresh(){
     for (const r of rows){
       const tr = document.createElement('tr');
       const sg = r.summary && r.summary.signatures ? Object.entries(r.summary.signatures).map(([k, v]) => `${k} (${v})`).join('; ') : '';
-      const eq = r.equipment ? `${r.equipment.out === 'ac' ? 'AC' : 'HP'} + ${r.equipment.in}` : '';
+      const eq = r.equipment ? (r.equipment.out === 'ac' ? 'AC' : 'HP') + (r.equipment.auto ? ' (auto)' : '') : '';
       tr.innerHTML = `<td>${new Date(r.created_at).toLocaleString()}</td><td>${r.site || ''}${r.customer ? ' · ' + r.customer : ''}</td><td>${r.tech_name || (r.tech_email || '').split('@')[0]}</td><td>${r.model || ''}</td><td>${r.started_at ? new Date(r.started_at).toLocaleString() : ''}</td><td>${r.row_count || ''}</td><td>${eq}</td><td>${r.summary ? r.summary.runs : ''}</td><td class="sigs">${sg || '—'}</td><td><button class="btn small" type="button">Open</button></td>`;
       tr.querySelector('button').addEventListener('click', async () => { try { toast('Downloading…'); const blob = await sbFetch('/storage/v1/object/authenticated/recordings/' + r.file_path).then(x => x.blob()); await openFiles([new File([blob], r.file_name)]); CURRENT_REC = {sha:null, id:r.id}; $('#fbthis').hidden = false; $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
       tb.appendChild(tr);
@@ -2215,8 +2191,8 @@ document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('c
 }));
 
 /* ---------- load ---------- */
-function load(text, name){
-  try { D = buildDataset(text, name); D._text = text; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
+function load(text, name, model){
+  try { D = buildDataset(text, name); D._text = text; D.model = model || null; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
   if (playing) togglePlay();
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
