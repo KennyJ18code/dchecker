@@ -903,10 +903,10 @@ const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a gr
             <g id="fourway"><rect class="fw-body" x="425" y="1195" width="70" height="70" rx="10"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
             <text class="sublbl" x="506" y="1292" id="fwlbl">4-WAY VALVE</text>
             <text class="state" x="506" y="1308" id="fwstate">—</text>
-            <path class="pipe-o" d="M460 1120 H412"/><path class="pipe off" id="svpipe" d="M460 1120 H412"/>
-            <g id="svsym" class="valve"><rect class="sv" x="382" y="1108" width="30" height="24" rx="4"/><rect class="motor" x="389" y="1094" width="16" height="12" rx="2"/><line x1="392" y1="1098" x2="402" y2="1098"/><line x1="392" y1="1102" x2="402" y2="1102"/></g>
-            <text class="sublbl" x="397" y="1150" text-anchor="middle" id="svlbl">HOT GAS SV</text>
-            <text class="state" x="397" y="1165" text-anchor="middle" id="svstate">—</text>
+            <path class="pipe-o" d="M460 1116 H510 V1310"/><path class="pipe off" id="svpipe" d="M460 1116 H510 V1310"/>
+            <g id="svsym" class="valve"><rect class="sv" x="498" y="1168" width="24" height="30" rx="4"/><rect class="motor" x="524" y="1175" width="12" height="16" rx="2"/><line x1="528" y1="1179" x2="528" y2="1187"/><line x1="532" y1="1179" x2="532" y2="1187"/></g>
+            <text class="sublbl" x="492" y="1158" text-anchor="end" id="svlbl">HOT GAS SV</text>
+            <text class="state" x="492" y="1172" text-anchor="end" id="svstate">—</text>
           </g>
 `;
 const SCENE_LAND = `
@@ -934,10 +934,10 @@ const SCENE_LAND = `
             <g id="fourway"><rect class="fw-body" x="910" y="140" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
             <text class="sublbl" x="896" y="214" text-anchor="end" id="fwlbl">4-WAY VALVE</text>
             <text class="state" x="896" y="230" text-anchor="end" id="fwstate">—</text>
-            <path class="pipe-o" d="M1040 400 H1098"/><path class="pipe off" id="svpipe" d="M1040 400 H1098"/>
-            <g id="svsym" class="valve"><rect class="sv" x="1098" y="388" width="30" height="24" rx="4"/><rect class="motor" x="1105" y="374" width="16" height="12" rx="2"/><line x1="1108" y1="378" x2="1118" y2="378"/><line x1="1108" y1="382" x2="1118" y2="382"/></g>
-            <text class="sublbl" x="1113" y="430" text-anchor="middle" id="svlbl">HOT GAS SV</text>
-            <text class="state" x="1113" y="445" text-anchor="middle" id="svstate">—</text>
+            <path class="pipe-o" d="M1040 420 H853"/><path class="pipe off" id="svpipe" d="M1040 420 H853"/>
+            <g id="svsym" class="valve"><rect class="sv" x="915" y="408" width="30" height="24" rx="4"/><rect class="motor" x="922" y="394" width="16" height="12" rx="2"/><line x1="925" y1="398" x2="935" y2="398"/><line x1="925" y1="402" x2="935" y2="402"/></g>
+            <text class="sublbl" x="930" y="447" text-anchor="middle" id="svlbl">HOT GAS SV</text>
+            <text class="state" x="930" y="461" text-anchor="middle" id="svstate">—</text>
           </g>
 `;
 let VIEW = loadJSON('dchk.view', 'num');
@@ -1503,7 +1503,7 @@ const PARTS = {
     {t:'muffler', x:750, y:668, o:'v', label:'MUFFLER', lx:728, ly:672, anchor:'end'},
     // discharge: compressor → check valve → Td → HPS → HP sensor → 4-way
     {t:'check', x:460, y:948, dir:'down', title:'Check valve (discharge)'}, {t:'hps', x:425, y:1050, to:[460,1050], title:'High pressure switch'},
-    {t:'strainer', x:436, y:1120, o:'h', title:'Strainer (hot-gas bypass)'},
+    {t:'strainer', x:484, y:1116, o:'h', title:'Strainer (hot-gas bypass)'},
     // liquid side: coil → strainer → EEV (check-valve bypass) → strainer → Ti → stop valve
     {t:'strainer', x:190, y:782, o:'v', title:'Strainer'}, {t:'strainer', x:190, y:706, o:'v', title:'Strainer'},
     {t:'check', x:160, y:745, dir:'up', title:'Check valve (bypasses the EEV in cooling)', bypass:'M190 772 H160 V718 H190'},
@@ -1513,7 +1513,7 @@ const PARTS = {
     {t:'port', x:790, y:170, side:'up', label:'SERVICE PORT', ly:146}, {t:'plug', x:830, y:170, side:'up', title:'Fusible plug'},
     {t:'muffler', x:700, y:170, o:'h', label:'MUFFLER', ly:196},
     {t:'check', x:1040, y:447, dir:'up', title:'Check valve (discharge)'}, {t:'hps', x:990, y:205, to:[990,230], title:'High pressure switch'},
-    {t:'strainer', x:1072, y:400, o:'h', title:'Strainer (hot-gas bypass)'},
+    {t:'strainer', x:1000, y:420, o:'h', title:'Strainer (hot-gas bypass)'},
     {t:'strainer', x:1250, y:700, o:'h', title:'Strainer'}, {t:'strainer', x:980, y:700, o:'h', title:'Strainer'},
     {t:'check', x:1100, y:735, dir:'left', title:'Check valve (bypasses the EEV in cooling)', bypass:'M1130 700 V735 H1070 V700'},
   ],
@@ -1698,7 +1698,7 @@ function renderCycle(i){
   $('#fwstate').textContent = fwv ? (fwv === 'ON' ? 'ON · de-energized' : 'OFF · energized') : '—';
   const sv = D.str.svhot[i] === 'ON';
   $('#svsym').querySelector('.sv').classList.toggle('on', sv);
-  const svp = $('#svpipe'); svp.classList.remove('hi','off'); svp.classList.add(sv && running ? 'hi' : 'off');
+  const svp = $('#svpipe'); svp.classList.remove('hi','off'); svp.classList.add(sv && running ? 'hi' : 'off'); svp.style.opacity = sv && running ? '' : '.55';
   const svs = $('#svstate'); svs.textContent = D.str.svhot[i] ? (sv ? 'OPEN' : 'closed') : '—'; svs.classList.toggle('on', sv);
   $('#cmpbody').classList.toggle('on', running);
   { const mf = D.num.mflow ? D.num.mflow[i] : null; const mr = D.range.mflow; const f = (isN(mf) && mr && mr.max > 0) ? mf/mr.max : 0.6; $('#diag').style.setProperty('--flowdur', (2.6 - 2.0*Math.max(0.15, Math.min(1, f))).toFixed(2) + 's'); }
@@ -2240,7 +2240,7 @@ async function openFiles(files){
 window.dchkOpen = openFiles;
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v32';
+const APP_VERSION = 'v33';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
