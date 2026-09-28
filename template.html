@@ -192,7 +192,9 @@ body.no-narr .nowline{display:none}
 .pipe-o{fill:none;stroke:var(--ink);stroke-opacity:.22;stroke-width:11;stroke-linejoin:round;stroke-linecap:round}
 .pipe{fill:none;stroke-width:7;stroke-linejoin:round;stroke-linecap:round;transition:stroke .3s}
 .pipe.hi{stroke:var(--hi)}.pipe.lo{stroke:var(--lo)}.pipe.off{stroke:var(--metal2)}
-.flow{fill:none;stroke:#fff;stroke-opacity:.85;stroke-width:2.2;stroke-dasharray:5 13;stroke-linecap:round;animation:flow 1.1s linear infinite}
+.flow{fill:none;stroke:#fff;stroke-opacity:.85;stroke-width:2.2;stroke-dasharray:5 13;stroke-linecap:round;animation:flow 1.1s steps(6) infinite}
+body.anim-off .flow,body.anim-off .fanb.on{animation-play-state:paused}
+body.anim-off .tag.alarm{animation:none}
 .flow.rev{animation-direction:reverse}
 .diag.idle .flow{animation-play-state:paused;opacity:0}
 @keyframes flow{to{stroke-dashoffset:-18}}
@@ -597,6 +599,7 @@ body.no-cabinet #indoor-var .cab{display:none}
         <label><input type="checkbox" data-s="ghosts"> Ghost graphs behind readings</label>
         <label><input type="checkbox" data-s="arrows"> Change arrows (▲▼ vs previous row)</label>
         <label><input type="checkbox" data-s="air"> Air streams through the coils</label>
+        <label>Motion (flow dashes, air, fans) <select data-s="anim"><option value="play">Only while playing</option><option value="always">Always</option><option value="off">Off</option></select></label>
         <label><input type="checkbox" data-s="flow"> Refrigerant flow dashes</label>
         <label><input type="checkbox" data-s="sv"> Hot-gas bypass valve</label>
         <label><input type="checkbox" data-s="parts"> Circuit components (strainers, drier, check valves, muffler, HPS, ports)</label>
@@ -889,7 +892,8 @@ const SCENE_LAND = `
 // ===== multi-zone (mini split) drawing =====
 // Portrait: one column per head across the top, each head's own liquid + gas line dropping straight down to ITS OWN port on the
 // outdoor unit (no shared trunk — that is a VRV thing). The liquid/gas headers, port EEVs and port thermistors live inside the outdoor box.
-const MZL = {colX:k => 20 + k*300, colW:300, hdrY:78, lLine:x0 => x0 + 140, gLine:x0 => x0 + 154, lHdr:606, gHdr:590};   // landscape geometry
+const MZL = {colX:k => 20 + k*300, colW:300, hdrY:78, lLine:x0 => x0 + 140, gLine:x0 => x0 + 154, lHdr:648, gHdr:632};
+const hopUp = (x, y) => `V${y + 8} A8 8 0 0 0 ${x} ${y - 8}`;   // landscape geometry
 function mzGeo(){
   const nZ = Math.max(2, Math.min(MZ.ports, D && D.zones.length ? Math.max(...D.zones) + 1 : 3));   // columns = highest port present
   const colW = 748 / nZ, two = colW >= 236, k = nZ >= 5 ? 0.70 : nZ === 4 ? 0.75 : nZ === 3 ? 0.66 : 0.75;
@@ -926,10 +930,11 @@ function multiScene(land){
       h += `<g id="zone-${k}" class="zone"><rect class="box" x="${x0}" y="60" width="${MZL.colW - 8}" height="450" rx="12"/>
         <text class="boxlbl" x="${x0 + 14}" y="${MZL.hdrY}">ZONE ${L}</text><text class="hdrtxt" x="${x0 + 14}" y="${MZL.hdrY + 16}" id="zhdr-${k}"></text>
         <rect class="cab" x="${x0 + 100}" y="96" width="100" height="72" rx="8"/><g id="zcoil-${k}"></g><g id="zfan-${k}"></g>
-        <g class="valve" id="pev-${k}"><path d="M${lx - 12} 512 L${lx} 524 L${lx - 12} 536 Z M${lx + 12} 512 L${lx} 524 L${lx + 12} 536 Z"/><rect class="motor" x="${lx - 22}" y="517" width="14" height="14" rx="2"/><path d="M${lx - 8} 524 H${lx}" fill="none"/></g>
-        <text class="sublbl" x="${lx - 26}" y="528" text-anchor="end">PORT ${L}</text></g>`; }
+        <g class="valve"><circle cx="${lx}" cy="556" r="7"/><circle cx="${lx + 14}" cy="556" r="7"/></g>
+        <g class="valve" id="pev-${k}"><path d="M${lx - 10} 578 L${lx} 590 L${lx - 10} 602 Z M${lx + 10} 578 L${lx} 590 L${lx + 10} 602 Z"/><rect class="motor" x="${lx - 22}" y="583" width="12" height="14" rx="2"/><path d="M${lx - 10} 590 H${lx}" fill="none"/></g>
+        <text class="sublbl" x="${lx - 28}" y="594" text-anchor="end">PORT ${L}</text><text class="sublbl" x="${lx - 6}" y="546" text-anchor="end">LIQ</text><text class="sublbl" x="${lx + 20}" y="546">GAS</text></g>`; }
     h += `<g id="g-out"><rect class="box" x="20" y="548" width="1560" height="332" rx="14"/><text class="boxlbl" x="36" y="578">OUTDOOR UNIT</text><text class="hdrtxt" x="1564" y="578" text-anchor="end" id="oduhdr"></text>
-      <text class="sublbl" x="1546" y="${MZL.gHdr - 8}" text-anchor="end">GAS</text><text class="sublbl" x="1546" y="${MZL.lHdr + 18}" text-anchor="end">LIQUID</text>
+      <text class="sublbl" x="36" y="${MZL.gHdr - 6}">GAS HEADER</text><text class="sublbl" x="36" y="${MZL.lHdr + 18}">LIQUID HEADER</text>
       <g id="coils-out"></g><g id="ofan"></g>
       <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="1180" cy="790" r="52"/><text class="cmplbl" x="1180" y="769">COMP</text><text class="cmpbig" x="1180" y="791" id="cmpsub">—</text><text class="cmpsub" x="1180" y="807" id="cmptgt"></text><text class="cmpsub cmpdev" x="1180" y="823" id="cmpdev"></text><text class="hold" x="1180" y="755" text-anchor="middle" id="cmphold"></text></g>
       <g class="acc"><rect x="1042" y="740" width="36" height="100" rx="16"/><rect class="acc-lvl" x="1046" y="800" width="28" height="36" rx="10"/><path d="M1060 740 V770" fill="none"/></g><text class="sublbl" x="1086" y="794">ACC</text>
@@ -963,9 +968,9 @@ function multiPipes(land){
   } else {
     out.push({id:'disch', d:'M1180 738 V620 H1060 V640', hi:true}, {id:'suct', d:'M1060 700 V740 M1060 840 V860 H1180 V842', lo:true},
              {id:'oc-in', d:'M1090 670 H1110 V585 H1546 V620', cool:'hi', heat:'lo', rev:true}, {id:'oc-out', d:`M1546 860 V872 H1386 V${MZL.lHdr} H${MZL.lLine(MZL.colX(0))}`, cool:'hi', heat:'lo', rev:true},
-             {id:'griser', d:`M${MZL.gLine(MZL.colX(0))} ${MZL.gHdr} H1010 V670 H1030`, cool:'lo', heat:'hi', rev:true});
+             {id:'griser', d:`M${MZL.gLine(MZL.colX(0))} ${MZL.gHdr} H1010 V670 H1030`, cool:'lo', heat:'hi', rev:true});   // gas header enters the 4-way's left port
     for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), lx = MZL.lLine(x0), gx = MZL.gLine(x0);
-      out.push({id:'zl'+k, d:`M${k ? MZL.lLine(MZL.colX(k-1)) : lx} ${MZL.lHdr} H${lx} V168`, cool:'hi', heat:'lo', rev:true, zone:k}, {id:'zg'+k, d:`M${gx} 168 V${MZL.gHdr} H${k ? MZL.gLine(MZL.colX(k-1)) : gx}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
+      out.push({id:'zl'+k, d:`M${k ? MZL.lLine(MZL.colX(k-1)) : lx} ${MZL.lHdr} H${lx} ${hopUp(lx, MZL.gHdr)} V168`, cool:'hi', heat:'lo', rev:true, zone:k}, {id:'zg'+k, d:`M${gx} 168 V${MZL.gHdr} H${k ? MZL.gLine(MZL.colX(k-1)) : gx}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
   }
   return out;
 }
@@ -993,13 +998,13 @@ function multiTags(land){
                   {ch:'rmgas'+k, x:a, y:py + tt + th + 2 * gap, from:[gx, oy + 150], mk:'temp', zone:k}, {ch:'psh'+k, x:a, y:py + tt + 2 * th + 3 * gap, zone:k}); }
   } else {
     T.push({ch:'disch', x:1240, y:600, from:[1180,690], mk:'temp', target:'tdisch', targetLabel:'target'}, {ch:'tderr', x:1240, y:680}, {ch:'rpserr', x:1240, y:740, sub:'trps', subLabel:'target'},
-           {ch:'maxhz', x:40, y:640, sub:'minhz', subLabel:'floor'}, {ch:'fin', x:190, y:640}, {ch:'syscur', x:340, y:640}, {ch:'volt', x:490, y:640}, {ch:'appr', x:640, y:640, adv:true},
+           {ch:'maxhz', x:40, y:700, sub:'minhz', subLabel:'floor'}, {ch:'fin', x:190, y:700}, {ch:'syscur', x:340, y:700}, {ch:'volt', x:490, y:700}, {ch:'appr', x:640, y:700, adv:true},
            {ch:'ochex', x:1400, y:600, from:[1516,700], mk:'temp'}, {ch:'oat', x:1400, y:660}, {ch:'fan', x:1400, y:720, target:'tfan'});
     for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), a = x0 + 4, b = x0 + 168;
       T.push({ch:'ra'+k, x:a, y:180, zone:k}, {ch:'ihx'+k, x:b, y:180, zone:k}, {ch:'dd'+k, x:a, y:236, zone:k}, {ch:'sp'+k, x:b, y:236, zone:k},
              {ch:'ifan'+k, x:a, y:292, zone:k}, {ch:'zdt'+k, x:b, y:292, zone:k},
-             {ch:'pevp'+k, x:a, y:348, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmliq'+k, x:b, y:348, from:[MZL.lLine(x0), 380], mk:'temp', zone:k},
-             {ch:'rmgas'+k, x:b, y:430, from:[MZL.gLine(x0), 470], mk:'temp', zone:k}, {ch:'psh'+k, x:a, y:430, zone:k}); }
+             {ch:'pevp'+k, x:a, y:348, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmliq'+k, x:b, y:348, from:[MZL.lLine(x0), 614], mk:'temp', zone:k},
+             {ch:'rmgas'+k, x:b, y:430, from:[MZL.gLine(x0), 604], mk:'temp', zone:k}, {ch:'psh'+k, x:a, y:430, zone:k}); }
   }
   return T;
 }
@@ -1033,11 +1038,12 @@ function renderMulti(i, m, running){
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play'};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
+function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); }
 function applySettings(){
-  saveJSON('dchk.settings', S);
+  saveJSON('dchk.settings', S); syncAnim();
   const b = document.body;
   for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet','parts','narr']) b.classList.toggle('no-' + k, !S[k]);
   LAND = S.land === 'auto' ? null : S.land === 'on';
@@ -2156,6 +2162,7 @@ function togglePlay(){
   if (timer){ clearInterval(timer); timer = null; }
   if (playing){ if (cur >= D.n-1) cur = 0; timer = setInterval(() => { if (cur >= D.n-1){ togglePlay(); if (S.synEnd){ buildSynopsis(); showTab('synopsis'); toast('End of recording — full synopsis'); } return; } setCur(cur+1); }, 1000 / +$('#speed').value); }
   $('#b-play').textContent = playing ? '❚❚' : '▶';
+  syncAnim();
 }
 function nextFlag(dir){
   for (let i = cur + dir; i >= 0 && i < D.n; i += dir){ const w = evalCache[i].worst; if (w === 'alarm' || w === 'warn' || w === 'sig'){ setCur(i); return; } }
@@ -2531,7 +2538,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v41';
+const APP_VERSION = 'v42';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -2572,7 +2579,7 @@ async function flushEvents(){
   try { await sbFetch('/rest/v1/events', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(batch), keepalive:true}); } catch(e){ EVQ.unshift(...batch); }
 }
 setInterval(flushEvents, 30000);
-document.addEventListener('visibilitychange', () => { if (document.hidden) flushEvents(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushEvents(); syncAnim(); });
 // --- recording uploads with an offline queue in IndexedDB ---
 function idb(){ return new Promise((res, rej) => { const q = indexedDB.open('dchk', 1); q.onupgradeneeded = () => q.result.createObjectStore('queue', {keyPath:'sha'}); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
 async function qPut(item){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('queue', 'readwrite'); t.objectStore('queue').put(item); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
@@ -2680,6 +2687,7 @@ $('#tabs').addEventListener('click', e => {
   if (b.dataset.tab === 'data') highlightRow();
   if (b.dataset.tab === 'fleet') fleetRefresh();
   if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
+  syncAnim();
 });
 $('#scrub').addEventListener('input', e => setCur(+e.target.value));
 $('#syncopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(synopsisText()); toast('Synopsis copied'); } catch(e){ toast('Could not copy here'); } });
@@ -2713,8 +2721,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/cla
 // air-stream motion is driven from JS (iOS Safari does not repaint CSS dash animations on gradient-stroked paths)
 (() => {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  let paths = null; const t0 = Date.now();
-  setInterval(() => { if (!paths || !paths.length) paths = document.querySelectorAll('.air path'); const off = -(((Date.now() - t0) / 900) * 14 % 14).toFixed(2) + 'px'; for (const p of paths) p.style.strokeDashoffset = off; }, 40);
+  const t0 = Date.now();
+  setInterval(() => { if (document.body.classList.contains('anim-off')) return; const paths = document.querySelectorAll('.air path'); if (!paths.length) return; const off = -(((Date.now() - t0) / 900) * 14 % 14).toFixed(2) + 'px'; for (const p of paths) p.style.strokeDashoffset = off; }, 120);
 })();
 // settings panel wiring
 $('#settingsbtn').addEventListener('click', () => { $('#settings').hidden = false; });
