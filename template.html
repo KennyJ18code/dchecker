@@ -119,6 +119,12 @@ body.no-narr .nowline{display:none}
 .syn.alarm{border-left-color:var(--alarm)}.syn.warn{border-left-color:var(--warn)}.syn.info{border-left-color:var(--accent)}.syn.ok{border-left-color:var(--ok)}
 .syn h3{margin:0 0 4px;font-size:14px}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
 .syn .do::before{content:"Do: ";font-weight:800;color:var(--accent)}.syn .why::before{content:"Evidence: ";font-weight:800;color:var(--muted)}
+.syntime{margin:0;padding:0 14px 12px 14px;list-style:none;display:flex;flex-direction:column;gap:2px;max-height:420px;overflow:auto}
+.syntime li{display:grid;grid-template-columns:52px 1fr;gap:10px;font-size:12.5px;padding:4px 8px;border-radius:6px;cursor:pointer;align-items:baseline}
+.syntime li:hover{background:var(--panel2)}.syntime li time{font-family:var(--mono);color:var(--muted);font-size:11.5px}
+.syntime li.warn{color:var(--warn)}.syntime li.alarm{color:var(--alarm)}.syntime li.ok{color:var(--ok)}.syntime li span b{font-weight:700}
+.syntab{border-collapse:collapse;font-size:12.5px;width:100%}.syntab th{text-align:left;color:var(--muted);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.syntab td{padding:3px 8px;border-bottom:1px solid var(--line);white-space:nowrap}.syntab td.n{text-align:right;font-family:var(--mono)}.syntab td.st{color:var(--ink2)}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:0 14px 12px;font-size:12px;color:var(--ink2);justify-content:center}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;width:18px;height:4px;border-radius:2px}
@@ -514,11 +520,18 @@ body.no-cabinet #indoor-var .cab{display:none}
 
   <!-- SYNOPSIS -->
   <section class="panel card" id="panel-synopsis" hidden>
-    <h2>What this recording says</h2>
+    <h2>What this recording says <button class="btn small" type="button" id="syncopy" style="float:right">Copy as text</button></h2>
     <div class="synhead" id="synhead"></div>
     <div class="synfacts" id="synfacts"></div>
     <div class="synlist" id="synlist"></div>
-    <p class="note" style="padding:0 14px 14px" id="synnote"></p>
+    <p class="note" style="padding:0 14px 8px" id="synnote"></p>
+    <h2>Timeline · tap an entry to jump there</h2>
+    <ol class="syntime" id="syntime"></ol>
+    <div id="synzonewrap" hidden><h2>Zones</h2><div class="tablewrap"><table class="syntab" id="synzones"></table></div></div>
+    <h2>Every reading · min / typical / max</h2>
+    <div class="tablewrap"><table class="syntab" id="synreads"></table></div>
+    <h2>Every control · time in each state</h2>
+    <div class="tablewrap"><table class="syntab" id="synctrl"></table></div>
   </section>
 
   <!-- RUNS -->
@@ -623,6 +636,7 @@ body.no-cabinet #indoor-var .cab{display:none}
         <label><input type="checkbox" data-s="chips"> Status chip band</label>
         <label><input type="checkbox" data-s="events"> Control-event chips (startup, defrost, demand…)</label>
         <label><input type="checkbox" data-s="narr"> "What it is doing now" line above the diagram</label>
+        <label><input type="checkbox" data-s="synEnd"> Open the Synopsis when playback reaches the end of the recording</label>
         <label><input type="checkbox" data-s="sigs"> Signature chips (blue)</label>
         <label><input type="checkbox" data-s="faults"> Fault-library chips (amber, with confidence)</label>
         <label><input type="checkbox" data-s="dock"> Pinned trend strips</label>
@@ -980,7 +994,7 @@ function renderMulti(i, m, running){
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
 function applySettings(){
@@ -1996,8 +2010,76 @@ function synopsisFindings(){
   const order = {alarm:0, warn:1, info:2, ok:3}; F.sort((a, b) => order[a.st] - order[b.st]);
   return F;
 }
+// consecutive rows where pred holds → episodes [{a,b}] of at least minRows
+function episodes(pred, minRows){ const out = []; let a = -1; for (let i = 0; i <= D.n; i++){ const on = i < D.n && !!pred(i); if (on && a < 0) a = i; if (!on && a >= 0){ if (i - a >= (minRows || 1)) out.push({a, b:i - 1}); a = -1; } } return out; }
+function synopsisTimeline(){
+  const E = [], num = D.num, s = D.str, dt = D.interval / 60, n = D.n;
+  const add = (i, text, st, end) => E.push({i, text, st:st || '', min:end != null ? (end - i + 1) * dt : null});
+  const minTxt = e => e.min != null && e.min >= 1 ? ` for ${f0(e.min)} min` : '';
+  D.runs.forEach((r, k) => { add(r.start, `Compressor on (run ${k + 1}${r.offBefore != null ? ', off ' + f0(r.offBefore) + ' min before' : ''})`, r.short ? 'warn' : 'ok'); if (r.end < n - 1) add(r.end + 1, `Compressor off after ${f0(r.min)} min${r.short ? ' — short run' : ''}`, r.short ? 'warn' : ''); if (r.tSteady != null) add(r.start + Math.round(r.tSteady / dt), `Steady state after ${f0(r.tSteady)} min`, 'ok'); });
+  for (let i = 1; i < n; i++) if (D.mode[i] !== D.mode[i - 1] && D.mode[i] !== 'other' && D.mode[i - 1] !== 'other') add(i, `Mode changed to ${s.opmode[i] || D.mode[i]}`, '');
+  const flags = [['startup','Startup control',''],['defrost','Defrost','warn'],['oilret','Oil return',''],['freeze','Freeze protection','warn'],['restart','Restart standby',''],['lownoise','Low-noise mode',''],['dropDisch','Discharge-temp drop control','warn'],['dropInv','INV-current drop control','warn'],['dropHp','HP drop control','warn'],['dropLp','LP drop control','warn'],['dropFin','Fin-temp drop control','warn'],['dropOther','Other drop control',''],['svhot','Hot-gas bypass open','']];
+  for (const [id, lab, st] of flags) if (s[id]) for (const e of episodes(i => s[id][i] === 'ON', 1)) E.push({i:e.a, text:lab, st, min:(e.b - e.a + 1) * dt});
+  for (const e of episodes(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()), 1)) E.push({i:e.a, text:`Error ${s.etype[e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
+  for (let i = 0; i < n; i++) if (isN(num.retry[i]) && num.retry[i] !== 0 && (i === 0 || num.retry[i] !== num.retry[i - 1])) add(i, `Retry code ${num.retry[i]}`, 'warn');
+  const codes = new Map(); for (let i = 0; i < n; i++) for (const x of (D.sig[i] || [])) if (x.st === 'sig' || x.st === 'fault') codes.set(x.code, x.label.replace(/ · \d+\/\d+$/, ''));
+  for (const [code, lab] of codes) for (const e of episodes(i => (D.sig[i] || []).some(x => x.code === code), 3)) E.push({i:e.a, text:lab, st:code.startsWith('fault-') ? 'alarm' : 'warn', min:(e.b - e.a + 1) * dt});
+  if (D.fam === 'multi'){
+    for (const id of ['limpeak','limfrz','limtd','liminv']) for (const e of episodes(i => isN(num[id][i]) && num[id][i] < 255, 1)) E.push({i:e.a, text:`${chById[id].label.replace('Max Hz limit: ', '')} limiter (cap ${f0(num[id][e.a])} rps)`, st:'warn', min:(e.b - e.a + 1) * dt});
+    for (let i = 1; i < n; i++) if (isN(num.maxhz[i]) && isN(num.maxhz[i - 1]) && num.maxhz[i] !== num.maxhz[i - 1]) add(i, `Speed cap ${f0(num.maxhz[i - 1])} → ${f0(num.maxhz[i])} rps`, '');
+    for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k], fan = num['ifan'+k];
+      for (const e of episodes(i => isN(ev[i]) && ev[i] === 0 && D.runSec[i] >= 0, Math.max(2, Math.round(2 / dt)))) E.push({i:e.a, text:`Zone ${L} satisfied — port closed${isN(fan[e.a]) && fan[e.a] > 0 ? ', fan ' + f0(fan[e.a]) + ' rpm still running' : ''}`, st:isN(fan[e.a]) && fan[e.a] > 0 && D.mode[e.a] === 'cool' ? 'warn' : '', min:(e.b - e.a + 1) * dt});
+      for (let i = 1; i < n; i++){ if (isN(fan[i]) && isN(fan[i - 1]) && fan[i] !== fan[i - 1] && fan[i] > 0 && fan[i - 1] > 0) add(i, `Zone ${L} fan ${f0(fan[i - 1])} → ${f0(fan[i])} rpm`, ''); const m0 = s['zmode'+k][i - 1], m1 = s['zmode'+k][i]; if (m1 && m0 && m1 !== m0) add(i, `Zone ${L} mode ${m0} → ${m1}`, ''); }
+      for (const e of episodes(i => s['zerr'+k][i] && !/^0+$/.test(s['zerr'+k][i]), 1)) E.push({i:e.a, text:`Zone ${L} error ${s['zerr'+k][e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
+    }
+  } else {
+    for (const e of episodes(i => isN(num.demand[i]) && num.demand[i] < 100 && D.runSec[i] >= 0, Math.max(2, Math.round(3 / dt)))) E.push({i:e.a, text:`Demand limited to ${f0(num.demand[e.a])}%`, st:'', min:(e.b - e.a + 1) * dt});
+  }
+  E.sort((x, y) => x.i - y.i || (x.min || 0) - (y.min || 0));
+  return E.map(e => ({...e, text:e.text + minTxt(e)}));
+}
+function synopsisText(){
+  const strip = h => h.replace(/<[^>]+>/g, '').replace(/\s+\n/g, '\n').trim();
+  const parts = [strip($('#synhead').textContent), strip($('#synfacts').innerText.replace(/\n/g, ' · ')), ''];
+  document.querySelectorAll('#synlist .syn').forEach(e => { parts.push(`[${e.className.replace('syn ', '').toUpperCase()}] ${e.querySelector('h3').textContent}`); parts.push('  Evidence: ' + e.querySelector('.why').textContent); parts.push('  Do: ' + e.querySelector('.do').textContent); });
+  parts.push('', 'TIMELINE'); document.querySelectorAll('#syntime li').forEach(li => parts.push(`${li.querySelector('time').textContent}  ${li.querySelector('span').textContent}`));
+  for (const [id, title] of [['synzones','ZONES'],['synreads','READINGS'],['synctrl','CONTROLS']]){ const t = document.getElementById(id); if (!t || !t.rows.length) continue; parts.push('', title); for (const r of t.rows) parts.push([...r.cells].map(c => c.textContent).join(' | ')); }
+  return parts.join('\n');
+}
+function buildSynopsisTables(){
+  const num = D.num, s = D.str, dt = D.interval / 60, n = D.n;
+  const med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  // timeline
+  const T = synopsisTimeline(); const tl = $('#syntime'); tl.innerHTML = '';
+  for (const e of T.slice(0, 200)){ const li = document.createElement('li'); li.className = e.st; li.innerHTML = `<time>${synEsc(fmtTime(D.t[e.i]))}</time><span>${synEsc(e.text)}</span>`; li.addEventListener('click', () => { setCur(e.i); showTab('cycle'); }); tl.appendChild(li); }
+  if (T.length > 200){ const li = document.createElement('li'); li.innerHTML = `<time></time><span>… ${T.length - 200} more events</span>`; tl.appendChild(li); }
+  if (!T.length) tl.innerHTML = '<li><time></time><span>Nothing changed state during this recording.</span></li>';
+  // zones
+  const zw = $('#synzonewrap'); zw.hidden = D.fam !== 'multi';
+  if (D.fam === 'multi'){ const run = [...Array(n).keys()].filter(i => D.runSec[i] >= 0);
+    const rowsH = D.zones.map(k => { const L = MZ.letters[k], ev = num['pev'+k], open = run.filter(i => isN(ev[i]) && ev[i] > 0), closed = run.filter(i => isN(ev[i]) && ev[i] === 0);
+      const errs = new Set([...Array(n).keys()].map(i => s['zerr'+k][i]).filter(v => v && !/^0+$/.test(v)));
+      return `<tr><td>Zone ${L}</td><td class="st">${synEsc([...new Set([...Array(n).keys()].map(i => s['zmode'+k][i]).filter(Boolean))].join('/'))}</td><td class="n">${f0(med(run.map(i => num['sp'+k][i])))}</td><td class="n">${f0(med(run.map(i => num['ra'+k][i])))}</td><td class="n">${f0(med(run.map(i => num['dd'+k][i])))}</td><td class="n">${pct(open.length, run.length)}%</td><td class="n">${f0(med(open.map(i => num['pevp'+k][i])))}%</td><td class="n">${f0(med(open.map(i => num['ihx'+k][i])))}</td><td class="n">${f0(med(closed.map(i => num['ihx'+k][i])))}</td><td class="n">${f0(med(open.map(i => num['psh'+k][i])))}</td><td class="n">${f0(med(run.map(i => num['ifan'+k][i])))}</td><td class="st">${errs.size ? [...errs].join(', ') : '—'}</td></tr>`; });
+    $('#synzones').innerHTML = `<thead><tr><th>Zone</th><th>Mode</th><th>Set °F</th><th>Return °F</th><th>ΔD</th><th>Port open</th><th>EV open</th><th>Coil °F open</th><th>Coil °F closed</th><th>Gas−liq °F</th><th>Fan rpm</th><th>Errors</th></tr></thead><tbody>${rowsH.join('')}</tbody>`; }
+  // readings: every channel with data
+  const steadyRows = [...Array(n).keys()].filter(i => D.steady[i]), runRows = [...Array(n).keys()].filter(i => D.runSec[i] >= 0);
+  const rr = [];
+  for (const ch of ALLCH){ const a = num[ch.id]; if (!a || !a.some(isN) || ch.lim) continue; const r = D.range[ch.id]; if (!r) continue;
+    const typ = steadyRows.length >= 6 ? med(steadyRows.map(i => a[i])) : med(runRows.map(i => a[i]));
+    const f = v => isN(v) ? v.toFixed(ch.dec != null ? ch.dec : (ch.unit === 'pls' || ch.unit === 'rpm' || ch.unit === 'rps' || ch.unit === '' ? 0 : 1)) : '—';
+    rr.push(`<tr><td>${synEsc(ch.label)}</td><td class="st">${synEsc(ch.unit || '')}</td><td class="n">${f(r.min)}</td><td class="n">${f(typ)}</td><td class="n">${f(r.max)}</td><td class="st">${ch.note ? synEsc(typeof ch.note === 'function' ? ch.note(D.mode[cur]) : ch.note) : ''}</td></tr>`); }
+  $('#synreads').innerHTML = `<thead><tr><th>Reading</th><th>Unit</th><th>Min</th><th>${steadyRows.length >= 6 ? 'Steady median' : 'Running median'}</th><th>Max</th><th>Meaning</th></tr></thead><tbody>${rr.join('')}</tbody>`;
+  // controls: every status column with data
+  const cr = [];
+  for (const c of STAT){ const a = s[c.id]; if (!a || !a.some(v => v != null)) continue; const cnt = {}; for (const v of a) if (v != null) cnt[v] = (cnt[v] || 0) + 1;
+    const top = Object.entries(cnt).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([v, k]) => `${synEsc(v)} ${f0(k * dt)} min`).join(' · ');
+    const changes = a.reduce((m, v, i) => m + (i > 0 && v != null && a[i - 1] != null && v !== a[i - 1] ? 1 : 0), 0);
+    cr.push(`<tr><td>${synEsc(c.label)}</td><td class="st">${top}</td><td class="n">${changes}</td></tr>`); }
+  $('#synctrl').innerHTML = `<thead><tr><th>Control</th><th>Time in each state</th><th>Changes</th></tr></thead><tbody>${cr.join('')}</tbody>`;
+}
 function buildSynopsis(){
   if (!D) return;
+  buildSynopsisTables();
   const n = D.n, dt = D.interval / 60, runMin = D.runSec.filter(x => x >= 0).length * dt, steadyMin = D.steady.filter(Boolean).length * dt;
   const F = synopsisFindings();
   const modes = [...new Set(D.mode.filter(m => m !== 'other'))].map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ') || 'unknown mode';
@@ -2031,7 +2113,7 @@ function step(d){ setCur(cur + d); }
 function togglePlay(){
   playing = !playing;
   if (timer){ clearInterval(timer); timer = null; }
-  if (playing){ if (cur >= D.n-1) cur = 0; timer = setInterval(() => { if (cur >= D.n-1){ togglePlay(); return; } setCur(cur+1); }, 1000 / +$('#speed').value); }
+  if (playing){ if (cur >= D.n-1) cur = 0; timer = setInterval(() => { if (cur >= D.n-1){ togglePlay(); if (S.synEnd){ buildSynopsis(); showTab('synopsis'); toast('End of recording — full synopsis'); } return; } setCur(cur+1); }, 1000 / +$('#speed').value); }
   $('#b-play').textContent = playing ? '❚❚' : '▶';
 }
 function nextFlag(dir){
@@ -2408,7 +2490,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v39';
+const APP_VERSION = 'v40';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -2548,6 +2630,7 @@ $('#csvfile').addEventListener('change', e => { openFiles([...e.target.files]); 
 document.addEventListener('dragover', e => e.preventDefault());
 document.addEventListener('drop', e => { e.preventDefault(); openFiles([...e.dataTransfer.files]); });
 $('#savecsv').addEventListener('click', () => { if (!D || !D._text) return; try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([D._text], {type:'text/csv'})); a.download = (D.name || 'dchecker').replace(/\.(tgz|gz|tar|log)$/i, '') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); } catch(e){ toast('Could not save here — open the app at its web address to save files'); } });
+function showTab(name){ const b = document.querySelector('#tabs [data-tab="' + name + '"]'); if (b) b.click(); }
 $('#tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
   document.querySelectorAll('#tabs [role=tab]').forEach(t => t.setAttribute('aria-selected', t === b));
@@ -2558,6 +2641,7 @@ $('#tabs').addEventListener('click', e => {
   if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
 });
 $('#scrub').addEventListener('input', e => setCur(+e.target.value));
+$('#syncopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(synopsisText()); toast('Synopsis copied'); } catch(e){ toast('Could not copy here'); } });
 $('#ticks').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); setCur(Math.floor((e.clientX - r.left) / r.width * D.n)); });
 $('#b-first').addEventListener('click', () => setCur(0));
 $('#b-last').addEventListener('click', () => setCur(D.n-1));
