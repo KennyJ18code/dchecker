@@ -112,6 +112,7 @@ body.landpage .wrap{max-width:1600px}
 .nowline{height:calc(2 * 1.35em + 14px);box-sizing:border-box;overflow:hidden;font-size:12.5px;line-height:1.35;color:var(--ink2);padding:6px 10px;margin:0 6px 6px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-family:var(--mono)}
 .nowline b{color:var(--ink);font-weight:700}.nowline .w{color:var(--warn)}.nowline .a{color:var(--alarm)}.nowline .g{color:var(--ok)}
 body.no-narr .nowline{display:none}
+@media (max-width:600px){.nowline{font-size:11px;height:calc(3 * 1.35em + 14px)}}
 .synhead{padding:10px 14px 4px;font-size:15px;font-weight:700;line-height:1.4}
 .synfacts{display:flex;flex-wrap:wrap;gap:6px 16px;padding:4px 14px 10px;font-size:13px;color:var(--ink2)}.synfacts b{color:var(--ink)}
 .synlist{display:flex;flex-direction:column;gap:8px;padding:0 14px 12px}
@@ -1022,24 +1023,41 @@ const SCENE_LAND = `
           </g>
 `;
 // ===== multi-zone (mini split) drawing: one row / column per head (port A–E), shared outdoor unit =====
-const MZP = {rowY:k => 56 + k*176, rowH:176, boxW:740, lRiser:762, gRiser:774, evX:470};            // portrait geometry
+// ===== multi-zone (mini split) drawing =====
+// Portrait: one column per head across the top, each head's own liquid + gas line dropping straight down to ITS OWN port on the
+// outdoor unit (no shared trunk — that is a VRV thing). The liquid/gas headers, port EEVs and port thermistors live inside the outdoor box.
 const MZL = {colX:k => 20 + k*300, colW:300, hdrY:78, lLine:x0 => x0 + 140, gLine:x0 => x0 + 154, lHdr:606, gHdr:590};   // landscape geometry
+function mzGeo(){
+  const nZ = Math.max(2, Math.min(MZ.ports, D && D.zones.length ? Math.max(...D.zones) + 1 : 3));   // columns = highest port present
+  const colW = 748 / nZ, two = colW >= 236, k = nZ >= 5 ? 0.70 : nZ === 4 ? 0.75 : nZ === 3 ? 0.66 : 0.75;
+  const tw = Math.round(148 * k), th = Math.round(58 * k), tt = Math.round(81 * k);          // tag width / height / tall height at this scale
+  const zoneH = two ? 176 + 3 * (th + 8) : 176 + 6 * (th + 8);
+  const oy = 56 + zoneH + 16;                                                                  // outdoor box top
+  const g = {nZ, colW, two, k, tw, th, tt, zoneH, oy, H: oy + 920, x0:j => 16 + j*colW, lx:j => 16 + (j+1)*colW - 26, gx:j => 16 + (j+1)*colW - 12,
+             gHdr: oy + 300, lHdr: oy + 320, fw:[400, oy + 400], comp:[250, oy + 620], acc:[400, oy + 470], coil:[670, oy + 440, 60, 240], fan:[610, oy + 840]};
+  return g;
+}
 function multiScene(land){
   let h = '';
   if (!land){
-    for (let k = 0; k < MZ.ports; k++){ const y = MZP.rowY(k), L = MZ.letters[k];
-      h += `<g id="zone-${k}" class="zone"><rect class="box" x="16" y="${y}" width="${MZP.boxW}" height="${MZP.rowH - 8}" rx="12"/>
-        <text class="boxlbl" x="32" y="${y + 20}">ZONE ${L}</text><text class="hdrtxt" x="112" y="${y + 20}" id="zhdr-${k}"></text>
-        <rect class="cab" x="36" y="${y + 34}" width="110" height="92" rx="8"/><g id="zcoil-${k}"></g><g id="zfan-${k}"></g>
-        <g class="valve" id="pev-${k}"><path d="M${MZP.evX - 12} ${y + 144} L${MZP.evX} ${y + 156} L${MZP.evX - 12} ${y + 168} Z M${MZP.evX + 12} ${y + 144} L${MZP.evX} ${y + 156} L${MZP.evX + 12} ${y + 168} Z"/><rect class="motor" x="${MZP.evX - 10}" y="${y + 128}" width="20" height="14" rx="2"/><path d="M${MZP.evX} ${y + 142} V${y + 156}" fill="none"/></g>
-        <text class="sublbl" x="${MZP.evX}" y="${y + 122}" text-anchor="middle">PORT ${L} EV</text></g>`; }
-    h += `<g id="g-out"><rect class="box" x="16" y="960" width="${MZP.boxW}" height="540" rx="14"/><text class="boxlbl" x="32" y="996">OUTDOOR UNIT</text><text class="hdrtxt" x="${16 + MZP.boxW - 12}" y="996" text-anchor="end" id="oduhdr"></text>
-      <text class="sublbl" x="${MZP.lRiser - 6}" y="952" text-anchor="end">LIQUID</text><text class="sublbl" x="${MZP.gRiser + 4}" y="952">GAS</text>
+    const G = mzGeo(), oy = G.oy;
+    for (let k = 0; k < MZ.ports; k++){ const L = MZ.letters[k]; if (k >= G.nZ){ h += `<g id="zone-${k}" class="zone hidden-eq"></g>`; continue; } const x0 = G.x0(k), cx = x0 + Math.min(G.colW, 250) / 2 - 8 + 8, lx = G.lx(k), gx = G.gx(k);
+      const hx = x0 + 8, hw = Math.min(100, G.colW - 44);                   // head icon box
+      h += `<g id="zone-${k}" class="zone"><rect class="box" x="${x0 + 3}" y="56" width="${G.colW - 6}" height="${G.zoneH}" rx="12"/>
+        <text class="boxlbl" x="${x0 + 12}" y="76">ZONE ${L}</text><text class="hdrtxt" x="${x0 + 12}" y="92" id="zhdr-${k}"></text>
+        <rect class="cab" x="${hx}" y="100" width="${hw}" height="70" rx="8"/><g id="zcoil-${k}"></g><g id="zfan-${k}"></g>
+        <text class="sublbl" x="${lx - 4}" y="${oy - 6}" text-anchor="end">LIQ</text><text class="sublbl" x="${gx + 4}" y="${oy - 6}">GAS</text>
+        <g class="valve" id="pev-${k}"><path d="M${lx - 10} ${oy + 58} L${lx} ${oy + 70} L${lx - 10} ${oy + 82} Z M${lx + 10} ${oy + 58} L${lx} ${oy + 70} L${lx + 10} ${oy + 82} Z"/><rect class="motor" x="${lx - 8}" y="${oy + 42}" width="16" height="12" rx="2"/><path d="M${lx} ${oy + 54} V${oy + 70}" fill="none"/></g>
+        <text class="sublbl" x="${lx}" y="${oy + 100}" text-anchor="middle">EV ${L}</text>
+        <g class="valve"><circle cx="${lx}" cy="${oy + 14}" r="7"/><circle cx="${gx}" cy="${oy + 14}" r="7"/></g></g>`; }
+    const [fx, fy] = G.fw, [cx, cy] = G.comp, [ax, ay] = G.acc;
+    h += `<g id="g-out"><rect class="box" x="16" y="${oy}" width="748" height="${G.H - oy - 16}" rx="14"/><text class="boxlbl" x="32" y="${oy + 30}">OUTDOOR UNIT</text><text class="hdrtxt" x="752" y="${oy + 30}" text-anchor="end" id="oduhdr"></text>
+      <text class="sublbl" x="34" y="${G.gHdr - 8}">GAS HEADER</text><text class="sublbl" x="34" y="${G.lHdr + 18}">LIQUID HEADER</text>
       <g id="coils-out"></g><g id="ofan"></g>
-      <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="700" cy="1330" r="55"/><text class="cmplbl" x="700" y="1308">COMP</text><text class="cmpbig" x="700" y="1331" id="cmpsub">—</text><text class="cmpsub" x="700" y="1348" id="cmptgt"></text><text class="cmpsub cmpdev" x="700" y="1365" id="cmpdev"></text><text class="hold" x="700" y="1293" text-anchor="middle" id="cmphold"></text></g>
-      <g class="acc"><rect x="612" y="1150" width="36" height="100" rx="16"/><rect class="acc-lvl" x="616" y="1210" width="28" height="36" rx="10"/><path d="M630 1150 V1180" fill="none"/></g><text class="sublbl" x="656" y="1204">ACC</text>
-      <g id="fourway"><rect class="fw-body" x="600" y="1010" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
-      <text class="sublbl" x="596" y="1090" text-anchor="end" id="fwlbl">4-WAY VALVE</text><text class="state" x="596" y="1106" text-anchor="end" id="fwstate">—</text></g>`;
+      <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="${cx}" cy="${cy}" r="55"/><text class="cmplbl" x="${cx}" y="${cy - 22}">COMP</text><text class="cmpbig" x="${cx}" y="${cy + 1}" id="cmpsub">—</text><text class="cmpsub" x="${cx}" y="${cy + 18}" id="cmptgt"></text><text class="cmpsub cmpdev" x="${cx}" y="${cy + 35}" id="cmpdev"></text><text class="hold" x="${cx}" y="${cy - 37}" text-anchor="middle" id="cmphold"></text></g>
+      <g class="acc"><rect x="${ax - 18}" y="${ay}" width="36" height="100" rx="16"/><rect class="acc-lvl" x="${ax - 14}" y="${ay + 60}" width="28" height="36" rx="10"/><path d="M${ax} ${ay} V${ay + 30}" fill="none"/></g><text class="sublbl" x="${ax + 26}" y="${ay + 54}">ACC</text>
+      <g id="fourway"><rect class="fw-body" x="${fx - 30}" y="${fy - 30}" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
+      <text class="sublbl" x="${fx - 36}" y="${fy - 40}" text-anchor="end" id="fwlbl">4-WAY VALVE</text><text class="state" x="${fx - 36}" y="${fy - 24}" text-anchor="end" id="fwstate">—</text></g>`;
   } else {
     for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), L = MZ.letters[k], lx = MZL.lLine(x0);
       h += `<g id="zone-${k}" class="zone"><rect class="box" x="${x0}" y="60" width="${MZL.colW - 8}" height="450" rx="12"/>
@@ -1057,17 +1075,28 @@ function multiScene(land){
   }
   return h;
 }
-// 4-way internal links for the multi scenes: top = discharge in, bottom = suction out, left = outdoor coil, right = gas header
-const FW_MP = { cool:{a:['M630 1015 Q630 1040 605 1040', 'hi'], b:['M655 1040 Q630 1040 630 1065', 'lo']}, heat:{a:['M630 1015 Q630 1040 655 1040', 'hi'], b:['M605 1040 Q630 1040 630 1065', 'lo']} };
+// 4-way internal links. Portrait multi: top = discharge, bottom = suction, left = gas header, right = outdoor coil.
+const FW_MP = (() => { const G = () => mzGeo(); return {
+  get cool(){ const [x, y] = G().fw; return {a:[`M${x} ${y - 25} Q${x} ${y} ${x + 25} ${y}`, 'hi'], b:[`M${x - 25} ${y} Q${x} ${y} ${x} ${y + 25}`, 'lo']}; },
+  get heat(){ const [x, y] = G().fw; return {a:[`M${x} ${y - 25} Q${x} ${y} ${x - 25} ${y}`, 'hi'], b:[`M${x + 25} ${y} Q${x} ${y} ${x} ${y + 25}`, 'lo']}; } }; })();
 const FW_ML = { cool:{a:['M1060 645 Q1060 670 1085 670', 'hi'], b:['M1035 670 Q1060 670 1060 695', 'lo']}, heat:{a:['M1060 645 Q1060 670 1035 670', 'hi'], b:['M1085 670 Q1060 670 1060 695', 'lo']} };
+// a vertical pipe crossing a horizontal one hops over it (schematic convention) instead of looking joined
+const hop = (x, y) => `V${y - 8} A8 8 0 0 1 ${x} ${y + 8}`;
 function multiPipes(land){
   const out = [];
   if (!land){
-    out.push({id:'disch', d:'M700 1275 V990 H630 V1010', hi:true}, {id:'suct', d:'M630 1070 V1150 M630 1250 V1330 H645', lo:true},
-             {id:'oc-in', d:'M600 1040 H70', cool:'hi', heat:'lo', rev:true}, {id:'oc-out', d:`M70 1340 V1380 H${MZP.lRiser}`, cool:'hi', heat:'lo', rev:true},
-             {id:'lriser', d:`M${MZP.lRiser} 1380 V${MZP.rowY(0) + 156}`, cool:'hi', heat:'hi', rev:true}, {id:'griser', d:`M${MZP.gRiser} ${MZP.rowY(0) + 26} V1040 H660`, cool:'lo', heat:'hi', rev:true});
-    for (let k = 0; k < MZ.ports; k++){ const y = MZP.rowY(k);
-      out.push({id:'zl'+k, d:`M${MZP.lRiser} ${y + 156} H91 V${y + 126}`, cool:'hi', heat:'lo', rev:true, zone:k}, {id:'zg'+k, d:`M91 ${y + 34} V${y + 26} H${MZP.gRiser}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
+    const G = mzGeo(), oy = G.oy, [fx, fy] = G.fw, [cx, cy] = G.comp, [ax, ay] = G.acc, coilX = G.coil[0] + 30, coilTop = G.coil[1], coilBot = G.coil[1] + G.coil[3];
+    const gxLast = G.gx(G.nZ - 1), lxLast = G.lx(G.nZ - 1);
+    out.push({id:'disch', d:`M${cx} ${cy - 55} V${fy - 50} H${fx} V${fy - 30}`, hi:true},
+             {id:'suct', d:`M${fx} ${fy + 30} V${ay} M${ax} ${ay + 100} V${cy} H${cx + 55}`, lo:true},
+             {id:'oc-in', d:`M${fx + 30} ${fy} H${coilX} V${coilTop}`, cool:'hi', heat:'lo', rev:true},
+             {id:'oc-out', d:`M${coilX} ${coilBot} V${coilBot + 60} H764 V${G.lHdr} H${G.lx(0)}`, cool:'hi', heat:'lo', rev:true},
+             {id:'griser', d:`M${gxLast} ${G.gHdr} H${fx - 60} V${fy} H${fx - 30}`, cool:'lo', heat:'hi', rev:true});
+    for (let k = 0; k < MZ.ports; k++){ if (k >= G.nZ){ out.push({id:'zl'+k, d:'M0 0', cool:'hi', heat:'lo', zone:k}, {id:'zg'+k, d:'M0 0', cool:'lo', heat:'hi', zone:k}); continue; }
+      const x0 = G.x0(k), lx = G.lx(k), gx = G.gx(k), hr = x0 + 8 + Math.min(100, G.colW - 44);   // head icon right edge
+      // liquid: header → up the port (EV, thermistor) → out the top of the outdoor unit → up beside the column → into the head (cooling direction is header → head)
+      out.push({id:'zl'+k, d:`M${lx} ${G.lHdr} ${hop(lx, G.gHdr)} V150 H${hr}`, cool:'hi', heat:'lo', rev:true, zone:k},
+               {id:'zg'+k, d:`M${hr} 120 H${gx} V${G.gHdr}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
   } else {
     out.push({id:'disch', d:'M1180 738 V620 H1060 V640', hi:true}, {id:'suct', d:'M1060 700 V740 M1060 840 V860 H1180 V842', lo:true},
              {id:'oc-in', d:'M1090 670 H1110 V585 H1546 V620', cool:'hi', heat:'lo', rev:true}, {id:'oc-out', d:`M1546 860 V872 H1386 V${MZL.lHdr} H${MZL.lLine(MZL.colX(0))}`, cool:'hi', heat:'lo', rev:true},
@@ -1080,14 +1109,25 @@ function multiPipes(land){
 function multiTags(land){
   const T = [];
   if (!land){
-    T.push({ch:'disch', x:140, y:1076, from:[700,1150], mk:'temp', target:'tdisch', targetLabel:'target'}, {ch:'tderr', x:252, y:1076}, {ch:'fin', x:364, y:1076}, {ch:'syscur', x:476, y:1076},
-           {ch:'rpserr', x:140, y:1150, sub:'trps', subLabel:'target'}, {ch:'maxhz', x:252, y:1150, sub:'minhz', subLabel:'floor'}, {ch:'fan', x:364, y:1150, target:'tfan'}, {ch:'volt', x:476, y:1150},
-           {ch:'ochex', x:140, y:1230, from:[100,1200], mk:'temp'}, {ch:'oat', x:252, y:1230}, {ch:'appr', x:364, y:1230, adv:true});
-    for (let k = 0; k < MZ.ports; k++){ const y = MZP.rowY(k);
-      T.push({ch:'ra'+k, x:160, y:y + 36, zone:k}, {ch:'ihx'+k, x:272, y:y + 36, zone:k}, {ch:'dd'+k, x:384, y:y + 36, zone:k},
-             {ch:'sp'+k, x:160, y:y + 92, zone:k}, {ch:'ifan'+k, x:272, y:y + 92, zone:k}, {ch:'zdt'+k, x:384, y:y + 92, zone:k},
-             {ch:'pevp'+k, x:500, y:y + 30, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmgas'+k, x:612, y:y + 30, from:[600,y + 26], mk:'temp', zone:k},
-             {ch:'rmliq'+k, x:500, y:y + 98, from:[560,y + 156], mk:'temp', zone:k}, {ch:'psh'+k, x:612, y:y + 98, zone:k}); }
+    const G = mzGeo(), oy = G.oy, tw = G.tw, th = G.th, tt = G.tt, gap = 8;
+    // outdoor tags: two columns between the accumulator and the coil
+    const c1 = 440, c2 = 440 + tw + gap, r = j => oy + 440 + j;
+    T.push({ch:'disch', x:c1, y:r(0), from:[G.comp[0], G.comp[1] - 100], mk:'temp', target:'tdisch', targetLabel:'target'}, {ch:'tderr', x:c2, y:r(0)},
+           {ch:'rpserr', x:c1, y:r(tt + gap), sub:'trps', subLabel:'target'}, {ch:'maxhz', x:c2, y:r(tt + gap), sub:'minhz', subLabel:'floor'},
+           {ch:'fan', x:c1, y:r(2 * tt + 2 * gap), target:'tfan'}, {ch:'ochex', x:c2, y:r(2 * tt + 2 * gap), from:[G.coil[0], G.coil[1] + 120], mk:'temp'},
+           {ch:'fin', x:c1, y:r(3 * tt + 3 * gap)}, {ch:'syscur', x:c2, y:r(3 * tt + 3 * gap)},
+           {ch:'volt', x:c1, y:r(3 * tt + th + 4 * gap)}, {ch:'oat', x:c2, y:r(3 * tt + th + 4 * gap)}, {ch:'appr', x:c1, y:r(3 * tt + 2 * th + 5 * gap), adv:true});
+    for (let k = 0; k < MZ.ports; k++){ if (k >= G.nZ) continue; const x0 = G.x0(k), a = x0 + 8, b = a + tw + gap, lx = G.lx(k), gx = G.gx(k);
+      // head readings under the head icon
+      const hy = 180, rows = G.two ? [[a, hy], [b, hy], [a, hy + th + gap], [b, hy + th + gap], [a, hy + 2 * (th + gap)], [b, hy + 2 * (th + gap)]] : [0, 1, 2, 3, 4, 5].map(j => [a, hy + j * (th + gap)]);
+      const ids = ['ra', 'ihx', 'dd', 'sp', 'ifan', 'zdt'];
+      ids.forEach((id, j) => T.push({ch:id + k, x:rows[j][0], y:rows[j][1], zone:k}));
+      // port readings inside the outdoor unit, beside the port
+      const py = oy + 30;
+      if (G.two) T.push({ch:'pevp'+k, x:a, y:py, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmliq'+k, x:b, y:py, from:[lx, oy + 120], mk:'temp', zone:k},
+                        {ch:'rmgas'+k, x:a, y:py + tt + gap, from:[gx, oy + 150], mk:'temp', zone:k}, {ch:'psh'+k, x:b, y:py + tt + gap, zone:k});
+      else T.push({ch:'pevp'+k, x:a, y:py, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmliq'+k, x:a, y:py + tt + gap, from:[lx, oy + 120], mk:'temp', zone:k},
+                  {ch:'rmgas'+k, x:a, y:py + tt + th + 2 * gap, from:[gx, oy + 150], mk:'temp', zone:k}, {ch:'psh'+k, x:a, y:py + tt + 2 * th + 3 * gap, zone:k}); }
   } else {
     T.push({ch:'disch', x:1240, y:600, from:[1180,690], mk:'temp', target:'tdisch', targetLabel:'target'}, {ch:'tderr', x:1240, y:680}, {ch:'rpserr', x:1240, y:740, sub:'trps', subLabel:'target'},
            {ch:'maxhz', x:40, y:640, sub:'minhz', subLabel:'floor'}, {ch:'fin', x:190, y:640}, {ch:'syscur', x:340, y:640}, {ch:'volt', x:490, y:640}, {ch:'appr', x:640, y:640, adv:true},
@@ -1102,18 +1142,17 @@ function multiTags(land){
 }
 function buildMulti(){
   const land = isLandLay(), go = $('#coils-out'); go.innerHTML = '';
-  if (!land){ coil(go, 'oc', 40, 1040, 60, 300, 'v'); fan($('#ofan'), 200, 1420, 34, 'ofanb'); }
+  if (!land){ const G = mzGeo(); coil(go, 'oc', ...G.coil, 'v'); fan($('#ofan'), G.fan[0], G.fan[1], 34, 'ofanb'); }
   else { coil(go, 'oc', 1516, 620, 60, 240, 'v'); fan($('#ofan'), 1450, 840, 30, 'ofanb'); }
   for (let k = 0; k < MZ.ports; k++){
-    const zc = $('#zcoil-' + k), zf = $('#zfan-' + k); zc.innerHTML = '';
-    if (!land){ coil(zc, 'ic' + k, 46, MZP.rowY(k) + 44, 90, 34, 'h'); fan(zf, 91, MZP.rowY(k) + 108, 16, 'ifanb' + k); }
+    const zc = $('#zcoil-' + k), zf = $('#zfan-' + k); if (!zc || !zf) continue; zc.innerHTML = '';
+    if (!land){ const G = mzGeo(); if (k >= G.nZ) continue; const x0 = G.x0(k), hw = Math.min(100, G.colW - 44); coil(zc, 'ic' + k, x0 + 14, 106, hw - 12, 26, 'h'); fan(zf, x0 + 8 + hw / 2, 152, 12, 'ifanb' + k); }
     else { const x0 = MZL.colX(k); coil(zc, 'ic' + k, x0 + 108, 104, 84, 30, 'h'); fan(zf, x0 + 150, 152, 13, 'ifanb' + k); }
   }
   const ac = EQ.out === 'ac';
   for (const id of ['fourway','fwlbl','fwstate']){ const e = document.getElementById(id); if (e) e.classList.toggle('hidden-eq', ac); }
   const zones = D ? D.zones : [0, 1, 2];
   for (let k = 0; k < MZ.ports; k++){ const on = zones.includes(k); const z = document.getElementById('zone-' + k); if (z) z.classList.toggle('hidden-eq', !on); for (const id of ['p-zl'+k, 'f-zl'+k, 'p-zg'+k, 'f-zg'+k]){ const e = document.getElementById(id); if (e) e.classList.toggle('hidden-eq', !on); } }
-  // the outlines of hidden zone pipes are drawn in buildPipes without ids: hide by index
   const outlines = document.querySelectorAll('#pipes .pipe-o'); PIPES.forEach((p, j) => { if (p.zone != null && outlines[j]) outlines[j].classList.toggle('hidden-eq', !zones.includes(p.zone)); });
 }
 // per-row rendering for the zones (called from renderCycle)
@@ -1139,7 +1178,7 @@ function applySettings(){
   const b = document.body;
   for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet','parts','narr']) b.classList.toggle('no-' + k, !S[k]);
   LAND = S.land === 'auto' ? null : S.land === 'on';
-  $('#diag').style.setProperty('--k', (isLandLay() ? S.kLand * (FAM === 'multi' ? 0.91 : 1) : S.kPort * (FAM === 'multi' ? 0.75 : 1)));
+  $('#diag').style.setProperty('--k', (isLandLay() ? S.kLand * (FAM === 'multi' ? 0.91 : 1) : S.kPort * (FAM === 'multi' ? mzGeo().k : 1)));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
   document.querySelectorAll('#settings [data-s]').forEach(inp => { const k = inp.dataset.s; if (inp.type === 'checkbox') inp.checked = !!S[k]; else inp.value = S[k]; });
   document.getElementById('kportv').textContent = Math.round(S.kPort*100) + '%'; document.getElementById('klandv').textContent = Math.round(S.kLand*100) + '%';
@@ -1147,7 +1186,7 @@ function applySettings(){
 const LAYOUTS = {
   port: {W:780, H:1520, in:[0,0], out:[0,0]},
   land: {W:1600, H:900, in:[0,0], out:[0,0]},
-  mport: {W:780, H:1520, in:[0,0], out:[0,0], multi:true},
+  mport: {W:780, H:1520, in:[0,0], out:[0,0], multi:true},   // H is set per log in setLayout (depends on the zone count)
   mland: {W:1600, H:900, in:[0,0], out:[0,0], multi:true},
 };
 // component geometry per layout (coils, cabinet, fans, air streams)
@@ -1649,11 +1688,13 @@ function buildLineSet(){
 function setLayout(){
   const land = isLand(), multi = FAM === 'multi';
   LAY = multi ? (land ? LAYOUTS.mland : LAYOUTS.mport) : (land ? LAYOUTS.land : LAYOUTS.port);
+  if (multi && !land) LAYOUTS.mport.H = mzGeo().H;
   $('#dsvg').setAttribute('viewBox', `0 0 ${LAY.W} ${LAY.H}`);
+  $('#diag').style.aspectRatio = (multi && !land) ? `${LAY.W}/${LAY.H}` : '';
   $('#scene').innerHTML = multi ? multiScene(land) : (land ? SCENE_LAND : SCENE_PORT);
   TAGS = [...(multi ? multiTags(land) : (land ? TAGS_LAND : TAGS_PORT)), ...customTagDefs()];
   $('#diag').classList.toggle('land', land); document.body.classList.toggle('landpage', land); $('#diag').classList.toggle('multi', multi);
-  $('#diag').style.setProperty('--k', land ? S.kLand * (multi ? 0.91 : 1) : S.kPort * (multi ? 0.75 : 1));
+  $('#diag').style.setProperty('--k', land ? S.kLand * (multi ? 0.91 : 1) : S.kPort * (multi ? mzGeo().k : 1));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
   buildDiagram(); buildTags();
     if (D && evalCache && evalCache.length === D.n && cur < D.n) renderCycle(cur);
@@ -2627,7 +2668,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v40';
+const APP_VERSION = 'v41';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
