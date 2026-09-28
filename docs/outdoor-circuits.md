@@ -95,3 +95,23 @@ publishes the manual. Model files in D-Checker: INV_Unitary_DX9VC(_5ton), DZ9VC.
 4. DX17VSS/DZ17VSA: FIT HP drawing plus a pressure regulating valve on 1.5–3 ton.
 5. Model detection from header.txt (INV_Unitary_<model>.txt) picks the family; the 4-way
    column picks AC vs HP when the model name is missing.
+
+## 5. Multi-zone mini splits (2MXS/3MXS/4MXS/5MXS, MXL) — R-410A
+
+Service manual SiUS121502E (`docs/manuals/mxs-service.pdf`, 227 pp); outdoor piping diagrams rendered as
+`mxs-service-p204-2-3mxs-outdoor-piping.png` and `mxs-service-p205-4mxs-outdoor-piping.png`.
+
+Circuit (3MXS24): compressor → muffler → discharge thermistor → 4-way → outdoor coil (distributor + capillaries,
+coil thermistor) → liquid stop valve → muffler with filter → liquid header → one EEV per port (EVa/EVb/EVc) →
+liquid-pipe thermistor per port → filter → room. Gas side: room → gas-pipe thermistor per port → muffler per
+port → gas header → gas stop valve → accumulator → 4-way → accumulator → compressor.
+
+D-Checker log layout (`samples/minisplit-3head.csv`): no pressure sensors at all. Outdoor columns 1–13 and 45–86
+(op mode, defrost, error, target discharge, max-Hz limiters 5–8 with 255 = no limit, rps cap 10, OAT 45, coil 46,
+discharge 47, port gas 48–52, port liquid 55–59, fin 62, current 64, volts 65, comp on 73, rps 74/75, fan 76/77,
+4-way 82/83, port EV 84–88). Each indoor head is a 28-column block starting at 97 + 28·k (address, mode, error,
+ΔD, return air, coil temp, fan, flap/louver, setpoint, airflow, transmission). EEV full open = 450 pulses (p.86).
+
+The app draws this as one row (phone) or column (desktop) per port with the head and its port EV, and a shared
+outdoor unit. Diagnostics are temperature based: port gas − liquid (coil ΔT / superheat proxy), return air − coil,
+discharge vs target discharge, comp vs target and vs the rps cap, and the four max-Hz limiters as chips.

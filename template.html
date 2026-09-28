@@ -135,6 +135,8 @@ body.landpage .wrap{max-width:1600px}
 .strips path{fill:none;stroke:var(--ink2);stroke-width:2.5;stroke-linejoin:round}
 .strips.on path{stroke:var(--alarm)}
 .hidden-eq{display:none}
+.valve.closed path{fill:var(--idle)}
+.diag.multi .cab{fill:var(--panel2)}
 .thermscale{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--mono)}
 .thermscale i{display:inline-block;width:120px;height:10px;border-radius:5px;background:linear-gradient(90deg,#1a237e,#1e88e5 22%,#26a69a 39%,#fdd835 56%,#fb8c00 78%,#c62828)}
 .thermscale[hidden]{display:none}
@@ -430,6 +432,8 @@ body.no-cabinet #indoor-var .cab{display:none}
           <option value="auto">Auto-detect</option>
           <option value="hp">Heat pump (DZ / DH)</option>
           <option value="ac">Air conditioner (DX / DC)</option>
+          <option value="hp-multi">Mini split · heat pump (2–5 zones)</option>
+          <option value="ac-multi">Mini split · AC (2–5 zones)</option>
         </select></label>
         <span class="viewnote" id="viewnote"></span>
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
@@ -617,9 +621,9 @@ const el = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, t
 
 /* ---------- channel registry (D-Checker column numbers) ---------- */
 const NUM = [
-  {id:'oat',   col:55, label:'Outdoor air',        short:'Outdoor air',unit:'°F', kind:'temp'},
-  {id:'ochex', col:56, label:'ODU coil temp',      short:'OD coil',    unit:'°F', kind:'temp'},
-  {id:'disch', col:57, label:'Discharge temp',     short:'Discharge',  unit:'°F', kind:'temp'},
+  {id:'oat',   col:55, mcol:45, label:'Outdoor air',        short:'Outdoor air',unit:'°F', kind:'temp'},
+  {id:'ochex', col:56, mcol:46, label:'ODU coil temp',      short:'OD coil',    unit:'°F', kind:'temp'},
+  {id:'disch', col:57, mcol:47, label:'Discharge temp',     short:'Discharge',  unit:'°F', kind:'temp'},
   {id:'suct',  col:58, label:'Suction temp',       short:'Suction',    unit:'°F', kind:'temp'},
   {id:'ocmid', col:59, label:'ODU coil mid temp',  short:'OD coil mid',unit:'°F', kind:'temp'},
   {id:'liq',   col:60, label:'Liquid pipe temp',   short:'Liquid pipe',unit:'°F', kind:'temp'},
@@ -630,15 +634,15 @@ const NUM = [
   {id:'tsc',   col:65, label:'Target subcooling',  short:'Target SC',  unit:'°F', kind:'dtemp'},
   {id:'inv1',  col:66, label:'INV primary current',short:'INV current',unit:'A'},
   {id:'inv2',  col:67, label:'INV secondary current',short:'INV 2nd',  unit:'A'},
-  {id:'fin',   col:68, label:'INV fin temp',       short:'Fin temp',   unit:'°F', kind:'temp'},
-  {id:'syscur',col:71, label:'System current',     short:'Sys current',unit:'A'},
+  {id:'fin',   col:68, mcol:62, label:'INV fin temp',       short:'Fin temp',   unit:'°F', kind:'temp'},
+  {id:'syscur',col:71, mcol:64, label:'System current',     short:'Sys current',unit:'A'},
   {id:'fancur',col:72, label:'Fan current',        short:'Fan current',unit:'A'},
-  {id:'rps',   col:77, label:'Compressor speed',   short:'Comp speed', unit:'rps'},
+  {id:'rps',   col:77, mcol:74, label:'Compressor speed',   short:'Comp speed', unit:'rps'},
   {id:'fanstep',col:78,label:'Fan step',           short:'Fan step',   unit:''},
   {id:'ev',    col:79, label:'Outdoor EV pulses',  short:'Outdoor EV', unit:'pls', max:327},
-  {id:'trps',  col:107,label:'Target comp speed',  short:'Target',     unit:'rps'},
-  {id:'tfan',  col:108,label:'Target OU fan',      short:'Target fan', unit:'rpm'},
-  {id:'fan',   col:109,label:'OU fan',             short:'OU fan',     unit:'rpm'},
+  {id:'trps',  col:107,mcol:75,label:'Target comp speed',  short:'Target',     unit:'rps'},
+  {id:'tfan',  col:108,mcol:76,label:'Target OU fan',      short:'Target fan', unit:'rpm'},
+  {id:'fan',   col:109,mcol:77,label:'OU fan',             short:'OU fan',     unit:'rpm'},
   {id:'iliq',  col:121,label:'Indoor liquid temp', short:'ID liquid',  unit:'°F', kind:'temp'},
   {id:'igas',  col:122,label:'Indoor gas temp',    short:'ID gas',     unit:'°F', kind:'temp'},
   {id:'iev',   col:123,label:'Indoor EV pulses',   short:'Indoor EV',  unit:'pls', max:480},
@@ -648,8 +652,32 @@ const NUM = [
   {id:'tsh',   col:128,label:'Target superheat',   short:'Target SH',  unit:'°F', kind:'dtemp'},
   {id:'demand',col:53, label:'Demand',             short:'Demand',     unit:'%'},
   {id:'retry', col:52, label:'Retry code',         short:'Retry',      unit:''},
-  {id:'ecode', col:38, label:'Error code',         short:'Err',        unit:''},
+  {id:'ecode', col:38, mcol:3, label:'Error code',         short:'Err',        unit:''},
+  // ---- multi-zone (2–5 port MXS/MXL style logs) — outdoor unit ----
+  {id:'tdisch', mcol:4,  label:'Target discharge temp', short:'Target Td', unit:'°F', kind:'temp'},
+  {id:'maxhz',  mcol:10, label:'Max comp speed allowed', short:'rps cap',  unit:'rps'},
+  {id:'minhz',  mcol:11, label:'Min comp speed',         short:'rps floor',unit:'rps'},
+  {id:'limpeak',mcol:5,  label:'Max Hz limit: peak cut', short:'Peak cut', unit:'rps', lim:true},
+  {id:'limfrz', mcol:6,  label:'Max Hz limit: freeze protect', short:'Freeze lim', unit:'rps', lim:true},
+  {id:'limtd',  mcol:7,  label:'Max Hz limit: discharge temp', short:'Td lim', unit:'rps', lim:true},
+  {id:'liminv', mcol:8,  label:'Max Hz limit: INV current', short:'INV lim', unit:'rps', lim:true},
+  {id:'volt',   mcol:65, label:'AC voltage',             short:'Voltage',  unit:'V'},
 ];
+// per port (A–E): gas / liquid pipe thermistors and the port EV; per indoor head (address 0–4): the 28-column block starting at 97
+const MZ = {ports:5, letters:'ABCDE', evMax:450};   // 450 pls = full open per the MXS service manual (SiUS121502E p.86)
+for (let k = 0; k < MZ.ports; k++){
+  const L = MZ.letters[k], b = 97 + 28*k;
+  NUM.push(
+    {id:'rmgas'+k, mcol:48+k, label:`Port ${L} gas temp`,    short:`${L} gas`,    unit:'°F', kind:'temp', zone:k},
+    {id:'rmliq'+k, mcol:55+k, label:`Port ${L} liquid temp`, short:`${L} liquid`, unit:'°F', kind:'temp', zone:k},
+    {id:'pev'+k,   mcol:84+k, label:`Port ${L} EV pulses`,   short:`${L} EV`,     unit:'pls', max:MZ.evMax, zone:k},
+    {id:'dd'+k,    mcol:b+6,  label:`Zone ${L} ΔD (demand)`, short:`${L} ΔD`,     unit:'°F', kind:'dtemp', zone:k},
+    {id:'ra'+k,    mcol:b+7,  label:`Zone ${L} return air`,  short:`${L} return`, unit:'°F', kind:'temp', zone:k},
+    {id:'ihx'+k,   mcol:b+8,  label:`Zone ${L} coil temp`,   short:`${L} coil`,   unit:'°F', kind:'temp', zone:k},
+    {id:'ifan'+k,  mcol:b+14, label:`Zone ${L} fan`,         short:`${L} fan`,    unit:'rpm', zone:k},
+    {id:'sp'+k,    mcol:b+19, label:`Zone ${L} setpoint`,    short:`${L} set`,    unit:'°F', kind:'temp', zone:k},
+  );
+}
 // R-410A saturation table (psig → °F), used only to sanity-check the unit's own Tc/Te against its transducers
 const PT410 = [[13,-30],[17,-25],[22,-20],[27,-15],[32,-10],[38,-5],[45,0],[52,5],[59,10],[67,15],[76,20],[85,25],[95,30],[106,35],[118,40],[130,45],[142,50],[156,55],[170,60],[185,65],[201,70],[217,75],[235,80],[253,85],[274,90],[295,95],[317,100],[340,105],[365,110],[390,115],[417,120],[445,125],[475,130],[506,135],[540,140],[575,145],[612,150]];
 // R-410A saturated enthalpies (kJ/kg, IIR reference) by °F, for relative capacity indices only
@@ -687,16 +715,29 @@ const DERIVED = [
   {id:'lpslope',label:'Low pressure slope (5 min)', short:'LP slope', unit:'psi/min', dec:1, calc:() => null, slope:{src:'lp', win:300}},
   {id:'evslope',label:'Outdoor EV slope (5 min)', short:'EV slope', unit:'pls/min', dec:1, calc:() => null, slope:{src:'ev', win:300}},
   {id:'rpsslope',label:'Comp speed slope (5 min)', short:'rps slope', unit:'rps/min', dec:1, calc:() => null, slope:{src:'rps', win:300}},
+  // ---- multi-zone ----
+  {id:'tderr', label:'Discharge vs target', short:'Td − target', unit:'°F', calc:r => sub(r.disch, r.tdisch), note:'Discharge − target discharge (the multi controls Td instead of SH)'},
 ];
+for (let k = 0; k < MZ.ports; k++){
+  const L = MZ.letters[k];
+  DERIVED.push(
+    {id:'psh'+k,  label:`Port ${L} coil ΔT (gas − liquid)`, short:`${L} coil ΔT`, unit:'°F', zone:k, calc:r => sub(r['rmgas'+k], r['rmliq'+k]), note:m => m === 'heat' ? 'gas − liquid across the head (condenser drop)' : 'gas − liquid across the head (evaporator superheat proxy)'},
+    {id:'pevp'+k, label:`Port ${L} EV % open`, short:`${L} EV`, unit:'%', dec:0, max:100, zone:k, calc:r => isN(r['pev'+k]) ? r['pev'+k]/MZ.evMax*100 : null, note:`pulses ÷ ${MZ.evMax}`},
+    {id:'zdt'+k,  label:`Zone ${L} air-to-coil ΔT`, short:`${L} air ΔT`, unit:'°F', zone:k, calc:(r,m) => m === 'heat' ? sub(r['ihx'+k], r['ra'+k]) : sub(r['ra'+k], r['ihx'+k]), note:m => m === 'heat' ? 'coil − return air' : 'return air − coil'},
+  );
+}
 const STAT = [
-  {id:'opmode',col:12,label:'Mode'}, {id:'therm',col:13,label:'Thermo'}, {id:'restart',col:14,label:'Restart standby'},
-  {id:'startup',col:15,label:'Startup ctrl'}, {id:'defrost',col:16,label:'Defrost'}, {id:'oilret',col:17,label:'Oil return'},
+  {id:'opmode',col:12,mcol:1,label:'Mode'}, {id:'therm',col:13,label:'Thermo'}, {id:'restart',col:14,label:'Restart standby'},
+  {id:'startup',col:15,label:'Startup ctrl'}, {id:'defrost',col:16,mcol:2,label:'Defrost'}, {id:'oilret',col:17,label:'Oil return'},
   {id:'dsig',col:19,label:'Demand signal'}, {id:'lownoise',col:20,label:'Low noise'}, {id:'freeze',col:21,label:'Freeze protect'},
-  {id:'etype',col:37,label:'Error'}, {id:'dropDisch',col:41,label:'Disch temp drop'}, {id:'dropInv',col:43,label:'INV current drop'},
+  {id:'etype',col:37,mcol:3,label:'Error'}, {id:'dropDisch',col:41,label:'Disch temp drop'}, {id:'dropInv',col:43,label:'INV current drop'},
   {id:'dropHp',col:45,label:'HP drop ctrl'}, {id:'dropLp',col:47,label:'LP drop ctrl'}, {id:'dropFin',col:49,label:'Fin temp drop'},
-  {id:'dropOther',col:51,label:'Other drop ctrl'}, {id:'fourway',col:80,label:'4-way'}, {id:'svhot',col:88,label:'Hot gas SV'},
-  {id:'compcmd',col:104,label:'Comp cmd'}, {id:'fancmd',col:105,label:'Fan cmd'}, {id:'iaddr',col:112,label:'IDU addr'}, {id:'imode',col:113,label:'IDU mode'}, {id:'ierr',col:116,label:'IDU error'},
+  {id:'dropOther',col:51,label:'Other drop ctrl'}, {id:'fourway',col:80,mcol:82,label:'4-way'}, {id:'svhot',col:88,label:'Hot gas SV'},
+  {id:'compcmd',col:104,mcol:73,label:'Comp cmd'}, {id:'fancmd',col:105,label:'Fan cmd'}, {id:'iaddr',col:112,label:'IDU addr'}, {id:'imode',col:113,label:'IDU mode'}, {id:'ierr',col:116,label:'IDU error'},
+  {id:'fwmode', mcol:83, label:'4-way mode'},
 ];
+for (let k = 0; k < MZ.ports; k++){ const L = MZ.letters[k], b = 97 + 28*k;
+  STAT.push({id:'zaddr'+k, mcol:b, label:`Zone ${L} addr`}, {id:'zmode'+k, mcol:b+1, label:`Zone ${L} mode`}, {id:'zerr'+k, mcol:b+3, label:`Zone ${L} error`}, {id:'zflow'+k, mcol:b+23, label:`Zone ${L} airflow`}, {id:'ztx'+k, mcol:b+27, label:`Zone ${L} transmission`}); }
 const ALLCH = [...NUM, ...DERIVED];
 const chById = Object.fromEntries(ALLCH.map(c => [c.id, c]));
 // user-defined channels: name + formula over channel ids (e.g. "disch - cond", "(igas + iliq) / 2")
@@ -807,6 +848,113 @@ const SCENE_LAND = `
             <text class="state" x="930" y="461" text-anchor="middle" id="svstate">—</text>
           </g>
 `;
+// ===== multi-zone (mini split) drawing: one row / column per head (port A–E), shared outdoor unit =====
+const MZP = {rowY:k => 56 + k*176, rowH:176, boxW:740, lRiser:762, gRiser:774, evX:470};            // portrait geometry
+const MZL = {colX:k => 20 + k*300, colW:300, hdrY:78, lLine:x0 => x0 + 140, gLine:x0 => x0 + 154, lHdr:606, gHdr:590};   // landscape geometry
+function multiScene(land){
+  let h = '';
+  if (!land){
+    for (let k = 0; k < MZ.ports; k++){ const y = MZP.rowY(k), L = MZ.letters[k];
+      h += `<g id="zone-${k}" class="zone"><rect class="box" x="16" y="${y}" width="${MZP.boxW}" height="${MZP.rowH - 8}" rx="12"/>
+        <text class="boxlbl" x="32" y="${y + 20}">ZONE ${L}</text><text class="hdrtxt" x="112" y="${y + 20}" id="zhdr-${k}"></text>
+        <rect class="cab" x="36" y="${y + 34}" width="110" height="92" rx="8"/><g id="zcoil-${k}"></g><g id="zfan-${k}"></g>
+        <g class="valve" id="pev-${k}"><path d="M${MZP.evX - 12} ${y + 144} L${MZP.evX} ${y + 156} L${MZP.evX - 12} ${y + 168} Z M${MZP.evX + 12} ${y + 144} L${MZP.evX} ${y + 156} L${MZP.evX + 12} ${y + 168} Z"/><rect class="motor" x="${MZP.evX - 10}" y="${y + 128}" width="20" height="14" rx="2"/><path d="M${MZP.evX} ${y + 142} V${y + 156}" fill="none"/></g>
+        <text class="sublbl" x="${MZP.evX}" y="${y + 122}" text-anchor="middle">PORT ${L} EV</text></g>`; }
+    h += `<g id="g-out"><rect class="box" x="16" y="960" width="${MZP.boxW}" height="540" rx="14"/><text class="boxlbl" x="32" y="996">OUTDOOR UNIT</text><text class="hdrtxt" x="${16 + MZP.boxW - 12}" y="996" text-anchor="end" id="oduhdr"></text>
+      <text class="sublbl" x="${MZP.lRiser - 6}" y="952" text-anchor="end">LIQUID</text><text class="sublbl" x="${MZP.gRiser + 4}" y="952">GAS</text>
+      <g id="coils-out"></g><g id="ofan"></g>
+      <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="700" cy="1330" r="55"/><text class="cmplbl" x="700" y="1308">COMP</text><text class="cmpbig" x="700" y="1331" id="cmpsub">—</text><text class="cmpsub" x="700" y="1348" id="cmptgt"></text><text class="cmpsub cmpdev" x="700" y="1365" id="cmpdev"></text><text class="hold" x="700" y="1293" text-anchor="middle" id="cmphold"></text></g>
+      <g class="acc"><rect x="612" y="1150" width="36" height="100" rx="16"/><rect class="acc-lvl" x="616" y="1210" width="28" height="36" rx="10"/><path d="M630 1150 V1180" fill="none"/></g><text class="sublbl" x="656" y="1204">ACC</text>
+      <g id="fourway"><rect class="fw-body" x="600" y="1010" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
+      <text class="sublbl" x="596" y="1090" text-anchor="end" id="fwlbl">4-WAY VALVE</text><text class="state" x="596" y="1106" text-anchor="end" id="fwstate">—</text></g>`;
+  } else {
+    for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), L = MZ.letters[k], lx = MZL.lLine(x0);
+      h += `<g id="zone-${k}" class="zone"><rect class="box" x="${x0}" y="60" width="${MZL.colW - 8}" height="450" rx="12"/>
+        <text class="boxlbl" x="${x0 + 14}" y="${MZL.hdrY}">ZONE ${L}</text><text class="hdrtxt" x="${x0 + 14}" y="${MZL.hdrY + 16}" id="zhdr-${k}"></text>
+        <rect class="cab" x="${x0 + 100}" y="96" width="100" height="72" rx="8"/><g id="zcoil-${k}"></g><g id="zfan-${k}"></g>
+        <g class="valve" id="pev-${k}"><path d="M${lx - 12} 512 L${lx} 524 L${lx - 12} 536 Z M${lx + 12} 512 L${lx} 524 L${lx + 12} 536 Z"/><rect class="motor" x="${lx - 22}" y="517" width="14" height="14" rx="2"/><path d="M${lx - 8} 524 H${lx}" fill="none"/></g>
+        <text class="sublbl" x="${lx - 26}" y="528" text-anchor="end">PORT ${L}</text></g>`; }
+    h += `<g id="g-out"><rect class="box" x="20" y="548" width="1560" height="332" rx="14"/><text class="boxlbl" x="36" y="578">OUTDOOR UNIT</text><text class="hdrtxt" x="1564" y="578" text-anchor="end" id="oduhdr"></text>
+      <text class="sublbl" x="1546" y="${MZL.gHdr - 8}" text-anchor="end">GAS</text><text class="sublbl" x="1546" y="${MZL.lHdr + 18}" text-anchor="end">LIQUID</text>
+      <g id="coils-out"></g><g id="ofan"></g>
+      <g id="cmp" style="cursor:pointer"><circle id="cmpbody" class="comp-body" cx="1180" cy="790" r="52"/><text class="cmplbl" x="1180" y="769">COMP</text><text class="cmpbig" x="1180" y="791" id="cmpsub">—</text><text class="cmpsub" x="1180" y="807" id="cmptgt"></text><text class="cmpsub cmpdev" x="1180" y="823" id="cmpdev"></text><text class="hold" x="1180" y="755" text-anchor="middle" id="cmphold"></text></g>
+      <g class="acc"><rect x="1042" y="740" width="36" height="100" rx="16"/><rect class="acc-lvl" x="1046" y="800" width="28" height="36" rx="10"/><path d="M1060 740 V770" fill="none"/></g><text class="sublbl" x="1086" y="794">ACC</text>
+      <g id="fourway"><rect class="fw-body" x="1030" y="640" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
+      <text class="sublbl" x="1100" y="662" id="fwlbl">4-WAY VALVE</text><text class="state" x="1100" y="678" id="fwstate">—</text></g>`;
+  }
+  return h;
+}
+// 4-way internal links for the multi scenes: top = discharge in, bottom = suction out, left = outdoor coil, right = gas header
+const FW_MP = { cool:{a:['M630 1015 Q630 1040 605 1040', 'hi'], b:['M655 1040 Q630 1040 630 1065', 'lo']}, heat:{a:['M630 1015 Q630 1040 655 1040', 'hi'], b:['M605 1040 Q630 1040 630 1065', 'lo']} };
+const FW_ML = { cool:{a:['M1060 645 Q1060 670 1085 670', 'hi'], b:['M1035 670 Q1060 670 1060 695', 'lo']}, heat:{a:['M1060 645 Q1060 670 1035 670', 'hi'], b:['M1085 670 Q1060 670 1060 695', 'lo']} };
+function multiPipes(land){
+  const out = [];
+  if (!land){
+    out.push({id:'disch', d:'M700 1275 V990 H630 V1010', hi:true}, {id:'suct', d:'M630 1070 V1150 M630 1250 V1330 H645', lo:true},
+             {id:'oc-in', d:'M600 1040 H70', cool:'hi', heat:'lo', rev:true}, {id:'oc-out', d:`M70 1340 V1380 H${MZP.lRiser}`, cool:'hi', heat:'lo', rev:true},
+             {id:'lriser', d:`M${MZP.lRiser} 1380 V${MZP.rowY(0) + 156}`, cool:'hi', heat:'hi', rev:true}, {id:'griser', d:`M${MZP.gRiser} ${MZP.rowY(0) + 26} V1040 H660`, cool:'lo', heat:'hi', rev:true});
+    for (let k = 0; k < MZ.ports; k++){ const y = MZP.rowY(k);
+      out.push({id:'zl'+k, d:`M${MZP.lRiser} ${y + 156} H91 V${y + 126}`, cool:'hi', heat:'lo', rev:true, zone:k}, {id:'zg'+k, d:`M91 ${y + 34} V${y + 26} H${MZP.gRiser}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
+  } else {
+    out.push({id:'disch', d:'M1180 738 V620 H1060 V640', hi:true}, {id:'suct', d:'M1060 700 V740 M1060 840 V860 H1180 V842', lo:true},
+             {id:'oc-in', d:'M1090 670 H1110 V585 H1546 V620', cool:'hi', heat:'lo', rev:true}, {id:'oc-out', d:`M1546 860 V872 H1386 V${MZL.lHdr} H${MZL.lLine(MZL.colX(0))}`, cool:'hi', heat:'lo', rev:true},
+             {id:'griser', d:`M${MZL.gLine(MZL.colX(0))} ${MZL.gHdr} H1010 V670 H1030`, cool:'lo', heat:'hi', rev:true});
+    for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), lx = MZL.lLine(x0), gx = MZL.gLine(x0);
+      out.push({id:'zl'+k, d:`M${k ? MZL.lLine(MZL.colX(k-1)) : lx} ${MZL.lHdr} H${lx} V168`, cool:'hi', heat:'lo', rev:true, zone:k}, {id:'zg'+k, d:`M${gx} 168 V${MZL.gHdr} H${k ? MZL.gLine(MZL.colX(k-1)) : gx}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
+  }
+  return out;
+}
+function multiTags(land){
+  const T = [];
+  if (!land){
+    T.push({ch:'disch', x:140, y:1076, from:[700,1150], mk:'temp', target:'tdisch', targetLabel:'target'}, {ch:'tderr', x:252, y:1076}, {ch:'fin', x:364, y:1076}, {ch:'syscur', x:476, y:1076},
+           {ch:'rpserr', x:140, y:1150, sub:'trps', subLabel:'target'}, {ch:'maxhz', x:252, y:1150, sub:'minhz', subLabel:'floor'}, {ch:'fan', x:364, y:1150, target:'tfan'}, {ch:'volt', x:476, y:1150},
+           {ch:'ochex', x:140, y:1230, from:[100,1200], mk:'temp'}, {ch:'oat', x:252, y:1230}, {ch:'appr', x:364, y:1230, adv:true});
+    for (let k = 0; k < MZ.ports; k++){ const y = MZP.rowY(k);
+      T.push({ch:'ra'+k, x:160, y:y + 36, zone:k}, {ch:'ihx'+k, x:272, y:y + 36, zone:k}, {ch:'dd'+k, x:384, y:y + 36, zone:k},
+             {ch:'sp'+k, x:160, y:y + 92, zone:k}, {ch:'ifan'+k, x:272, y:y + 92, zone:k}, {ch:'zdt'+k, x:384, y:y + 92, zone:k},
+             {ch:'pevp'+k, x:500, y:y + 30, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmgas'+k, x:612, y:y + 30, from:[600,y + 26], mk:'temp', zone:k},
+             {ch:'rmliq'+k, x:500, y:y + 98, from:[560,y + 156], mk:'temp', zone:k}, {ch:'psh'+k, x:612, y:y + 98, zone:k}); }
+  } else {
+    T.push({ch:'disch', x:1240, y:600, from:[1180,690], mk:'temp', target:'tdisch', targetLabel:'target'}, {ch:'tderr', x:1240, y:680}, {ch:'rpserr', x:1240, y:740, sub:'trps', subLabel:'target'},
+           {ch:'maxhz', x:40, y:640, sub:'minhz', subLabel:'floor'}, {ch:'fin', x:190, y:640}, {ch:'syscur', x:340, y:640}, {ch:'volt', x:490, y:640}, {ch:'appr', x:640, y:640, adv:true},
+           {ch:'ochex', x:1400, y:600, from:[1516,700], mk:'temp'}, {ch:'oat', x:1400, y:660}, {ch:'fan', x:1400, y:720, target:'tfan'});
+    for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), a = x0 + 4, b = x0 + 168;
+      T.push({ch:'ra'+k, x:a, y:180, zone:k}, {ch:'ihx'+k, x:b, y:180, zone:k}, {ch:'dd'+k, x:a, y:236, zone:k}, {ch:'sp'+k, x:b, y:236, zone:k},
+             {ch:'ifan'+k, x:a, y:292, zone:k}, {ch:'zdt'+k, x:b, y:292, zone:k},
+             {ch:'pevp'+k, x:a, y:348, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmliq'+k, x:b, y:348, from:[MZL.lLine(x0), 380], mk:'temp', zone:k},
+             {ch:'rmgas'+k, x:b, y:430, from:[MZL.gLine(x0), 470], mk:'temp', zone:k}, {ch:'psh'+k, x:a, y:430, zone:k}); }
+  }
+  return T;
+}
+function buildMulti(){
+  const land = isLandLay(), go = $('#coils-out'); go.innerHTML = '';
+  if (!land){ coil(go, 'oc', 40, 1040, 60, 300, 'v'); fan($('#ofan'), 200, 1420, 34, 'ofanb'); }
+  else { coil(go, 'oc', 1516, 620, 60, 240, 'v'); fan($('#ofan'), 1450, 840, 30, 'ofanb'); }
+  for (let k = 0; k < MZ.ports; k++){
+    const zc = $('#zcoil-' + k), zf = $('#zfan-' + k); zc.innerHTML = '';
+    if (!land){ coil(zc, 'ic' + k, 46, MZP.rowY(k) + 44, 90, 34, 'h'); fan(zf, 91, MZP.rowY(k) + 108, 16, 'ifanb' + k); }
+    else { const x0 = MZL.colX(k); coil(zc, 'ic' + k, x0 + 108, 104, 84, 30, 'h'); fan(zf, x0 + 150, 152, 13, 'ifanb' + k); }
+  }
+  const ac = EQ.out === 'ac';
+  for (const id of ['fourway','fwlbl','fwstate']){ const e = document.getElementById(id); if (e) e.classList.toggle('hidden-eq', ac); }
+  const zones = D ? D.zones : [0, 1, 2];
+  for (let k = 0; k < MZ.ports; k++){ const on = zones.includes(k); const z = document.getElementById('zone-' + k); if (z) z.classList.toggle('hidden-eq', !on); for (const id of ['p-zl'+k, 'f-zl'+k, 'p-zg'+k, 'f-zg'+k]){ const e = document.getElementById(id); if (e) e.classList.toggle('hidden-eq', !on); } }
+  // the outlines of hidden zone pipes are drawn in buildPipes without ids: hide by index
+  const outlines = document.querySelectorAll('#pipes .pipe-o'); PIPES.forEach((p, j) => { if (p.zone != null && outlines[j]) outlines[j].classList.toggle('hidden-eq', !zones.includes(p.zone)); });
+}
+// per-row rendering for the zones (called from renderCycle)
+function renderMulti(i, m, running){
+  const s = D.str, num = D.num;
+  for (const k of D.zones){
+    const L = MZ.letters[k], mode = s['zmode'+k][i], err = s['zerr'+k][i], addr = s['zaddr'+k][i], fl = s['zflow'+k][i];
+    const hd = document.getElementById('zhdr-' + k); if (hd) hd.textContent = [addr != null ? 'addr ' + addr : null, mode, fl ? 'fan ' + fl : null, err != null ? 'err ' + err : null].filter(Boolean).join(' · ');
+    const fb = document.getElementById('ifanb' + k); if (fb) fb.classList.toggle('on', isN(num['ifan'+k][i]) ? num['ifan'+k][i] > 0 : running);
+    const tube = document.getElementById('ic' + k); if (tube){ tube.classList.remove('hi','lo'); if (running) tube.classList.add(m === 'heat' ? 'hi' : 'lo'); if (THERMAL && running){ const c = thermColor(avg(num['rmgas'+k][i], num['rmliq'+k][i])); tube.style.stroke = c || ''; } else tube.style.stroke = ''; }
+    const ev = document.getElementById('pev-' + k); if (ev) ev.classList.toggle('closed', isN(num['pev'+k][i]) && num['pev'+k][i] === 0);
+  }
+  const oh = document.getElementById('oduhdr'); if (oh) oh.textContent = [s.opmode[i], s.fwmode[i] ? '4-way ' + s.fwmode[i] : null, s.etype[i] != null ? 'err ' + s.etype[i] : null].filter(Boolean).join(' · ');
+}
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
@@ -818,7 +966,7 @@ function applySettings(){
   const b = document.body;
   for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet','parts']) b.classList.toggle('no-' + k, !S[k]);
   LAND = S.land === 'auto' ? null : S.land === 'on';
-  $('#diag').style.setProperty('--k', (LAY === LAYOUTS.land ? S.kLand : S.kPort));
+  $('#diag').style.setProperty('--k', (isLandLay() ? S.kLand * (FAM === 'multi' ? 0.91 : 1) : S.kPort * (FAM === 'multi' ? 0.75 : 1)));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
   document.querySelectorAll('#settings [data-s]').forEach(inp => { const k = inp.dataset.s; if (inp.type === 'checkbox') inp.checked = !!S[k]; else inp.value = S[k]; });
   document.getElementById('kportv').textContent = Math.round(S.kPort*100) + '%'; document.getElementById('klandv').textContent = Math.round(S.kLand*100) + '%';
@@ -826,6 +974,8 @@ function applySettings(){
 const LAYOUTS = {
   port: {W:780, H:1520, in:[0,0], out:[0,0]},
   land: {W:1600, H:900, in:[0,0], out:[0,0]},
+  mport: {W:780, H:1520, in:[0,0], out:[0,0], multi:true},
+  mland: {W:1600, H:900, in:[0,0], out:[0,0], multi:true},
 };
 // component geometry per layout (coils, cabinet, fans, air streams)
 const GEO = {
@@ -836,11 +986,12 @@ const GEO = {
          cab:{x:260,y:250,w:210,h:350,lbl:[365,268],fan:[440,420]},
          fanOut:[1240,330,34], airOut:{ys:[220,270,320,370,420,470,520],x0:1312,x1:1430}, airIn:{ys:[290,335,380,425,470,515],x0:405,x1:100}, gIc:[1,0,0,0]},
 };
-const geo = () => LAY === LAYOUTS.land ? GEO.land : GEO.port;
+const geo = () => isLandLay() ? GEO.land : GEO.port;
 let LAY = LAYOUTS.port;
 const isLand = () => LAND === null ? (window.matchMedia && window.matchMedia('(min-width: 1100px) and (orientation: landscape)').matches) : !!LAND;
+const isLandLay = () => LAY === LAYOUTS.land || LAY === LAYOUTS.mland;
 // map a local point to canvas coordinates: indoor points have local y < 540
-const P = (x, y) => { const o = y < 540 ? LAY.in : LAY.out; return [x + o[0], y + o[1]]; };
+const P = (x, y) => { const o = (!LAY.multi && y < 540) ? LAY.in : LAY.out; return [x + o[0], y + o[1]]; };
 // translate an absolute SVG path (M L H V Q C A) by dx,dy
 function tx(d, dx, dy){
   return d.replace(/([MLHVQCA])([^MLHVQCAZ]*)/g, (m, c, rest) => {
@@ -853,6 +1004,7 @@ function tx(d, dx, dy){
 }
 // equipment profile: outdoor unit type only — 'hp' (DZ/DH/GZ/AZ) or 'ac' (DX/DC/GX/AX). No indoor / auxiliary-heat data exists in D-Checker logs.
 let EQ = {out:'hp', auto:true, guess:''};
+let FAM = 'unitary';   // 'unitary' (one head) or 'multi' (2–5 heads on ports A–E)
 function detectEquipment(){
   // 1) model file named in the phone recording's header.txt (INV_Unitary_DZ6VS → DZ = heat pump)
   const mdl = (D.model || '').replace(/^INV_Unitary_/i, '');
@@ -860,20 +1012,22 @@ function detectEquipment(){
   if (mm){ const hp = /[ZH]/i.test(mm[2]); return {out: hp ? 'hp' : 'ac', why: `model ${mdl}`}; }
   // 2) otherwise the data: a live 4-way valve column or heating rows mean a heat pump
   const fw = STAT.find(x => x.id === 'fourway');
-  const hp = (fw && fw.present && D.str.fourway.some(v => v != null)) || D.mode.some(m => m === 'heat');
+  const hp = (fw && fw.present && D.str.fourway.some(v => v != null)) || D.mode.some(m => m === 'heat') || (D.fam === 'multi' && D.str.fwmode.some(v => v != null));
   return {out: hp ? 'hp' : 'ac', why: hp ? (fw && fw.present ? '4-way valve column present' : 'heating rows present') : 'no 4-way valve column, no heating rows'};
 }
 function applyEquipment(){
   let saved = D ? loadJSON('dchk.eq.' + D.name, 'auto') : 'auto';
-  if (saved !== 'auto') saved = saved.split('-')[0];            // older saves were "hp-furnace" style
+  if (saved !== 'auto' && !/-multi$/.test(saved)) saved = saved.split('-')[0];   // older saves were "hp-furnace" style
   const det = D ? detectEquipment() : {out:'hp', why:''};
-  if (saved === 'auto') EQ = {out:det.out, auto:true, guess:det.why};
-  else EQ = {out:saved, auto:false, guess:''};
+  const detFam = D ? D.fam : 'unitary';
+  if (saved === 'auto'){ EQ = {out:det.out, auto:true, guess:det.why}; FAM = detFam; }
+  else { EQ = {out:saved.split('-')[0], auto:false, guess:''}; FAM = /-multi$/.test(saved) ? 'multi' : 'unitary'; }
   $('#eqsel').value = saved;
   const names = {hp:'Heat pump', ac:'Air conditioner'};
-  $('#eqsel').options[0].textContent = D ? `Auto: ${names[det.out]}${det.why.startsWith('model') ? ' · ' + det.why.slice(6) : ''}` : 'Auto-detect';
+  const famTxt = detFam === 'multi' ? `Mini split ${det.out === 'hp' ? 'heat pump' : 'AC'} · ${D.zones.length} zone${D.zones.length === 1 ? '' : 's'}` : names[det.out];
+  $('#eqsel').options[0].textContent = D ? `Auto: ${famTxt}${det.why.startsWith('model') ? ' · ' + det.why.slice(6) : ''}` : 'Auto-detect';
   $('#eqsel').title = EQ.auto ? EQ.guess : 'set by hand';
-  buildDiagram(); buildTags();
+  setLayout();
 }
 let THERMAL = !!loadJSON('dchk.thermal', false);
 function setThermal(on){ if (THERMAL !== !!on) logEvent('thermal', {on:!!on}); THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
@@ -912,7 +1066,10 @@ function buildDataset(text, name){
   const head = rows[0].map(h => h.trim());
   const byNum = {}, unitOf = {};
   head.forEach((h, i) => { const m = h.match(/^(\d+)\s*:\s*(.*)$/); if (m){ byNum[+m[1]] = i; unitOf[+m[1]] = m[2]; } });
-  const colIdx = c => { if (byNum[c.col] != null) return byNum[c.col]; const key = c.label.toLowerCase().split(' ')[0]; return head.findIndex(h => h.toLowerCase().includes(key)); };
+  // family: a multi-zone (MXS/MXL style) export carries per-port columns; everything else is the unitary FIT/VC layout
+  const fam = head.some(h => /Port A EV|Rm_A (gas|liquid)/i.test(h)) ? 'multi' : 'unitary';
+  const numbered = Object.keys(byNum).length > 0;
+  const colIdx = c => { const col = fam === 'multi' ? c.mcol : c.col; if (col == null) return -1; if (byNum[col] != null) return byNum[col]; if (numbered) return -1; const key = c.label.toLowerCase().split(' ')[0]; return head.findIndex(h => h.toLowerCase().includes(key)); };
   const n = rows.length - 1;
   const t = new Array(n), num = {}, str = {};
   for (let i = 0; i < n; i++) t[i] = parseDate(rows[i+1][0]);
@@ -939,7 +1096,8 @@ function buildDataset(text, name){
   const interval = n > 1 ? Math.max(1, span / (n - 1)) : 30;
   const runSec = new Array(n); let startIdx = -1;
   for (let i = 0; i < n; i++){ const on = isN(num.rps[i]) ? num.rps[i] > 0 : (str.compcmd[i] === 'ON'); if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
-  return {name, n, t, num, str, mode, runSec, interval, head};
+  const zones = fam === 'multi' ? [...Array(MZ.ports).keys()].filter(k => num['rmgas'+k].some(isN) || num['pev'+k].some(isN) || str['zaddr'+k].some(v => v != null)) : [];
+  return {name, n, t, num, str, mode, runSec, interval, head, fam, zones};
 }
 
 /* ---------- rule evaluation ---------- */
@@ -963,7 +1121,7 @@ function evalRow(i){
     if (st === 'warn' || st === 'alarm') out.hits.push({ch:r.ch, st, v, rule:r});
   }
   const s = D.str, ev = [];
-  if (s.etype[i] && !/normal/i.test(s.etype[i])) ev.push({label:'Error: '+s.etype[i], st:'alarm'});
+  if (s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim())) ev.push({label:'Error: '+s.etype[i], st:'alarm'});
   if (s.ierr[i] && !/^0+$/.test(s.ierr[i])) ev.push({label:'IDU error '+s.ierr[i], st:'alarm'});
   for (const id of ['dropDisch','dropInv','dropHp','dropLp','dropFin']) if (s[id][i] === 'ON') ev.push({label:STAT.find(x=>x.id===id).label+' active', st:'warn'});
   if (s.dropOther[i] === 'ON') ev.push({label:'Other drop ctrl', st:'info'});
@@ -975,6 +1133,11 @@ function evalRow(i){
   if (s.lownoise[i] === 'ON') ev.push({label:'Low noise', st:'info'});
   if (isN(D.num.demand[i]) && D.num.demand[i] < 100) ev.push({label:'Demand '+D.num.demand[i]+'%', st:'info'});
   if (isN(D.num.retry[i]) && D.num.retry[i] !== 0) ev.push({label:'Retry code '+D.num.retry[i], st:'warn'});
+  if (D.fam === 'multi'){
+    for (const id of ['limpeak','limfrz','limtd','liminv']){ const v = D.num[id][i]; if (isN(v) && v < 255) ev.push({label:chById[id].label.replace('Max Hz limit: ', '') + ' limit ' + v.toFixed(0) + ' rps', st:'warn'}); }
+    if (isN(D.num.maxhz[i]) && isN(D.num.rps[i]) && D.num.rps[i] >= D.num.maxhz[i] - 1 && D.num.rps[i] > 0) ev.push({label:'At rps cap ' + D.num.maxhz[i].toFixed(0), st:'info'});
+    for (const k of D.zones){ const e2 = s['zerr'+k][i]; if (e2 && !/^0+$/.test(e2)) ev.push({label:`Zone ${MZ.letters[k]} error ${e2}`, st:'alarm'}); const tx = s['ztx'+k][i]; if (tx && !/normal/i.test(tx)) ev.push({label:`Zone ${MZ.letters[k]} transmission ${tx}`, st:'warn'}); }
+  }
   out.events = ev; out.sigs = D.sig ? D.sig[i] : [];
   let worst = 'ok';
   for (const h of out.hits) if (SEV[h.st] > SEV[worst]) worst = h.st;
@@ -1099,7 +1262,7 @@ function analyze(){
   const kS = Math.max(2, Math.round(SIG.steadyMin*60/D.interval));
   D.steady = new Array(n).fill(false);
   const rng = (a, i) => { let lo = Infinity, hi = -Infinity; for (let j = i-kS; j <= i; j++){ const v = a[j]; if (!isN(v)) return null; lo = Math.min(lo, v); hi = Math.max(hi, v); } return hi-lo; };
-  for (let i = kS; i < n; i++){ if (D.runSec[i] < SIG.steadyMin*60 || D.dropout[i]) continue; const r1 = rng(num.rps, i), r2 = rng(num.hp, i), r3 = rng(num.lp, i), r4 = rng(num.ev, i); if (r1 != null && r2 != null && r3 != null && r1 <= SIG.steadyRps && r2 <= SIG.steadyHp && r3 <= SIG.steadyLp && (r4 == null || r4 <= SIG.steadyEv)) D.steady[i] = true; }
+  for (let i = kS; i < n; i++){ if (D.runSec[i] < SIG.steadyMin*60 || D.dropout[i]) continue; const r1 = rng(num.rps, i), r2 = chById.hp.present ? rng(num.hp, i) : 0, r3 = chById.lp.present ? rng(num.lp, i) : 0, r4 = chById.ev.present ? rng(num.ev, i) : (D.fam === 'multi' ? Math.max(...D.zones.map(k => rng(num['pev'+k], i) ?? Infinity), 0) : 0); if (r1 != null && r2 != null && r3 != null && r1 <= SIG.steadyRps && r2 <= SIG.steadyHp && r3 <= SIG.steadyLp && (r4 == null || r4 <= SIG.steadyEv)) D.steady[i] = true; }
   const evVals = num.ev.filter(isN), rpsVals = num.rps.filter(isN);
   const evMax = evVals.length ? Math.max(...evVals) : null, rpsMax = rpsVals.length ? Math.max(...rpsVals) : null;
   const aprSteady = []; for (let i = 0; i < n; i++) if (D.steady[i] && isN(num.apr[i])) aprSteady.push(num.apr[i]);
@@ -1239,8 +1402,8 @@ const PIPES_AC_L = [
   {id:'gas',    d:'M160 220 V170 H850 V470',                       cool:'lo', heat:'lo'},
 ];
 function buildPipes(){
-  const land = LAY === LAYOUTS.land;
-  const base = land ? (EQ.out === 'ac' ? PIPES_AC_L : PIPES_HP_L) : (EQ.out === 'ac' ? PIPES_AC : PIPES_HP);
+  const land = isLandLay();
+  const base = FAM === 'multi' ? multiPipes(land) : land ? (EQ.out === 'ac' ? PIPES_AC_L : PIPES_HP_L) : (EQ.out === 'ac' ? PIPES_AC : PIPES_HP);
   PIPES = base.map(p => ({...p}));
   const g = $('#pipes'); g.innerHTML = '';
   for (const p of PIPES) el('path', {class:'pipe-o', d:p.d}, g);
@@ -1302,7 +1465,7 @@ function buildLineSet(){
   const g = $('#g-line'); g.innerHTML = '';
   const valve = (x, y) => { const v = el('g', {class:'valve'}, g); el('circle', {cx:x, cy:y, r:10}, v); el('path', {d:`M${x} ${y-10} V${y-22} M${x-10} ${y-22} H${x+10}`}, v); };
   const txt = (x, y, t, anchor, id) => { const e = el('text', {class:'sublbl', x, y, 'text-anchor':anchor || 'start'}, g); if (id) e.id = id; e.textContent = t; return e; };
-  if (LAY === LAYOUTS.land){
+  if (isLandLay()){
     valve(640, 170); valve(640, 700);
     txt(560, 158, 'GAS LINE', 'end'); txt(560, 688, 'LIQUID LINE', 'end'); txt(800, 878, '', 'middle', 'lineset-note');
   } else {
@@ -1311,16 +1474,16 @@ function buildLineSet(){
   }
 }
 function setLayout(){
-  LAY = isLand() ? LAYOUTS.land : LAYOUTS.port;
-  const land = LAY === LAYOUTS.land;
+  const land = isLand(), multi = FAM === 'multi';
+  LAY = multi ? (land ? LAYOUTS.mland : LAYOUTS.mport) : (land ? LAYOUTS.land : LAYOUTS.port);
   $('#dsvg').setAttribute('viewBox', `0 0 ${LAY.W} ${LAY.H}`);
-  $('#scene').innerHTML = land ? SCENE_LAND : SCENE_PORT;
-  TAGS = [...(land ? TAGS_LAND : TAGS_PORT), ...customTagDefs()];
-  $('#diag').classList.toggle('land', land); document.body.classList.toggle('landpage', land);
-  $('#diag').style.setProperty('--k', land ? S.kLand : S.kPort);
+  $('#scene').innerHTML = multi ? multiScene(land) : (land ? SCENE_LAND : SCENE_PORT);
+  TAGS = [...(multi ? multiTags(land) : (land ? TAGS_LAND : TAGS_PORT)), ...customTagDefs()];
+  $('#diag').classList.toggle('land', land); document.body.classList.toggle('landpage', land); $('#diag').classList.toggle('multi', multi);
+  $('#diag').style.setProperty('--k', land ? S.kLand * (multi ? 0.91 : 1) : S.kPort * (multi ? 0.75 : 1));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
   buildDiagram(); buildTags();
-    if (D) renderCycle(cur);
+    if (D && evalCache && evalCache.length === D.n && cur < D.n) renderCycle(cur);
 }
 // circuit components as on the Daikin FIT drawing: strainers, filter drier, check valves, muffler, HPS, service port, fusible plug
 function partSym(g, it){
@@ -1372,8 +1535,9 @@ const PARTS = {
     {t:'check', x:1100, y:735, dir:'left', title:'Check valve (bypasses the EEV in cooling)', bypass:'M1130 700 V735 H1070 V700', hp:true},
   ],
 };
-function buildParts(){ const g = $('#parts'); g.innerHTML = ''; for (const it of (LAY === LAYOUTS.land ? PARTS.land : PARTS.port)) if (!(it.hp && EQ.out === 'ac')) partSym(g, it); }
+function buildParts(){ const g = $('#parts'); g.innerHTML = ''; for (const it of (isLandLay() ? PARTS.land : PARTS.port)) if (!(it.hp && EQ.out === 'ac')) partSym(g, it); }
 function buildDiagram(){
+  if (FAM === 'multi'){ $('#g-line').innerHTML = ''; $('#parts').innerHTML = ''; buildPipes(); buildMulti(); return; }
   buildPipes(); buildCoils(); buildLineSet(); buildParts();
   // per the FIT AC service drawing: no reversing valve, no hot-gas solenoid, no outdoor EEV (the muffler, check valves and their strainers go with them)
   const ac = EQ.out === 'ac';
@@ -1457,7 +1621,7 @@ const TAGS_LAND = [
 let CUSTOM = loadJSON('dchk.custom', []);
 CUSTOM.forEach(c => { try { registerCustom(c); } catch(e){} });
 function customTagDefs(){
-  const land = LAY === LAYOUTS.land;
+  const land = isLandLay();
   return CUSTOM.filter(c => chById[c.id]).map((c, k) => {
     const pos = (c.pos && c.pos[land ? 'land' : 'port']) || (land ? [700 + (k % 4) * 150, 30] : [90 + (k % 4) * 160, 22]);
     return {ch:c.id, x:pos[0], y:pos[1], custom:c, anchor:'ctr'};
@@ -1486,11 +1650,11 @@ function buildTags(){
         tg.x = Math.max(60, Math.min(LAY.W - 60, ux)); tg.y = Math.max(20, Math.min(LAY.H - 20, uy));
         e.style.left = (tg.x / LAY.W * 100) + '%'; e.style.top = (tg.y / LAY.H * 100) + '%'; });
       e.addEventListener('pointerup', ev => { if (!drag) return; const moved = drag.moved; drag = null;
-        if (moved){ const key = LAY === LAYOUTS.land ? 'land' : 'port'; tg.custom.pos = tg.custom.pos || {}; tg.custom.pos[key] = [Math.round(tg.x), Math.round(tg.y)]; saveJSON('dchk.custom', CUSTOM); }
+        if (moved){ const key = isLandLay() ? 'land' : 'port'; tg.custom.pos = tg.custom.pos || {}; tg.custom.pos[key] = [Math.round(tg.x), Math.round(tg.y)]; saveJSON('dchk.custom', CUSTOM); }
         else togglePin(tg.ch); });
       e.addEventListener('pointercancel', () => { drag = null; });
     } else e.addEventListener('click', () => { const id = tagCh(tg, D ? (D.mode[cur] === 'cool' ? 'cool' : 'heat') : 'heat'); if (id) togglePin(id); });
-    const eqHidden = !!(tg.hp && EQ.out === 'ac'); e.hidden = eqHidden;
+    const eqHidden = !!(tg.hp && EQ.out === 'ac') || (tg.zone != null && !!D && !D.zones.includes(tg.zone)); e.hidden = eqHidden;
     host.appendChild(e);
     if (tg.from && !eqHidden){
       const [fx, fy] = P(tg.from[0], tg.from[1]);
@@ -1528,7 +1692,10 @@ function segTemp(seg, i, m){
     case 'ic-in': return v('iliq');
     case 'ic': return avg(v('igas'), v('iliq'));
     case 'sv': return v('disch');
+    case 'lriser': return avg(...D.zones.map(k => v('rmliq'+k)).filter(isN).slice(0, 2));
+    case 'griser': return avg(...D.zones.map(k => v('rmgas'+k)).filter(isN).slice(0, 2));
   }
+  let z; if ((z = /^zl(\d)$/.exec(seg))) return v('rmliq'+z[1]); if ((z = /^zg(\d)$/.exec(seg))) return v('rmgas'+z[1]);
   return null;
 }
 function renderCycle(i){
@@ -1539,7 +1706,7 @@ function renderCycle(i){
     const pe = document.getElementById('p-' + p.id); pe.classList.remove('hi','lo','off'); pe.classList.add(running ? side : 'off');
     document.getElementById('f-' + p.id).classList.toggle('rev', !!p.rev && m === 'heat');
   }
-  const tube = (id, side) => { const t = document.getElementById(id); t.classList.remove('hi','lo'); if (running) t.classList.add(side); };
+  const tube = (id, side) => { const t = document.getElementById(id); if (!t) return; t.classList.remove('hi','lo'); if (running) t.classList.add(side); };
   const mm = EQ.out === 'ac' ? 'cool' : m;
   tube('oc', mm === 'heat' ? 'lo' : 'hi'); tube('ic', mm === 'heat' ? 'hi' : 'lo');
   // thermal-camera coloring of the tubing by the temperature logged on each segment
@@ -1547,14 +1714,14 @@ function renderCycle(i){
   for (const p of PIPES) paint(document.getElementById('p-' + p.id), p.id);
   paint(document.getElementById('oc'), 'oc'); paint(document.getElementById('ic'), 'ic');
   paint(document.getElementById('svpipe'), D.str.svhot[i] === 'ON' ? 'sv' : null);
-  const fw = (LAY === LAYOUTS.land ? FW_L : FW)[m];
+  const fw = (FAM === 'multi' ? (isLandLay() ? FW_ML : FW_MP) : isLandLay() ? FW_L : FW)[m];
   if (EQ.out === 'hp') for (const k of ['a','b']){ const pth = document.getElementById('fw-' + k); pth.setAttribute('d', fw[k][0]); pth.classList.remove('hi','lo','off'); pth.classList.add(running ? fw[k][1] : 'off'); pth.style.stroke = (THERMAL && running) ? (thermColor(fw[k][1] === 'hi' ? D.num.disch[i] : D.num.suct[i]) || '') : ''; }
   const fwv = D.str.fourway[i];
   $('#fwstate').textContent = fwv ? (fwv === 'ON' ? 'ON · de-energized' : 'OFF · energized') : '—';
   const sv = D.str.svhot[i] === 'ON';
-  $('#svsym').querySelector('.sv').classList.toggle('on', sv);
+  if ($('#svsym')){ $('#svsym').querySelector('.sv').classList.toggle('on', sv);
   const svp = $('#svpipe'); svp.classList.remove('hi','off'); svp.classList.add(sv && running ? 'hi' : 'off'); svp.style.opacity = sv && running ? '' : '.55';
-  const svs = $('#svstate'); svs.textContent = D.str.svhot[i] ? (sv ? 'OPEN' : 'closed') : '—'; svs.classList.toggle('on', sv);
+  const svs = $('#svstate'); svs.textContent = D.str.svhot[i] ? (sv ? 'OPEN' : 'closed') : '—'; svs.classList.toggle('on', sv); }
   $('#cmpbody').classList.toggle('on', running);
   { const mf = D.num.mflow ? D.num.mflow[i] : null; const mr = D.range.mflow; const f = (isN(mf) && mr && mr.max > 0) ? mf/mr.max : 0.6; $('#diag').style.setProperty('--flowdur', (2.6 - 2.0*Math.max(0.15, Math.min(1, f))).toFixed(2) + 's'); }
   const rps = D.num.rps[i], trps = D.num.trps[i];
@@ -1563,7 +1730,7 @@ function renderCycle(i){
   const dv = $('#cmpdev'); dv.classList.remove('off','dn','up');
   if (isN(rps) && isN(trps)){ const d = rps - trps; dv.textContent = (d === 0 ? 'on target' : (d > 0 ? '▲ +' : '▼ ') + d.toFixed(0) + ' rps'); dv.classList.add(d === 0 ? 'off' : d > 0 ? 'up' : 'dn'); } else dv.textContent = '';
   const ofOn = isN(D.num.fan[i]) ? D.num.fan[i] > 0 : running, ifOn = isN(D.num.cfm[i]) ? D.num.cfm[i] > 0 : running;
-  $('#ofanb').classList.toggle('on', ofOn); $('#ifanb').classList.toggle('on', ifOn);
+  $('#ofanb').classList.toggle('on', ofOn); if ($('#ifanb')) $('#ifanb').classList.toggle('on', ifOn);
   // air through the coils: entering-air color → leaving-air color (leaving air lands most of the way to the coil temperature)
   const oat = D.num.oat[i], oc = D.num.ochex[i];
   const gOc = document.querySelectorAll('#g-oc stop'), gIc = document.querySelectorAll('#g-ic stop');
@@ -1576,16 +1743,19 @@ function renderCycle(i){
   // cooling: refrigerant in = ID liquid, out = ID gas  →  air in ≈ ID gas, air out ≈ ID liquid
   const airIn = m === 'heat' ? D.num.iliq[i] : D.num.igas[i], airOut = m === 'heat' ? D.num.igas[i] : D.num.iliq[i];
   gIc[1].setAttribute('stop-color', thermColor(airIn) || grey); gIc[0].setAttribute('stop-color', thermColor(airOut) || grey);
-  $('#air-oc').classList.toggle('off', !ofOn); $('#air-ic').classList.toggle('off', !ifOn);
+  if ($('#air-oc')) $('#air-oc').classList.toggle('off', !ofOn); if ($('#air-ic')) $('#air-ic').classList.toggle('off', !ifOn);
   const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
+  if (FAM === 'multi') renderMulti(i, m, running);
+  else {
   $('#iduhdr').textContent = [im, ia != null ? 'addr ' + ia : null, ie != null ? 'err ' + ie : null].filter(Boolean).join(' · ');
   $('#oduhdr').textContent = [D.str.opmode[i], D.str.therm[i] ? 'thermo ' + D.str.therm[i] : null, D.str.etype[i]].filter(Boolean).join(' · ');
   $('#lineset-note').textContent = running ? ((m === 'heat' && EQ.out === 'hp') ? 'HEATING · hot gas → indoor' : 'COOLING · liquid → indoor') : 'COMPRESSOR OFF';
+  }
   TAGS.forEach((tg, k) => {
     const e = document.getElementById('tag-' + k);
     const id = tagCh(tg, m);
-    if (!id || (tg.adv && !S.physics) || (tg.hp && EQ.out === 'ac')){ e.hidden = true; return; } e.hidden = false;
+    if (!id || (tg.adv && !S.physics) || (tg.hp && EQ.out === 'ac') || (tg.zone != null && !D.zones.includes(tg.zone))){ e.hidden = true; return; } e.hidden = false;
     const ch = chById[id]; const v = D.num[id][i];
     e.querySelector('.l').textContent = (pick(tg.label, m) || ch.short) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
     e.querySelector('.n').textContent = fmt(v, ch);
@@ -1686,12 +1856,14 @@ function renderNow(i){
   { const dm = D.num.demand[i], op = (D.str.opmode[i] || D.str.imode[i] || '—'), th = D.str.therm[i];
     const s = D.str, ph = s.defrost[i] === 'ON' ? 'DEFROST' : s.oilret[i] === 'ON' ? 'OIL RETURN' : s.startup[i] === 'ON' ? 'STARTUP' : s.restart[i] === 'ON' ? 'RESTART STANDBY' : s.freeze[i] === 'ON' ? 'FREEZE PROTECT' : ['dropDisch','dropInv','dropHp','dropLp','dropFin'].some(id => s[id][i] === 'ON') ? 'DROP CTRL' : (D.runSec[i] >= 0 ? (D.steady[i] ? 'STEADY' : 'RUNNING') : 'OFF');
     const cls = m === 'heat' ? 'm-heat' : m === 'cool' ? 'm-cool' : '';
-    $('#demand').innerHTML = `<span>DEMAND <b>${isN(dm) ? dm.toFixed(0) + '%' : '—'}</b></span><span class="${cls}">${String(op).toUpperCase()}</span><span class="ph">${th ? (th === 'ON' ? 'CALL' : 'NO CALL') + ' · ' : ''}${ph}</span>`; }
+    const cap = D.num.maxhz[i];
+    $('#demand').innerHTML = (D.fam === 'multi' ? `<span>RPS CAP <b>${isN(cap) ? cap.toFixed(0) : '—'}</b></span>` : `<span>DEMAND <b>${isN(dm) ? dm.toFixed(0) + '%' : '—'}</b></span>`) + `<span class="${cls}">${String(op).toUpperCase()}</span><span class="ph">${th ? (th === 'ON' ? 'CALL' : 'NO CALL') + ' · ' : ''}${ph}</span>`; }
   $('#scrub').value = i;
   $('#b-play').textContent = playing ? '❚❚' : '▶';
 }
 function cssVar(k){ return getComputedStyle(document.documentElement).getPropertyValue(k).trim(); }
 function drawTicks(){
+  if (!D || !evalCache || evalCache.length !== D.n) return;
   const c = $('#ticks'), dpr = window.devicePixelRatio || 1;
   const W = c.clientWidth, H = 24; if (!W) return; c.width = W*dpr; c.height = H*dpr;
   const g = c.getContext('2d'); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
@@ -2088,7 +2260,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v37';
+const APP_VERSION = 'v38';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);

@@ -17,3 +17,7 @@ The mobile D-Checker app saves each recording as a `.tgz` (a folder with a binar
 Record format (worked out from a Daikin FIT heat-pump log): each record is a 14-digit timestamp followed by tagged binary blocks `[group][0][length] data...` ending in `FF FF`; `datalabel.txt` gives every field's group, byte offset, size, type and label. Types: 105/107 int16 x0.1 (C or kgf/cm2, `0x8000` = no data), 151 uint16, 152/220 uint8, 161 uint8/2 (%), 164 uint8x5 (rpm), 211 fan step, 217 op mode, 313 indoor mode (upper nibble), 203 error type, 215 error code, 30x bit x, 310/311 nibbles.
 
 Known differences from the PC export: the phone recording keeps seconds on every timestamp; one valid record the PC app dropped is kept; the PC app truncates whole-degree-C temperatures to integer F (16.0 C -> "60"), this app converts exactly (60.8).
+
+## Multi-zone mini splits
+
+Logs from 2–5 port MXS/MXL outdoor units (columns `Rm_A gas temp`, `Port A EV`…) are detected automatically and drawn as one zone per port with a shared outdoor unit. See `docs/outdoor-circuits.md` §5.
