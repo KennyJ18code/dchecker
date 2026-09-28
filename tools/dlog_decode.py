@@ -12,7 +12,7 @@ import sys, io, tarfile, struct, csv
 
 OPMODE = {0: 'Stop', 1: 'Heating', 2: 'Cooling', 3: 'Fan', 4: 'Dry'}          # 1 confirmed; others provisional
 # IDU byte 2: upper nibble = mode (same enum as op mode), bit3 = thermo on, bit2 = freeze protection
-PSI_PER_KGF = 14.2233
+PSI_PER_KGF = 14.223
 
 def parse_labels(text):
     rows = []

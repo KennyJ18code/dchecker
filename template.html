@@ -2030,7 +2030,7 @@ function dlValue(l, g){
   if (!g) return '---'; const o = l.off, t = l.type;
   const i16 = () => (g[o] | (g[o + 1] << 8)) << 16 >> 16, u16 = () => g[o] | (g[o + 1] << 8);
   const f1 = v => { const s = v.toFixed(1); return s.endsWith('.0') ? s.slice(0, -2) : s; };
-  if (t === 105 || t === 107){ const v = i16(); if (v === -32768) return '---'; const c = v / 10; return f1(l.kind === 1 ? c * 1.8 + 32 : l.kind === 3 ? c * 1.8 : l.kind === 2 ? c * 14.2233 : c); }
+  if (t === 105 || t === 107){ const v = i16(); if (v === -32768) return '---'; const c = v / 10; return f1(l.kind === 1 ? c * 1.8 + 32 : l.kind === 3 ? c * 1.8 : l.kind === 2 ? c * 14.223 : c); }
   if (t === 151) return String(u16());
   if (t === 152 || t === 220) return String(g[o]);
   if (t === 211) return g[o] === 0 ? 'OFF' : String(g[o]);
@@ -2085,9 +2085,10 @@ async function openFiles(files){
   } catch(e){ toast('Could not open: ' + e.message); }
 }
 window.dchkOpen = openFiles;
+window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v36';
+const APP_VERSION = 'v37';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
