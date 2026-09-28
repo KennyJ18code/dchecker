@@ -109,6 +109,16 @@ body.no-chips .nowbar .chips{height:0}
 body.landpage .wrap{max-width:1600px}
 .diag > svg{position:absolute;inset:0;width:100%;height:100%}
 .hint{text-align:center;font-size:12px;color:var(--muted);padding:0 14px 10px}
+.nowline{height:calc(2 * 1.35em + 14px);box-sizing:border-box;overflow:hidden;font-size:12.5px;line-height:1.35;color:var(--ink2);padding:6px 10px;margin:0 6px 6px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-family:var(--mono)}
+.nowline b{color:var(--ink);font-weight:700}.nowline .w{color:var(--warn)}.nowline .a{color:var(--alarm)}.nowline .g{color:var(--ok)}
+body.no-narr .nowline{display:none}
+.synhead{padding:10px 14px 4px;font-size:15px;font-weight:700;line-height:1.4}
+.synfacts{display:flex;flex-wrap:wrap;gap:6px 16px;padding:4px 14px 10px;font-size:13px;color:var(--ink2)}.synfacts b{color:var(--ink)}
+.synlist{display:flex;flex-direction:column;gap:8px;padding:0 14px 12px}
+.syn{border:1px solid var(--line);border-left-width:5px;border-radius:8px;padding:8px 12px;background:var(--panel)}
+.syn.alarm{border-left-color:var(--alarm)}.syn.warn{border-left-color:var(--warn)}.syn.info{border-left-color:var(--accent)}.syn.ok{border-left-color:var(--ok)}
+.syn h3{margin:0 0 4px;font-size:14px}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
+.syn .do::before{content:"Do: ";font-weight:800;color:var(--accent)}.syn .why::before{content:"Evidence: ";font-weight:800;color:var(--muted)}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:0 14px 12px;font-size:12px;color:var(--ink2);justify-content:center}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;width:18px;height:4px;border-radius:2px}
@@ -402,6 +412,7 @@ body.no-cabinet #indoor-var .cab{display:none}
   <div class="tabs" role="tablist" id="tabs">
     <button role="tab" aria-selected="true" data-tab="cycle" id="tab-cycle">Cycle</button>
     <button role="tab" aria-selected="false" data-tab="trends" id="tab-trends">Trends</button>
+    <button role="tab" aria-selected="false" data-tab="synopsis" id="tab-synopsis">Synopsis</button>
     <button role="tab" aria-selected="false" data-tab="rules" id="tab-rules" hidden>Rules</button>
     <button role="tab" aria-selected="false" data-tab="runs" id="tab-runs" hidden>Runs</button>
     <button role="tab" aria-selected="false" data-tab="data" id="tab-data">Data</button>
@@ -438,6 +449,7 @@ body.no-cabinet #indoor-var .cab{display:none}
         <span class="viewnote" id="viewnote"></span>
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
       </div>
+      <div class="nowline" id="nowline"></div>
       <div class="diagwrap"><div class="diag" id="diag">
         <svg viewBox="0 0 780 1520" aria-hidden="true" id="dsvg">
           <defs><linearGradient id="g-oc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient><linearGradient id="g-ic" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#888"/><stop offset="1" stop-color="#888"/></linearGradient></defs>
@@ -498,6 +510,15 @@ body.no-cabinet #indoor-var .cab{display:none}
       <thead><tr><th>On</th><th>Channel</th><th>Mode</th><th>Red below</th><th>Yellow below</th><th>Yellow above</th><th>Red above</th><th>Comp running</th><th>Settle (min)</th><th></th></tr></thead>
       <tbody></tbody>
     </table></div>
+  </section>
+
+  <!-- SYNOPSIS -->
+  <section class="panel card" id="panel-synopsis" hidden>
+    <h2>What this recording says</h2>
+    <div class="synhead" id="synhead"></div>
+    <div class="synfacts" id="synfacts"></div>
+    <div class="synlist" id="synlist"></div>
+    <p class="note" style="padding:0 14px 14px" id="synnote"></p>
   </section>
 
   <!-- RUNS -->
@@ -601,6 +622,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <section><h3>Header and bottom bar</h3>
         <label><input type="checkbox" data-s="chips"> Status chip band</label>
         <label><input type="checkbox" data-s="events"> Control-event chips (startup, defrost, demand…)</label>
+        <label><input type="checkbox" data-s="narr"> "What it is doing now" line above the diagram</label>
         <label><input type="checkbox" data-s="sigs"> Signature chips (blue)</label>
         <label><input type="checkbox" data-s="faults"> Fault-library chips (amber, with confidence)</label>
         <label><input type="checkbox" data-s="dock"> Pinned trend strips</label>
@@ -1095,13 +1117,13 @@ function renderMulti(i, m, running){
 let VIEW = loadJSON('dchk.view', 'num');
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
 function applySettings(){
   saveJSON('dchk.settings', S);
   const b = document.body;
-  for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet','parts']) b.classList.toggle('no-' + k, !S[k]);
+  for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet','parts','narr']) b.classList.toggle('no-' + k, !S[k]);
   LAND = S.land === 'auto' ? null : S.land === 'on';
   $('#diag').style.setProperty('--k', (isLandLay() ? S.kLand * (FAM === 'multi' ? 0.91 : 1) : S.kPort * (FAM === 'multi' ? 0.75 : 1)));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
@@ -1997,8 +2019,134 @@ function renderNow(i){
     $('#demand').innerHTML = (D.fam === 'multi' ? `<span>RPS CAP <b>${isN(cap) ? cap.toFixed(0) : '—'}</b></span>` : `<span>DEMAND <b>${isN(dm) ? dm.toFixed(0) + '%' : '—'}</b></span>`) + `<span class="${cls}">${String(op).toUpperCase()}</span><span class="ph">${th ? (th === 'ON' ? 'CALL' : 'NO CALL') + ' · ' : ''}${ph}</span>`; }
   $('#scrub').value = i;
   $('#b-play').textContent = playing ? '❚❚' : '▶';
+  $('#nowline').innerHTML = narrateRow(i);
 }
 function cssVar(k){ return getComputedStyle(document.documentElement).getPropertyValue(k).trim(); }
+
+/* ---------- plain-English narration: one line for the current row, a synopsis for the whole recording ---------- */
+const synEsc = x => String(x).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f0 = v => isN(v) ? v.toFixed(0) : '—', f1s = v => isN(v) ? v.toFixed(1) : '—';
+const pct = (n, d) => d ? Math.round(n / d * 100) : 0;
+function narrateRow(i){
+  if (!D) return '';
+  const num = D.num, s = D.str, m = D.mode[i], running = D.runSec[i] >= 0, rs = D.runSec[i] / 60;
+  const parts = [];
+  const mode = (s.opmode[i] || s.imode[i] || 'Mode ?');
+  if (!running) parts.push(`<b>${synEsc(mode)}</b> · compressor off`);
+  else {
+    const ph = s.defrost[i] === 'ON' ? 'defrost' : s.oilret[i] === 'ON' ? 'oil return' : s.startup[i] === 'ON' ? 'startup control' : s.freeze[i] === 'ON' ? 'freeze protection' : null;
+    parts.push(`<b>${synEsc(mode)}</b>${ph ? ' · <span class="w">' + ph + '</span>' : ''} · ${f0(rs)} min in`);
+    if (D.fam === 'multi'){
+      const rps = num.rps[i], cap = num.maxhz[i], flr = num.minhz[i];
+      if (isN(rps)) parts.push(`comp <b>${f0(rps)} rps</b>` + (isN(cap) && rps >= cap - 1 ? ' <span class="w">at its cap</span>' : isN(flr) && rps <= Math.max(flr, 10) + 1 ? ' at its floor (low load)' : isN(cap) ? ` of ${f0(cap)} allowed` : ''));
+      const lim = ['limpeak','limfrz','limtd','liminv'].filter(id => isN(num[id][i]) && num[id][i] < 255); if (lim.length) parts.push(`<span class="w">limited by ${lim.map(id => chById[id].label.replace('Max Hz limit: ', '')).join(', ')}</span>`);
+      if (rs >= 5 && isN(num.tderr[i]) && Math.abs(num.tderr[i]) >= 10) parts.push(`discharge ${f0(Math.abs(num.tderr[i]))}°F ${num.tderr[i] < 0 ? 'under' : '<span class="w">over</span>'} target`);
+      const on = [], off = [];
+      for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k][i], fan = num['ifan'+k][i], dd = num['dd'+k][i], hx = num['ihx'+k][i];
+        if (isN(ev) && ev === 0) off.push(L + (isN(fan) && fan > 0 ? '' : '·fan off'));
+        else on.push(`${L}${isN(dd) ? ' ΔD' + f0(dd) : ''}${isN(hx) ? ' coil ' + f0(hx) + '°' : ''}`); }
+      if (on.length) parts.push(`calling: <b>${synEsc(on.join(', '))}</b>`);
+      if (off.length) parts.push(`satisfied: ${synEsc(off.join(', '))}` + (off.some(x => !/fan off/.test(x)) && m === 'cool' ? ' <span class="w">(fan on over a warm coil → re-evaporation)</span>' : ''));
+    } else {
+      const rps = num.rps[i], trps = num.trps[i];
+      if (isN(rps)) parts.push(`comp <b>${f0(rps)} rps</b>` + (isN(trps) ? (Math.abs(rps - trps) <= 2 ? ' on target' : rps < trps ? ` <span class="w">${f0(trps - rps)} under target</span>` : ` ${f0(rps - trps)} over target`) : ''));
+      const drops = ['dropDisch','dropInv','dropHp','dropLp','dropFin'].filter(id => s[id][i] === 'ON'); if (drops.length) parts.push(`<span class="w">held back by ${drops.map(id => STAT.find(x => x.id === id).label.toLowerCase()).join(', ')}</span>`);
+      if (isN(num.evpct[i])) parts.push(`EV ${f0(num.evpct[i])}%` + (num.evpct[i] >= 95 ? ' <span class="w">(pinned open)</span>' : num.evpct[i] <= 8 ? ' <span class="w">(nearly closed)</span>' : ''));
+      if (rs >= SIG.settle && isN(num.scerr[i])){ const e = num.scerr[i]; parts.push(`SC ${f1s(num.sc[i])}°F` + (Math.abs(e) < 3 ? ' <span class="g">on target</span>' : e < 0 ? ` <span class="w">${f1s(-e)} under target</span>` : ` <span class="w">${f1s(e)} over target</span>`)); }
+      if (isN(num.sh[i]) && rs >= 3 && (num.sh[i] < 3 || num.sh[i] > 25)) parts.push(`suction SH ${f1s(num.sh[i])}°F <span class="w">${num.sh[i] < 3 ? '(flood risk)' : '(starved coil)'}</span>`);
+      if (isN(num.dsh[i]) && rs >= 5 && num.dsh[i] < SIG.dshLow) parts.push(`<span class="a">discharge SH only ${f1s(num.dsh[i])}°F</span>`);
+    }
+  }
+  const sigs = (D.sig[i] || []).filter(x => (x.st === 'sig' && S.sigs) || (x.st === 'fault' && S.faults)).slice(0, 2);
+  for (const x of sigs) parts.push(`<span class="${x.st === 'fault' ? 'a' : 'w'}">${synEsc(x.label)}</span>`);
+  const err = (s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim())) ? s.etype[i] : null; if (err) parts.unshift(`<span class="a">ERROR ${synEsc(err)}</span>`);
+  return parts.join(' · ');
+}
+// whole-recording findings: {st, title, why, do}
+function synopsisFindings(){
+  const F = [], num = D.num, s = D.str, n = D.n, dt = D.interval / 60, run = i => D.runSec[i] >= 0;
+  const rows = [...Array(n).keys()], runRows = rows.filter(run), steadyRows = rows.filter(i => D.steady[i]);
+  const settled = rows.filter(i => run(i) && D.runSec[i] >= SIG.settle * 60);
+  const med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  const share = (arr, pred) => arr.length ? arr.filter(pred).length / arr.length : 0;
+  const modes = [...new Set(D.mode.filter(m => m !== 'other'))];
+  const runMin = runRows.length * dt, spanMin = n * dt;
+  // errors and controls
+  const errRows = rows.filter(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()));
+  if (errRows.length){ const codes = [...new Set(errRows.map(i => s.etype[i]))]; F.push({st:'alarm', title:`Error code logged: ${codes.join(', ')}`, why:`${errRows.length} rows (${f0(errRows.length * dt)} min), first at ${fmtTime(D.t[errRows[0]])}`, do:'Look this code up first; everything below is secondary until it is cleared.'}); }
+  const retry = rows.filter(i => isN(num.retry[i]) && num.retry[i] !== 0);
+  if (retry.length) F.push({st:'warn', title:`Retry codes ${[...new Set(retry.map(i => num.retry[i]))].join(', ')}`, why:`${retry.length} rows`, do:'Protection retries mean the unit backed off from a limit; match them to the drop controls below.'});
+  for (const id of ['dropDisch','dropInv','dropHp','dropLp','dropFin']){ const r = rows.filter(i => s[id][i] === 'ON'); if (r.length >= 2) F.push({st:'warn', title:`${STAT.find(x => x.id === id).label} active ${f0(r.length * dt)} min (${pct(r.length, runRows.length)}% of run time)`, why:`first at ${fmtTime(D.t[r[0]])}`, do:{dropDisch:'Discharge-temperature limiting: check charge (low charge runs hot), EV response and condenser airflow.', dropInv:'Inverter-current limiting: high load or a hot compressor; check condenser airflow, charge and line voltage.', dropHp:'High-pressure limiting: condenser airflow, fan speed, overcharge or a restricted liquid line.', dropLp:'Low-pressure limiting: low charge, starved evaporator, dirty filter or low indoor airflow.', dropFin:'Fin-temperature limiting: inverter heatsink hot; check the outdoor fan and the heatsink for debris.'}[id]}); }
+  // cycling
+  if (D.runs.length){ const shorts = D.runs.filter(r => r.short).length; const avgRun = D.runs.reduce((a, r) => a + r.min, 0) / D.runs.length;
+    if (shorts >= 2 && shorts / D.runs.length >= 0.3) F.push({st:'warn', title:`Short cycling: ${shorts} of ${D.runs.length} runs`, why:`average run ${f0(avgRun)} min; a short run is under ${SIG.shortRun} min or restarts within ${SIG.shortOff} min`, do:'Oversizing, a thermostat differential set too tight, or a limit trip. Check the thermostat settings before the refrigerant.'});
+    if (D.runs.length === 1 && runMin >= 180) F.push({st:'info', title:`Ran continuously for ${f0(runMin)} min without stopping`, why:`one run across the whole recording`, do:'Normal for a variable-speed unit in steady weather. Judge it by whether it held its targets, not by the run length.'}); }
+  if (D.fam === 'multi'){
+    const cap = med(runRows.map(i => num.maxhz[i])), rpsMed = med(runRows.map(i => num.rps[i]));
+    const floorShare = share(runRows, i => isN(num.rps[i]) && num.rps[i] <= 15), capShare = share(runRows, i => isN(num.rps[i]) && isN(num.maxhz[i]) && num.rps[i] >= num.maxhz[i] - 1);
+    if (floorShare >= 0.25) F.push({st:'info', title:`Compressor at its floor ${pct(floorShare, 1)}% of the run time (median ${f0(rpsMed)} rps of ${f0(cap)} allowed)`, why:`outdoor air ${f0(D.range.oat && D.range.oat.min)}–${f0(D.range.oat && D.range.oat.max)}°F over the recording`, do:'The house is asking for far less than the unit can give. Coils run warm at low speed, so latent (moisture) removal suffers. Expect humidity complaints on mild days; use Dry mode or lower fan speeds.'});
+    if (capShare >= 0.25) F.push({st:'warn', title:`Compressor pinned at its cap ${pct(capShare, 1)}% of the run time`, why:`cap ${f0(cap)} rps`, do:'The unit is running out of capacity or is being limited. Check the limiter findings, then the load.'});
+    for (const id of ['limpeak','limfrz','limtd','liminv']){ const r = rows.filter(i => isN(num[id][i]) && num[id][i] < 255); if (r.length >= 2) F.push({st:'warn', title:`${chById[id].label.replace('Max Hz limit: ', '')} limiter active ${f0(r.length * dt)} min`, why:`speed capped at ${f0(med(r.map(i => num[id][i])))} rps; first at ${fmtTime(D.t[r[0]])}`, do:{limpeak:'Peak-cut is a demand/quiet setting on the remote or the outdoor DIP switches, not a fault.', limfrz:'Freeze protection: an indoor coil got near freezing. Low indoor airflow (dirty filter, low fan) or a head that is too big for its room.', limtd:'Discharge-temperature limit: the compressor ran hot. Check charge and outdoor airflow.', liminv:'Inverter-current limit: high load, high ambient or a hot inverter fin.'}[id]}); }
+    const tdm = med(settled.map(i => num.tderr[i]));
+    if (isN(tdm) && tdm <= -15) F.push({st:'info', title:`Discharge ran ${f0(-tdm)}°F below its target while settled`, why:`the control aims for a discharge temperature; it could not raise it at these speeds`, do:'Consistent with low load. Not a fault by itself.'});
+    if (isN(tdm) && tdm >= 15) F.push({st:'warn', title:`Discharge ran ${f0(tdm)}°F above its target while settled`, why:`median over settled rows`, do:'Hot compressor: suspect low charge, a starved port, or condenser airflow.'});
+    const cool = modes.includes('cool');
+    for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k], fan = num['ifan'+k], hx = num['ihx'+k], ra = num['ra'+k], sp = num['sp'+k], dd = num['dd'+k];
+      const closed = runRows.filter(i => isN(ev[i]) && ev[i] === 0), openR = runRows.filter(i => isN(ev[i]) && ev[i] > 0);
+      let best = 0, cur = 0; for (const i of rows){ cur = (isN(ev[i]) && ev[i] === 0) ? cur + 1 : 0; best = Math.max(best, cur); }
+      const fanOnClosed = share(closed, i => isN(fan[i]) && fan[i] > 0);
+      if (cool && closed.length && closed.length / runRows.length >= 0.4 && fanOnClosed >= 0.8)
+        F.push({st:'warn', title:`Zone ${L}: satisfied ${pct(closed.length, runRows.length)}% of the time with its fan still running`, why:`port closed up to ${f0(best * dt)} min at a stretch; coil ${f0(med(closed.map(i => hx[i])))}°F while closed (room ${f0(med(closed.map(i => ra[i])))}°F), fan ${f0(med(closed.map(i => fan[i])))} rpm`, do:'A wet coil with the fan running and no refrigerant flow puts the water back into the room. Put this head in Dry mode, or drop its fan to Auto/Low, or lower its setpoint so it keeps metering. This is the main reason a multi-split will not dehumidify.'});
+      if (cool && openR.length){ const hxMed = med(openR.map(i => hx[i])), coldShare = share(openR, i => isN(hx[i]) && hx[i] <= 52), fanMed = med(openR.map(i => fan[i])), fanMax = Math.max(...runRows.map(i => fan[i]).filter(isN));
+        if (hxMed >= 52 && openR.length / runRows.length >= 0.3) F.push({st:'warn', title:`Zone ${L}: coil only ${f0(hxMed)}°F while metering (≤52°F just ${pct(coldShare, 1)}% of the time)`, why:`fan ${f0(fanMed)} rpm${fanMax && fanMed >= fanMax - 5 ? ' (its maximum, the whole time)' : ''}, return air ${f0(med(openR.map(i => ra[i])))}°F`, do:'Too warm to condense much moisture. Turn this head\'s fan down to Auto or Low; a slower coil runs colder and pulls more water per hour.'}); }
+      const spv = med(rows.map(i => sp[i])), ram = med(runRows.map(i => ra[i])), ddm = med(runRows.map(i => dd[i]));
+      if (cool && isN(spv) && isN(ram) && isN(ddm) && ram <= spv + 1 && ddm >= 4 && openR.length / runRows.length >= 0.8) F.push({st:'info', title:`Zone ${L}: keeps calling (ΔD ${f0(ddm)}) although return air ${f0(ram)}°F is within 1°F of its ${f0(spv)}°F setpoint`, why:`port open ${pct(openR.length, runRows.length)}% of the time`, do:'The head is not deciding from the return-air sensor: check for the remote\'s "I feel"/room sensor mode, a sensor in a warm spot, or a setback schedule.'});
+      const errs = rows.filter(i => s['zerr'+k][i] && !/^0+$/.test(s['zerr'+k][i])); if (errs.length) F.push({st:'alarm', title:`Zone ${L} error ${[...new Set(errs.map(i => s['zerr'+k][i]))].join(', ')}`, why:`${errs.length} rows`, do:'Look up the indoor error code before anything else on this head.'});
+      const tx = rows.filter(i => s['ztx'+k][i] && !/normal/i.test(s['ztx'+k][i])); if (tx.length) F.push({st:'warn', title:`Zone ${L} transmission faults`, why:`${tx.length} rows`, do:'Indoor–outdoor communication dropped; check the interconnect wiring at both ends.'});
+    }
+  } else {
+    const evMax = chById.ev.max;
+    // charge / metering
+    if (settled.length >= 6 && chById.tsc.present){ const scm = med(settled.map(i => num.scerr[i])), evm = med(settled.map(i => num.evpct[i]));
+      if (isN(scm) && scm <= -SIG.scErr){ const pin = share(settled, i => isN(num.ev[i]) && num.ev[i] >= evMax * SIG.evPinFrac);
+        F.push({st:pin >= 0.3 ? 'alarm' : 'warn', title:`Subcooling ran ${f1s(-scm)}°F under target once settled` + (pin >= 0.3 ? ', with the outdoor EV pinned open' : ''), why:`median over ${settled.length} settled rows; EV median ${f0(evm)}% open, at ≥${Math.round(SIG.evPinFrac * 100)}% for ${pct(pin, 1)} % of settled time`, do:pin >= 0.3 ? 'The valve is wide open and still cannot hold subcooling: undercharge or a liquid-line restriction (drier, strainer, kinked line). Weigh the charge against the nameplate plus line-set adder before condemning anything.' : 'Low subcooling with the valve not yet pinned: mild undercharge, or the log is too short for the control to settle. Check charge by weight.'}); }
+      else if (isN(scm) && scm >= SIG.scErr){ const near = share(settled, i => isN(num.ev[i]) && num.ev[i] <= evMax * 0.12);
+        F.push({st:'warn', title:`Subcooling ran ${f1s(scm)}°F over target once settled` + (near >= 0.3 ? ', with the EV nearly closed' : ''), why:`EV median ${f0(evm)}% open`, do:'Too much liquid backed up in the condenser: overcharge, or a restriction downstream of the liquid-line sensor (indoor EV/TXV, indoor strainer).'}); }
+      else if (isN(scm)) F.push({st:'ok', title:`Subcooling held its target (${f1s(scm) > 0 ? '+' : ''}${f1s(scm)}°F) once settled`, why:`EV median ${f0(evm)}% open`, do:'Charge and the liquid side look right.'}); }
+    const shm = med(settled.map(i => num.sh[i]));
+    if (isN(shm) && shm > 25) F.push({st:'warn', title:`Suction superheat high: ${f1s(shm)}°F settled median`, why:`Suction − Te`, do:'Starved evaporator: low charge, indoor EV/TXV underfeeding, or a restricted indoor strainer.'});
+    if (isN(shm) && shm < 3) F.push({st:'warn', title:`Suction superheat near zero: ${f1s(shm)}°F settled median`, why:`Suction − Te`, do:'Liquid reaching the compressor: overfeeding EV, low indoor airflow, or an accumulator doing all the work.'});
+    const dshLow = share(settled.filter(i => isN(num.rps[i]) && D.ref.rpsMax && num.rps[i] >= D.ref.rpsMax * SIG.rpsFrac), i => isN(num.dsh[i]) && num.dsh[i] < SIG.dshLow);
+    if (dshLow >= 0.3) F.push({st:'alarm', title:`Discharge superheat under ${SIG.dshLow}°F for ${pct(dshLow, 1)}% of the time at speed`, why:`Discharge − Tc at ≥${Math.round(SIG.rpsFrac * 100)}% of max speed`, do:'Liquid floodback signature. Find why the evaporator is not boiling it all off before it damages the compressor.'});
+    if (D.range.disch && D.range.disch.max >= 220) F.push({st:'warn', title:`Discharge peaked at ${f0(D.range.disch.max)}°F`, why:`highest logged discharge`, do:'Hot compressor: low charge, high compression ratio, or restricted airflow over the condenser.'});
+    // capacity delivery
+    if (runRows.length){ const under = share(settled, i => isN(num.rpserr[i]) && num.rpserr[i] <= -SIG.rpsHold); if (under >= 0.2) F.push({st:'warn', title:`Compressor held ≥${SIG.rpsHold} rps under its target ${pct(under, 1)}% of the settled time`, why:`see the drop-control findings for what held it`, do:'Capacity is being limited by a protection, not by the thermostat.'}); }
+    if (chById.cfm.present && chById.reqcfm.present){ const shortA = share(runRows, i => isN(num.cfm[i]) && isN(num.reqcfm[i]) && num.reqcfm[i] > 0 && num.cfm[i] < 0.9 * num.reqcfm[i]); if (shortA >= 0.2) F.push({st:'warn', title:`Indoor airflow short of request ${pct(shortA, 1)}% of the run time`, why:`present CFM under 90% of requested`, do:'Dirty filter, closed registers or a duct restriction. Fix airflow before judging refrigerant numbers.'}); }
+    // sensor disagreements from the signature pass
+    const cnt = code => rows.filter(i => (D.sig[i] || []).some(x => x.code === code)).length;
+    for (const [code, title, doTxt] of [['pt-tc','Tc disagrees with the HP transducer','A pressure sensor or the saturation table is off; verify with gauges.'],['pt-te','Te disagrees with the LP transducer','A pressure sensor or the saturation table is off; verify with gauges.'],['hp-ip','Outdoor and indoor pressure sensors disagree','One of the two pressure sensors is wrong, or the indoor sensor is on a restricted line; compare both to a gauge.'],['order','Thermistor order violated','A thermistor is reading wrong or misplaced; check the flagged pair.']]){ const c = cnt(code); if (c >= Math.max(3, 0.05 * n)) F.push({st:'warn', title:`${title} on ${c} rows`, why:`signature '${code}'`, do:doTxt}); }
+    if (modes.includes('heat')){ const d = D.runs.reduce((a, r) => a + (r.defrost || 0), 0); const dm = D.runs.reduce((a, r) => a + (r.defrostMin || 0), 0); if (d) F.push({st:d / Math.max(1, spanMin / 60) >= 2 ? 'warn' : 'info', title:`${d} defrost${d === 1 ? '' : 's'} in ${f0(spanMin)} min (${f0(dm)} min defrosting)`, why:`from the defrost control flag`, do:d / Math.max(1, spanMin / 60) >= 2 ? 'Frequent defrosts: check the outdoor coil for ice/dirt, the defrost thermistor placement, and outdoor fan operation.' : 'Normal defrost frequency for the conditions.'}); }
+  }
+  // dropouts
+  const drop = rows.filter(i => D.dropout[i]).length; if (drop >= 3) F.push({st:'info', title:`${drop} rows with sensor dropouts`, why:`HP, LP or Tc read zero`, do:'Ignore those rows; if they cluster, check the D-Checker cable and the pressure sensor connectors.'});
+  if (!F.length) F.push({st:'ok', title:'Nothing stood out in this recording', why:`${f0(runMin)} min of run time, ${steadyRows.length ? f0(steadyRows.length * dt) + ' min steady' : 'never reached steady state'}`, do:'If there is a complaint, record longer, through a full cycle, or in the complaint conditions.'});
+  const order = {alarm:0, warn:1, info:2, ok:3}; F.sort((a, b) => order[a.st] - order[b.st]);
+  return F;
+}
+function buildSynopsis(){
+  if (!D) return;
+  const n = D.n, dt = D.interval / 60, runMin = D.runSec.filter(x => x >= 0).length * dt, steadyMin = D.steady.filter(Boolean).length * dt;
+  const F = synopsisFindings();
+  const modes = [...new Set(D.mode.filter(m => m !== 'other'))].map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ') || 'unknown mode';
+  const worst = F[0].st;
+  const unit = D.fam === 'multi' ? `${D.zones.length}-zone mini split` : (EQ.out === 'ac' ? 'air conditioner' : 'heat pump') + (D.model ? ' ' + D.model.replace(/^INV_Unitary_/i, '') : '');
+  const verdict = worst === 'alarm' ? 'needs attention' : worst === 'warn' ? 'has things worth fixing' : worst === 'info' ? 'looks normal for the conditions' : 'looks healthy';
+  $('#synhead').textContent = `This ${unit} ran ${f0(runMin)} min in ${modes} over ${f0(n * dt)} min of recording and ${verdict}.`;
+  const facts = [`<span><b>${D.runs.length}</b> run${D.runs.length === 1 ? '' : 's'}</span>`, `<span><b>${f0(steadyMin)}</b> min steady</span>`, D.range.oat ? `<span>outdoor <b>${f0(D.range.oat.min)}–${f0(D.range.oat.max)}°F</b></span>` : '', D.range.rps ? `<span>comp <b>${f0(D.range.rps.min)}–${f0(D.range.rps.max)} rps</b></span>` : '', D.range.disch ? `<span>discharge <b>${f0(D.range.disch.min)}–${f0(D.range.disch.max)}°F</b></span>` : '', D.range.hp ? `<span>HP <b>${f0(D.range.hp.min)}–${f0(D.range.hp.max)}</b> · LP <b>${f0(D.range.lp.min)}–${f0(D.range.lp.max)} psi</b></span>` : ''];
+  $('#synfacts').innerHTML = facts.filter(Boolean).join('');
+  $('#synlist').innerHTML = F.map(f => `<div class="syn ${f.st}"><h3>${synEsc(f.title)}</h3><p class="why">${synEsc(f.why)}</p><p class="do">${synEsc(f.do)}</p></div>`).join('');
+  $('#synnote').textContent = D.fam === 'multi' ? 'A multi-zone log has no pressure sensors, humidity or airflow, so these findings rest on coil, pipe and air temperatures plus the EV positions. Confirm humidity with a meter.' : 'Findings use the unit\'s own targets and the signature thresholds in the Runs tab. They point at what to check first; they are not a replacement for gauges and a scale.';
+}
 function drawTicks(){
   if (!D || !evalCache || evalCache.length !== D.n) return;
   const c = $('#ticks'), dpr = window.devicePixelRatio || 1;
@@ -2397,7 +2545,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v38';
+const APP_VERSION = 'v39';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -2448,7 +2596,8 @@ async function sha256(buf){ const h = await crypto.subtle.digest('SHA-256', buf)
 function recordingSummary(){
   const sigs = {}; D.sig.forEach(a => a.forEach(x => { if (x.st === 'sig' || x.st === 'fault'){ const L = x.label.replace(/ · \d+\/\d+$/, ''); sigs[L] = (sigs[L] || 0) + 1; } }));
   const spanH = (D.t[D.n-1] - D.t[0]) / 3.6e6;
-  return {runs:D.runs.length, cycles_per_hr: spanH > 0 ? +(D.runs.length/spanH).toFixed(2) : null, steady_min: +(D.steady.filter(Boolean).length*D.interval/60).toFixed(0), signatures:sigs,
+  let findings = []; try { findings = synopsisFindings().filter(f => f.st !== 'ok').slice(0, 8).map(f => f.st + ': ' + f.title); } catch(e){}
+  return {findings, runs:D.runs.length, cycles_per_hr: spanH > 0 ? +(D.runs.length/spanH).toFixed(2) : null, steady_min: +(D.steady.filter(Boolean).length*D.interval/60).toFixed(0), signatures:sigs,
           max_disch: D.range.disch ? D.range.disch.max : null, max_hp: D.range.hp ? D.range.hp.max : null, min_lp: D.range.lp ? D.range.lp.min : null, modes:[...new Set(D.mode)]};
 }
 let CURRENT_REC = null;   // {sha, id?} for feedback
@@ -2515,7 +2664,7 @@ function load(text, name, model){
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
   applyEquipment();
-  evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns();
+  evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns(); buildSynopsis();
   $('#rulejson').value = JSON.stringify(rules, null, 1);
   setCur(0);
   const nflag = evalCache.filter(e => e.worst==='alarm'||e.worst==='warn'||e.worst==='sig').length;
@@ -2543,6 +2692,7 @@ $('#tabs').addEventListener('click', e => {
   if (b.dataset.tab === 'trends') drawAllStrips();
   if (b.dataset.tab === 'data') highlightRow();
   if (b.dataset.tab === 'fleet') fleetRefresh();
+  if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
 });
 $('#scrub').addEventListener('input', e => setCur(+e.target.value));
 $('#ticks').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); setCur(Math.floor((e.clientX - r.left) / r.width * D.n)); });
