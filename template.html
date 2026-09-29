@@ -372,6 +372,10 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .fb input{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 8px;font-size:12px;flex:1;min-width:14ch}
 #fleettable td.sigs{white-space:normal;max-width:30ch;font-size:12px}
 .datawrap{overflow:auto;max-height:70vh;padding:0 14px 14px}
+.ptbox{margin:0 14px 10px;border:1px solid var(--line);border-radius:10px;padding:6px 12px}.ptbox summary{cursor:pointer;font-weight:700;font-size:13px}.ptbox .note{margin:8px 0}
+.ptnow{font-family:var(--mono);font-size:12px;color:var(--ink2);margin:0 0 8px}
+.ptwrap{max-height:50vh;overflow:auto;display:inline-block;border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
+.ptbox table.pt{width:auto;border-collapse:collapse;font-family:var(--mono);font-size:12px}.pt th,.pt td{padding:2px 12px;text-align:right;border-bottom:1px solid var(--line)}.pt th{font-family:var(--sans);font-size:11px;color:var(--muted)}.pt .cur{background:var(--panel2);font-weight:700}
 .datawrap table{font-family:var(--mono);font-size:12px}
 .datawrap th{position:sticky;top:0;background:var(--panel);z-index:1}
 .datawrap td{padding:3px 7px;text-align:right}
@@ -474,6 +478,7 @@ body.no-cabinet #indoor-var .cab{display:none}
           <option value="hp-multi">Mini split · heat pump (2–5 zones)</option>
           <option value="ac-multi">Mini split · AC (2–5 zones)</option>
         </select></label>
+        <label class="eqtog">Refrigerant <select id="refsel"><option value="auto">Auto</option><option value="R410A">R-410A</option><option value="R32">R-32</option></select></label>
         <span class="viewnote" id="viewnote"></span>
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
       </div>
@@ -582,6 +587,7 @@ body.no-cabinet #indoor-var .cab{display:none}
 
   <!-- DATA -->
   <section class="panel card" id="panel-data" hidden>
+    <details class="ptbox"><summary>PT chart · R-410A and R-32</summary><div id="ptchart"></div></details>
     <h2>Rows · click a row to jump to it</h2>
     <div class="datawrap" id="datawrap"></div>
   </section>
@@ -741,7 +747,10 @@ for (let k = 0; k < MZ.ports; k++){
   );
 }
 // R-410A saturation table (psig → °F), used only to sanity-check the unit's own Tc/Te against its transducers
-const PT410 = [[13,-30],[17,-25],[22,-20],[27,-15],[32,-10],[38,-5],[45,0],[52,5],[59,10],[67,15],[76,20],[85,25],[95,30],[106,35],[118,40],[130,45],[142,50],[156,55],[170,60],[185,65],[201,70],[217,75],[235,80],[253,85],[274,90],[295,95],[317,100],[340,105],[365,110],[390,115],[417,120],[445,125],[475,130],[506,135],[540,140],[575,145],[612,150]];
+// saturation tables [psig, °F] in 5 °F steps, −40 to 160 °F, from CoolProp 8 (R-410A dew point; R-32 is a pure fluid). R-32 runs 1–17 psi above R-410A at the same temperature.
+const PT410 = [[10.7,-40],[14.0,-35],[17.7,-30],[21.8,-25],[26.2,-20],[31.0,-15],[36.3,-10],[42.0,-5],[48.2,0],[54.9,5],[62.2,10],[70.0,15],[78.4,20],[87.4,25],[97.0,30],[107.3,35],[118.4,40],[130.1,45],[142.6,50],[156.0,55],[170.1,60],[185.1,65],[201.1,70],[217.9,75],[235.7,80],[254.6,85],[274.5,90],[295.4,95],[317.6,100],[340.8,105],[365.4,110],[391.2,115],[418.3,120],[446.8,125],[476.8,130],[508.4,135],[541.5,140],[576.3,145],[613.0,150],[651.7,155],[692.6,160]];
+const PT32 = [[11.0,-40],[14.4,-35],[18.2,-30],[22.3,-25],[26.8,-20],[31.7,-15],[37.1,-10],[42.9,-5],[49.3,0],[56.1,5],[63.5,10],[71.4,15],[80.0,20],[89.2,25],[99.1,30],[109.7,35],[121.0,40],[133.0,45],[145.8,50],[159.5,55],[174.0,60],[189.5,65],[205.8,70],[223.2,75],[241.5,80],[260.9,85],[281.3,90],[302.9,95],[325.7,100],[349.6,105],[374.9,110],[401.4,115],[429.3,120],[458.7,125],[489.5,130],[521.8,135],[555.8,140],[591.4,145],[628.8,150],[668.1,155],[709.4,160]];
+const PTS = {R410A:PT410, R32:PT32}, REFNAME = {R410A:'R-410A', R32:'R-32'};
 // R-410A saturated enthalpies (kJ/kg, IIR reference) by °F, for relative capacity indices only
 const HT = [-40,-22,-4,14,32,50,68,86,104,122,140], HF = [144.0,157.8,172.0,186.4,200.0,215.0,230.4,246.5,263.5,282.2,303.7], HG = [405.9,411.5,416.6,420.5,421.3,424.2,426.5,427.7,427.5,425.3,419.6];
 function interp(xs, ys, x){ if (x <= xs[0]) return ys[0]; for (let k = 1; k < xs.length; k++) if (x <= xs[k]) return ys[k-1] + (ys[k]-ys[k-1])*(x-xs[k-1])/(xs[k]-xs[k-1]); return ys[ys.length-1]; }
@@ -749,7 +758,7 @@ function hLiquid(tF){ return interp(HT, HF, tF); }
 function hVapor(tSatF, shF){ return interp(HT, HG, tSatF) + 0.9 * Math.max(0, shF) * 5/9; }
 function rhoSuction(lpPsig, suctF){ if (!isN(lpPsig) || !isN(suctF) || lpPsig < 5) return null; const P = (lpPsig + 14.7) * 6894.76, T = (suctF + 459.67) * 5/9; return P / (0.85 * 114.5 * T); }
 function isoDisch(lpPsig, hpPsig, suctF){ if (!isN(lpPsig) || !isN(hpPsig) || !isN(suctF) || lpPsig < 5 || hpPsig <= lpPsig) return null; const k = 1.2; const T1 = suctF + 459.67; return T1 * Math.pow((hpPsig + 14.7)/(lpPsig + 14.7), (k-1)/k) - 459.67; }
-function satF(psig){ if (!isN(psig)) return null; const T = PT410; if (psig <= T[0][0]) return T[0][1]; for (let k = 1; k < T.length; k++){ if (psig <= T[k][0]){ const [p0,t0] = T[k-1], [p1,t1] = T[k]; return t0 + (t1-t0)*(psig-p0)/(p1-p0); } } return T[T.length-1][1]; }
+function satF(psig, ref){ if (!isN(psig)) return null; const T = PTS[ref || REF.ref] || PT410; if (psig <= T[0][0]) return T[0][1]; for (let k = 1; k < T.length; k++){ if (psig <= T[k][0]){ const [p0,t0] = T[k-1], [p1,t1] = T[k]; return t0 + (t1-t0)*(psig-p0)/(p1-p0); } } return T[T.length-1][1]; }
 const DERIVED = [
   {id:'sh',  label:'Suction superheat', short:'Suction SH', unit:'°F', calc:r => sub(r.suct, r.evap), note:'Suction − Te'},
   {id:'sc',  label:'Subcooling (outdoor liquid pipe)', short:'Subcooling', unit:'°F', calc:r => sub(r.cond, r.liq), note:'Tc − liquid pipe — the SC Daikin\'s target refers to'},
@@ -765,8 +774,8 @@ const DERIVED = [
   {id:'rpserr',label:'Comp vs target', short:'Comp Δ', unit:'rps', calc:r => sub(r.rps, r.trps), note:'Actual − target'},
   {id:'odsat', label:'Outdoor coil vs saturation', short:'OD coil − sat', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.ochex, r.evap) : sub(r.cond, r.ochex), note:m => m==='heat' ? 'OD coil − Te' : 'Tc − OD coil'},
   {id:'apr',   label:'INV current per rps', short:'Amps / rps', unit:'A/rps', dec:3, calc:r => (isN(r.inv1)&&isN(r.rps)&&r.rps>0) ? r.inv1/r.rps : null, note:'INV current ÷ comp speed'},
-  {id:'tcchk', label:'Tc check vs PT table', short:'Tc − PT(HP)', unit:'°F', calc:r => (isN(r.hp)&&r.hp>30&&isN(r.cond)) ? r.cond - satF(r.hp) : null, note:'logged Tc − R-410A sat temp at HP'},
-  {id:'techk', label:'Te check vs PT table', short:'Te − PT(LP)', unit:'°F', calc:r => (isN(r.lp)&&r.lp>20&&isN(r.evap)) ? r.evap - satF(r.lp) : null, note:'logged Te − R-410A sat temp at LP'},
+  {id:'tcchk', label:'Tc check vs PT table', short:'Tc − PT(HP)', unit:'°F', calc:r => (isN(r.hp)&&r.hp>30&&isN(r.cond)) ? r.cond - satF(r.hp) : null, note:() => `logged Tc − ${REFNAME[REF.ref]} sat temp at HP`},
+  {id:'techk', label:'Te check vs PT table', short:'Te − PT(LP)', unit:'°F', calc:r => (isN(r.lp)&&r.lp>20&&isN(r.evap)) ? r.evap - satF(r.lp) : null, note:() => `logged Te − ${REFNAME[REF.ref]} sat temp at LP`},
   {id:'hpip',  label:'Pressure sensor check', short:'PS check', unit:'psi', calc:(r,m) => m === 'heat' ? sub(r.hp, r.ipress) : sub(r.lp, r.ipress), note:'indoor pressure sensor (on the gas pipe) vs outdoor HP in heating / LP in cooling'},
   {id:'lift',  label:'Lift (Tc − Te)', short:'Lift', unit:'°F', calc:r => sub(r.cond, r.evap), note:'condensing − evaporating sat temp'},
   {id:'isod',  label:'Discharge vs isentropic', short:'Disch − isen', unit:'°F', calc:r => { const t = isoDisch(r.lp, r.hp, r.suct); return isN(t) ? r.disch - t : null; }, note:'actual discharge − ideal compression estimate (k=1.2); high = compressor heat/wear, negative = wet suction or 4-way bypass'},
@@ -1144,6 +1153,43 @@ function tx(d, dx, dy){
 }
 // equipment profile: outdoor unit type only — 'hp' (DZ/DH/GZ/AZ) or 'ac' (DX/DC/GX/AX). No indoor / auxiliary-heat data exists in D-Checker logs.
 let EQ = {out:'hp', auto:true, guess:''};
+// refrigerant: the board logs Te and Tc from its own pressure→temperature table, so on a unit with transducers the logged Te at the logged LP
+// tells us which table it used. Otherwise the model name (DC/DH = R-32, DX/DZ = R-410A); a Multi_Split log names no model, so R-410A (MXS) unless set.
+let REF = {ref:'R410A', auto:true, why:'assumed'};
+function detectRefrigerant(){
+  const lp = D.num.lp, te = D.num.evap, hp = D.num.hp, tc = D.num.cond;
+  if (lp && te){ const err = {R410A:[], R32:[]};
+    for (let i = 0; i < D.n; i++){ if (D.runSec[i] < 0) continue;
+      if (isN(lp[i]) && lp[i] > 20 && isN(te[i])) for (const r of ['R410A','R32']) err[r].push(Math.abs(te[i] - satF(lp[i], r)));
+      if (hp && tc && isN(hp[i]) && hp[i] > 30 && isN(tc[i])) for (const r of ['R410A','R32']) err[r].push(Math.abs(tc[i] - satF(hp[i], r))); }
+    if (err.R410A.length >= 20){ const m = r => err[r].reduce((a, b) => a + b, 0) / err[r].length, a = m('R410A'), b = m('R32');
+      if (Math.abs(a - b) >= 1) return {ref: a < b ? 'R410A' : 'R32', why:`board's Te/Tc match the ${a < b ? 'R-410A' : 'R-32'} table (avg ${Math.min(a, b).toFixed(1)}°F off vs ${Math.max(a, b).toFixed(1)}°F)`}; } }
+  const mdl = (D.model || '').replace(/^INV_Unitary_/i, '');
+  if (/^D[CH]\d/i.test(mdl)) return {ref:'R32', why:`model ${mdl}`};
+  if (/^D[XZ]\d/i.test(mdl)) return {ref:'R410A', why:`model ${mdl}`};
+  return {ref:'R410A', why: D.fam === 'multi' ? 'assumed (MXS); pick R-32 for an MXL' : 'assumed'};
+}
+function applyRefrigerant(){
+  const saved = D ? loadJSON('dchk.ref.' + D.name, 'auto') : 'auto';
+  const det = D ? detectRefrigerant() : {ref:'R410A', why:''};
+  REF = saved === 'auto' ? {ref:det.ref, auto:true, why:det.why} : {ref:saved, auto:false, why:'set by hand'};
+  $('#refsel').value = saved; $('#refsel').options[0].textContent = D ? `Auto: ${REFNAME[det.ref]}` : 'Auto'; $('#refsel').title = REF.why;
+  buildPtChart();
+}
+function buildPtChart(){
+  const host = $('#ptchart'); if (!host) return;
+  let h = `<p class="note">Saturation temperature by gauge pressure (CoolProp 8; R-410A dew point). In use for this log: <b>${REFNAME[REF.ref]}</b> · ${REF.why}. Superheat = suction line temperature − Te sat at LP; subcooling = Tc sat at HP − liquid line temperature.</p><div id="ptnow" class="ptnow"></div>
+    <div class="ptwrap"><table class="pt"><thead><tr><th>°F</th><th class="${REF.ref === 'R410A' ? 'cur' : ''}">R-410A psig</th><th class="${REF.ref === 'R32' ? 'cur' : ''}">R-32 psig</th><th>Δ psi</th></tr></thead><tbody>`;
+  for (let k = 0; k < PT410.length; k++){ const [p4, t] = PT410[k], p3 = PT32[k][0]; h += `<tr><td>${t}</td><td class="${REF.ref === 'R410A' ? 'cur' : ''}">${p4.toFixed(1)}</td><td class="${REF.ref === 'R32' ? 'cur' : ''}">${p3.toFixed(1)}</td><td>+${(p3 - p4).toFixed(1)}</td></tr>`; }
+  host.innerHTML = h + '</tbody></table></div>';
+}
+function renderPtNow(i){
+  const e = $('#ptnow'); if (!e || !D) return;
+  const lp = D.num.lp ? D.num.lp[i] : null, hp = D.num.hp ? D.num.hp[i] : null, te = D.num.evap ? D.num.evap[i] : null, tc = D.num.cond ? D.num.cond[i] : null;
+  if (!isN(lp) && !isN(hp)){ e.textContent = D.fam === 'multi' ? 'This log has no pressure transducers (mini splits log temperatures only), so the chart is for your gauges.' : ''; return; }
+  const line = (lbl, p, logged) => isN(p) ? `${lbl} ${p.toFixed(0)} psig → sat ${satF(p, 'R410A').toFixed(1)}°F R-410A · ${satF(p, 'R32').toFixed(1)}°F R-32${isN(logged) ? ` · board says ${logged.toFixed(1)}°F` : ''}` : '';
+  e.innerHTML = `<b>${fmtTime(D.t[i])}</b> · ${[line('LP', lp, te), line('HP', hp, tc)].filter(Boolean).join(' &nbsp;|&nbsp; ')}`;
+}
 let FAM = 'unitary';   // 'unitary' (one head) or 'multi' (2–5 heads on ports A–E)
 function detectEquipment(){
   // 1) model file named in the phone recording's header.txt (INV_Unitary_DZ6VS → DZ = heat pump)
@@ -1488,7 +1534,7 @@ function ruleCtx(i){
   return {i, run, rs, cool, heat, multi, rps, trps, rpsMax, rpsMin, disch, dsh, tEvap, tCond, oat, ochex, ssh:v('sh'), sc:v('sc'), scErr:v('scerr'), approach:(cool && isN(ochex) && isN(oat)) ? ochex - oat : null,
           splitHeat:(heat && isN(ochex) && isN(oat)) ? oat - ochex : null, cfm:v('cfm'), reqcfm:v('reqcfm'), fin:v('fin'), fan:v('fan'), tfan:v('tfan'), ihxMax, ihxMin,
           evMax:evs.length ? Math.max(...evs) : (multi ? null : v('evpct')), evMin:evs.length ? Math.min(...evs) : (multi ? null : v('evpct')), limits, hiFanWarm, reevap, unmet,
-          locked:D.locked[i], sinceDefrost:D.sinceDefrost[i], pinnedMin:D.pinnedMin[i], heldMin:D.heldMin[i], reversals:D.reversals[i], freezeMin:D.freezeMin[i], r32:!!(D.model && /^(INV_Unitary_)?D[CH]\d|^Multi/i.test(D.model) && !/DX|DZ/i.test(D.model))};
+          locked:D.locked[i], sinceDefrost:D.sinceDefrost[i], pinnedMin:D.pinnedMin[i], heldMin:D.heldMin[i], reversals:D.reversals[i], freezeMin:D.freezeMin[i], r32:REF.ref === 'R32'};
 }
 function runRulebook(){
   const n = D.n, num = D.num, dt = D.interval / 60, s = D.str;
@@ -1693,8 +1739,8 @@ function analyze(){
     if (isN(num.lpslope[i]) && num.lpslope[i] <= SIG.lpSlope && isN(num.evslope[i]) && num.evslope[i] >= SIG.evSlope) out.push({code:'lp-fall', label:'LP falling while EV opens', detail:`${num.lpslope[i].toFixed(1)} psi/min with EV +${num.evslope[i].toFixed(1)} pls/min — starving evaporator`, st:'sig'});
     const drops = ['dropDisch','dropInv','dropHp','dropLp','dropFin'].filter(id => s[id][i] === 'ON').map(id => STAT.find(x => x.id === id).label);
     if (drops.length && isN(num.rps[i]) && isN(num.trps[i]) && num.rps[i] <= num.trps[i]-SIG.rpsHold) out.push({code:'held', label:'Capacity limited: ' + drops.join(', '), detail:`${num.rps[i].toFixed(0)} of ${num.trps[i].toFixed(0)} rps`, st:'sig', hold:drops.join(', ')});
-    if (isN(num.tcchk[i]) && Math.abs(num.tcchk[i]) > SIG.ptTol) out.push({code:'pt-tc', label:'Tc disagrees with HP', detail:`logged Tc is ${num.tcchk[i] > 0 ? '+' : ''}${num.tcchk[i].toFixed(1)}°F from R-410A saturation at ${num.hp[i].toFixed(0)} psi — transducer or refrigerant mismatch`, st:'sig'});
-    if (isN(num.techk[i]) && Math.abs(num.techk[i]) > SIG.ptTol) out.push({code:'pt-te', label:'Te disagrees with LP', detail:`logged Te is ${num.techk[i] > 0 ? '+' : ''}${num.techk[i].toFixed(1)}°F from R-410A saturation at ${num.lp[i].toFixed(0)} psi`, st:'sig'});
+    if (isN(num.tcchk[i]) && Math.abs(num.tcchk[i]) > SIG.ptTol) out.push({code:'pt-tc', label:'Tc disagrees with HP', detail:`logged Tc is ${num.tcchk[i] > 0 ? '+' : ''}${num.tcchk[i].toFixed(1)}°F from ${REFNAME[REF.ref]} saturation at ${num.hp[i].toFixed(0)} psi — transducer or refrigerant mismatch`, st:'sig'});
+    if (isN(num.techk[i]) && Math.abs(num.techk[i]) > SIG.ptTol) out.push({code:'pt-te', label:'Te disagrees with LP', detail:`logged Te is ${num.techk[i] > 0 ? '+' : ''}${num.techk[i].toFixed(1)}°F from ${REFNAME[REF.ref]} saturation at ${num.lp[i].toFixed(0)} psi`, st:'sig'});
     if (rs >= 3 && isN(num.hpip[i]) && Math.abs(num.hpip[i]) > SIG.hpipTol) out.push({code:'hp-ip', label:'Pressure sensors disagree', detail:`${num.hpip[i] > 0 ? '+' : ''}${num.hpip[i].toFixed(0)} psi between the outdoor ${m === 'heat' ? 'HP' : 'LP'} sensor and the indoor gas-pipe sensor`, st:'sig'});
     if (D.steady[i] && isN(num.odsat[i]) && num.odsat[i] > SIG.odsatHi) out.push({code:'od-coil', label:'Outdoor coil far from saturation', detail:`${num.odsat[i].toFixed(1)}°F between coil sensor and sat temp — airflow or fouling`, st:'sig'});
     if (aprRef && D.steady[i] && isN(num.apr[i]) && num.apr[i] > aprRef*SIG.aprRise) out.push({code:'amps', label:'Current per rps above norm', detail:`${num.apr[i].toFixed(3)} vs ${aprRef.toFixed(3)} A/rps steady-state median for this log`, st:'sig'});
@@ -2126,6 +2172,7 @@ function renderCycle(i){
   if ($('#air-oc')) $('#air-oc').classList.toggle('off', !ofOn); if ($('#air-ic')) $('#air-ic').classList.toggle('off', !ifOn);
   const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
+  if (!$('#panel-data').hidden) renderPtNow(i);
   if (FAM === 'multi') renderMulti(i, m, running);
   else {
   $('#iduhdr').textContent = [im, ia != null ? 'addr ' + ia : null, ie != null ? 'err ' + ie : null].filter(Boolean).join(' · ');
@@ -2614,7 +2661,7 @@ function buildDataTable(){
     const e = evalCache[i];
     h += `<tr data-i="${i}"><td>${fmtTime(D.t[i])}</td><td>${D.mode[i]}</td>` + cols.map(c => { const st = e.byCh[c.id]; const cls = st && (st.st === 'warn' || st.st === 'alarm') ? st.st : ''; return `<td class="${cls}">${fmt(D.num[c.id][i], c)}</td>`; }).join('') + '</tr>';
   }
-  host.innerHTML = h + '</tbody></table>';
+  host.innerHTML = h + '</tbody></table></div>';
   host.querySelectorAll('tr[data-i]').forEach(tr => tr.addEventListener('click', () => setCur(+tr.dataset.i)));
   highlightRow();
 }
@@ -2636,7 +2683,7 @@ function buildGhosts(){
 
 /* ---------- custom tags: settings UI ---------- */
 function refreshAfterCustom(){
-  if (D){ const text = D._text, model = D.model; D = buildDataset(text, D.name); D._text = text; D.model = model; analyze(); evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
+  if (D){ const text = D._text, model = D.model; D = buildDataset(text, D.name); D._text = text; D.model = model; analyze(); applyRefrigerant(); evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
   setLayout(); renderCustomList();
   document.querySelectorAll('#cbuild .chan').forEach(o => { const v = o.value; const n = chanSelect(v); o.replaceWith(n); n.addEventListener('change', () => { n.nextElementSibling.hidden = n.value !== '__const'; updatePreview(); }); });
 }
@@ -2860,7 +2907,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v48';
+const APP_VERSION = 'v49';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -2979,7 +3026,7 @@ function load(text, name, model){
   if (playing) togglePlay();
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
-  applyEquipment();
+  applyEquipment(); applyRefrigerant();
   evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns(); buildSynopsis();
   $('#rulejson').value = JSON.stringify(rules, null, 1);
   setCur(0);
@@ -2995,6 +3042,7 @@ $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
 $('#thermal2').addEventListener('change', e => setThermal(e.target.checked));
 
 if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: landscape)').addEventListener('change', () => { if (LAND === null) setLayout(); });
+$('#refsel').addEventListener('change', e => { if (D) saveJSON('dchk.ref.' + D.name, e.target.value); logEvent('refrigerant', {value:e.target.value}); applyRefrigerant(); if (D){ evalAll(); buildDataTable(); buildSynopsis(); renderCycle(cur); } });
 $('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); logEvent('equipment', {value:e.target.value}); applyEquipment(); if (D) renderCycle(cur); });
 setThermal(THERMAL);
 $('#loadbtn').addEventListener('click', () => $('#csvfile').click());
@@ -3008,7 +3056,7 @@ $('#tabs').addEventListener('click', e => {
   document.querySelectorAll('#tabs [role=tab]').forEach(t => t.setAttribute('aria-selected', t === b));
   document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + b.dataset.tab);
   if (b.dataset.tab === 'trends') drawAllStrips();
-  if (b.dataset.tab === 'data') highlightRow();
+  if (b.dataset.tab === 'data'){ highlightRow(); if (D) renderPtNow(cur); }
   if (b.dataset.tab === 'fleet') fleetRefresh();
   if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
   syncAnim();

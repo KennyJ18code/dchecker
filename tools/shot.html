@@ -7,10 +7,10 @@ localStorage.setItem('dchk.thermal', q.get('thermal') === '0' ? 'false' : 'true'
 const f = document.getElementById('f'); if (q.get('w')) f.style.width = q.get('w') + 'px';
 f.src = '../index.html?x=' + Date.now();
 f.onload = async () => {
-  const w = f.contentWindow, d = w.document;
+  const w = f.contentWindow, d = w.document; const errs = []; w.addEventListener('error', e => errs.push(e.message + ' @' + e.lineno));
   await new Promise(r => setTimeout(r, 800));
-  const r = await fetch('../' + (q.get('file') || 'samples/minisplit-20260920.tgz')); const b = await r.blob();
-  await w.dchkOpen([new File([b], (q.get('file') || 'log.tgz').split('/').pop())]);
+  if (q.get('file') !== 'none'){ const r = await fetch('../' + (q.get('file') || 'samples/minisplit-20260920.tgz')); const b = await r.blob();
+  await w.dchkOpen([new File([b], (q.get('file') || 'log.tgz').split('/').pop())]); }
   await new Promise(r => setTimeout(r, 1500));
   const zs = q.get('zones');
   if (zs){ for (const btn of d.querySelectorAll('#zonebar button')){ const t = btn.textContent.trim(); if (/^Zone /.test(t) && !zs.includes(t.slice(5))) btn.click(); } await new Promise(r => setTimeout(r, 400)); }
@@ -18,8 +18,9 @@ f.onload = async () => {
   await new Promise(r => setTimeout(r, 600));
   const R = d.querySelector('#dsvg').getBoundingClientRect();
   w.scrollTo(0, w.scrollY + R.top + R.height * (+q.get('y') || 0) - (+q.get('off') || 0));
+  if (q.get('tab')){ const tb = d.querySelector('#tab-' + q.get('tab')); if (tb) tb.click(); await new Promise(r => setTimeout(r, 300)); if (q.get('pt')){ const dt = d.querySelector('.ptbox'); if (dt) dt.open = true; } }
   const de = d.documentElement, dg = d.querySelector('#diag').getBoundingClientRect(), wide = [...d.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > w.innerWidth + 2 && !e.closest('#tags') && !e.closest('svg')).slice(0, 12).map(e => e.tagName + '#' + e.id + '.' + e.className + ':' + Math.round(e.getBoundingClientRect().right));
-  const m = {iw:w.innerWidth, sw:de.scrollWidth, bodyW:d.body.scrollWidth, diag:[dg.left, dg.width], svg:d.querySelector('#dsvg').getBoundingClientRect().width, wide};
+  const rs = d.querySelector('#refsel'); const m = {errs, ref:rs && rs.title, refopt:rs && rs.options[0].textContent, ptnow:(d.querySelector('#ptnow')||{}).textContent, ptrows:d.querySelectorAll('.pt tbody tr').length, iw:w.innerWidth, sw:de.scrollWidth, bodyW:d.body.scrollWidth, diag:[dg.left, dg.width], svg:d.querySelector('#dsvg').getBoundingClientRect().width, wide};
   document.body.insertAdjacentHTML('beforeend', '<pre id="m">' + JSON.stringify(m) + '</pre>');
   document.title = 'ready';
 };
