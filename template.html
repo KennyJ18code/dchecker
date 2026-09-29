@@ -337,6 +337,18 @@ input[type=range].scrub{width:100%;margin:0;accent-color:var(--accent);height:22
 .strip .h b{display:block;font-weight:700}
 .strip .h .num{color:var(--ink2);font-size:13px}
 .strip canvas{width:100%;height:76px;display:block;cursor:crosshair}
+.strip .h .tg{display:block;font-size:11px;color:#FB8C00;font-weight:700}
+.strip .lg,.tlegend{font-size:11px;color:var(--muted)}
+.strip .lg{display:block;margin-top:2px}
+.sw{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin:0 3px 0 6px}.sw.dash{height:0;border-top:2px dashed;background:none}
+.strip.stack{grid-template-columns:1fr;gap:4px}
+.strip.stack canvas{height:240px}
+.tlegend{display:flex;flex-wrap:wrap;gap:4px 16px;padding:2px 0}
+.tlegend .li i{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}.tlegend .li i.dash{width:14px;height:0;border-top:2px dashed;background:none;margin:0 4px 0 8px}
+.tlegend .li b{color:var(--ink)}.tlegend .li .v{font-family:var(--mono);font-size:12px;color:var(--ink);margin-left:4px}.tlegend .li .t{margin-left:2px}.tlegend .li .r{margin-left:8px;font-family:var(--mono);opacity:.75}
+.tmode{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-right:6px}
+.tmode button{border:0;background:var(--panel);padding:3px 10px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer}.tmode button.on{background:var(--ink);color:var(--panel)}
+.trendbar label small{color:var(--muted);font-weight:600}
 .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:6px;z-index:50;white-space:nowrap;font-family:var(--mono);font-weight:500}
 .tip[hidden]{display:none}
 
@@ -2520,13 +2532,51 @@ function nextFlag(dir){
 
 /* ---------- strip drawing (shared by the Trends tab and the bottom dock) ---------- */
 function rulesFor(chid, mode){ return rules.filter(r => r.on && r.ch === chid && (r.mode === 'both' || r.mode === mode)); }
+// which logged target belongs on the same graph as a reading
+const TARGET_OF = {disch:'tdisch', fan:'tfan', sc:'tsc', sh:'tsh', rps:'trps', cfm:'reqcfm'};
+const TCOL = ['#1E88E5', '#E53935', '#43A047', '#FB8C00', '#8E24AA'];   // overlay colours, readable on light and dark
+const TARGETCOL = '#FB8C00';
+function targetArr(c){ const tid = TARGET_OF[c.id]; const a = tid && D.num[tid]; return a && a.some(isN) ? a : null; }
+function stripPrep(s){
+  const {cv} = s; const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight || 76; if (!W) return null; cv.width = W*dpr; cv.height = H*dpr;
+  const g = cv.getContext('2d'); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
+  const x = i => D.n > 1 ? i/(D.n-1)*W : W/2;
+  g.fillStyle = cssVar('--idle-soft');
+  for (let i = 0; i < D.n; i++) if (D.runSec[i] < 0) g.fillRect(x(i) - W/(D.n-1)/2, 0, W/(D.n-1)+0.5, H);
+  return {g, W, H, x};
+}
+function polyline(g, a, x, y, colour, width, dash){
+  g.strokeStyle = colour; g.lineWidth = width; g.lineJoin = 'round'; g.setLineDash(dash || []); g.beginPath(); let pen = false;
+  for (let i = 0; i < D.n; i++){ const v = a[i]; if (!isN(v)){ pen = false; continue; } if (!pen){ g.moveTo(x(i), y(v)); pen = true; } else g.lineTo(x(i), y(v)); }
+  g.stroke(); g.setLineDash([]);
+}
+// several channels on one canvas, each on its own scale, each in its own colour (its target dashed in the same colour)
+function drawOverlay(s, hover){
+  const R = stripPrep(s); if (!R) return; const {g, W, H, x} = R; const P = cssVar;
+  const ci = hover != null ? hover : cur, series = [];
+  s.cs.forEach((c, k) => {
+    const a = D.num[c.id], ta = targetArr(c); const vals = a.filter(isN); if (!vals.length) return;
+    let lo = Math.min(...vals), hi = Math.max(...vals); if (ta) for (const v of ta) if (isN(v)){ lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    if (hi === lo){ hi += 1; lo -= 1; } const padv = (hi-lo)*0.08; lo -= padv; hi += padv;
+    const y = v => 6 + (H-12) * (1 - (v-lo)/(hi-lo)), col = TCOL[k % TCOL.length];
+    if (ta) polyline(g, ta, x, y, col, 1.2, [4,4]);
+    polyline(g, a, x, y, col, 1.7);
+    series.push({c, a, ta, y, col, lo:lo + padv, hi:hi - padv});
+  });
+  g.strokeStyle = P('--accent'); g.lineWidth = hover != null ? 1 : 1.5; g.beginPath(); g.moveTo(x(ci), 0); g.lineTo(x(ci), H); g.stroke();
+  for (const q of series) if (isN(q.a[ci])){ g.fillStyle = q.col; g.beginPath(); g.arc(x(ci), q.y(q.a[ci]), 4, 0, 7); g.fill(); g.strokeStyle = P('--panel'); g.lineWidth = 2; g.stroke(); }
+  if (s.legend) s.legend.innerHTML = series.map(q => `<span class="li"><i style="background:${q.col}"></i><b>${q.c.short}</b> <span class="v">${fmt(q.a[ci], q.c)}${q.c.unit ? ' ' + q.c.unit : ''}</span>${q.ta ? `<span class="t"><i class="dash" style="border-color:${q.col}"></i>target ${fmt(q.ta[ci], q.c)}</span>` : ''}<span class="r">${fmt(q.lo, q.c)} – ${fmt(q.hi, q.c)}</span></span>`).join('');
+}
 function drawStrip(s, hover){
+  if (s.cs) return drawOverlay(s, hover);
   const {c, cv} = s; const dpr = window.devicePixelRatio || 1;
   const W = cv.clientWidth, H = cv.clientHeight || 76; if (!W) return; cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext('2d'); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
   const P = cssVar;
   const a = D.num[c.id]; const vals = a.filter(isN); if (!vals.length) return;
   let lo = Math.min(...vals), hi = Math.max(...vals);
+  const ta = targetArr(c); if (ta) for (const v of ta) if (isN(v)){ lo = Math.min(lo, v); hi = Math.max(hi, v); }
   const modeCounts = {}; D.mode.forEach(m => modeCounts[m] = (modeCounts[m]||0)+1);
   const domMode = Object.keys(modeCounts).sort((x,y) => modeCounts[y]-modeCounts[x])[0];
   const rs = rulesFor(c.id, domMode);
@@ -2545,18 +2595,17 @@ function drawStrip(s, hover){
     for (const k of ['alo','ahi']) if (isN(r[k]) && r[k] >= lo && r[k] <= hi){ g.beginPath(); g.moveTo(0, y(r[k])); g.lineTo(W, y(r[k])); g.stroke(); }
     g.setLineDash([]);
   }
-  g.strokeStyle = P('--ink'); g.lineWidth = 1.6; g.lineJoin = 'round'; g.beginPath(); let pen = false;
-  for (let i = 0; i < D.n; i++){ const v = a[i]; if (!isN(v)){ pen = false; continue; } if (!pen){ g.moveTo(x(i), y(v)); pen = true; } else g.lineTo(x(i), y(v)); }
-  g.stroke();
+  if (ta) polyline(g, ta, x, y, TARGETCOL, 1.2, [4,4]);   // the target the board is steering to, on the same scale
+  polyline(g, a, x, y, P('--ink'), 1.6);
   for (let i = 0; i < D.n; i++){ const e = evalCache[i].byCh[c.id]; if (!e || !isN(a[i])) continue; if (e.st === 'warn' || e.st === 'alarm'){ g.fillStyle = P(e.st === 'alarm' ? '--alarm' : '--warn'); g.beginPath(); g.arc(x(i), y(a[i]), 2.4, 0, 7); g.fill(); } }
   g.fillStyle = P('--muted'); g.font = '10px ' + P('--mono'); g.textBaseline = 'top'; g.fillText(fmt(hi - padv, c), 3, 1); g.textBaseline = 'bottom'; g.fillText(fmt(lo + padv, c), 3, H-1);
   const ci = hover != null ? hover : cur;
   g.strokeStyle = P('--accent'); g.lineWidth = hover != null ? 1 : 1.5; g.beginPath(); g.moveTo(x(ci), 0); g.lineTo(x(ci), H); g.stroke();
   if (isN(a[ci])){ g.fillStyle = P('--accent'); g.beginPath(); g.arc(x(ci), y(a[ci]), 4, 0, 7); g.fill(); g.strokeStyle = P('--panel'); g.lineWidth = 2; g.stroke(); }
-  if (s.valEl) s.valEl.textContent = fmt(a[cur], c) + (c.unit ? ' ' + c.unit : '');
+  if (s.valEl) s.valEl.innerHTML = fmt(a[cur], c) + (c.unit ? ' ' + c.unit : '') + (ta ? `<span class="tg">target ${fmt(ta[cur], c)}</span>` : '');
 }
 function wireStrip(s){
-  const {c, cv} = s;
+  const {cv} = s, c = s.c || s.cs[0];
   const idxAt = ev => { const r = cv.getBoundingClientRect(); const cx = ev.touches ? ev.touches[0].clientX : ev.clientX; return Math.round((cx - r.left) / r.width * (D.n-1)); };
   const move = ev => { setCur(idxAt(ev)); showTip(ev, c, cur); };
   cv.addEventListener('mousedown', ev => { move(ev); const mm = e => move(e); const up = () => { window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', up); }; window.addEventListener('mousemove', mm); window.addEventListener('mouseup', up); });
@@ -2569,6 +2618,7 @@ function wireStrip(s){
 function showTip(ev, c, i){
   const t = $('#tip'); const v = D.num[c.id][i];
   t.textContent = `${fmtTime(D.t[i])}  ${c.short} ${fmt(v,c)}${c.unit ? ' '+c.unit : ''}`;
+  const tid = TARGET_OF[c.id]; if (tid && D.num[tid] && isN(D.num[tid][i])) t.textContent += ` · target ${fmt(D.num[tid][i], c)}`;
   t.hidden = false;
   const x = (ev.touches ? ev.touches[0].clientX : ev.clientX), y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
   t.style.left = Math.min(window.innerWidth - t.offsetWidth - 8, x + 12) + 'px'; t.style.top = (y - 34) + 'px';
@@ -2600,23 +2650,38 @@ function drawDock(){ for (const s of dockStrips) drawStrip(s); }
 const TREND_DEFAULT = ['disch','hp','lp','cond','evap','suct','sh','sc','dsh','rps','ev','oat'];
 let trendSel = null;
 function trendChannels(){ return ALLCH.filter(c => c.present !== false && D.num[c.id] && D.num[c.id].some(isN)); }
+let TRENDMODE = loadJSON('dchk.trendmode', 'sep');   // 'sep' = one strip per reading · 'stack' = up to 5 readings on one chart
+const STACK_MAX = 5;
 function buildTrendPicker(){
   if (!trendSel) trendSel = new Set(loadJSON('dchk.trends', TREND_DEFAULT));
   const host = $('#trendpick'); host.innerHTML = '';
-  for (const c of trendChannels()){
-    const l = document.createElement('label');
-    l.innerHTML = `<input type="checkbox" id="tp-${c.id}" ${trendSel.has(c.id)?'checked':''}> ${c.label}`;
-    l.querySelector('input').addEventListener('change', e => { if (e.target.checked) trendSel.add(c.id); else trendSel.delete(c.id); saveJSON('dchk.trends', [...trendSel]); buildStrips(); });
+  const mode = document.createElement('span'); mode.className = 'tmode';
+  mode.innerHTML = `<button type="button" data-m="sep" class="${TRENDMODE === 'sep' ? 'on' : ''}">Separate strips</button><button type="button" data-m="stack" class="${TRENDMODE === 'stack' ? 'on' : ''}">Overlay · up to ${STACK_MAX}</button>`;
+  mode.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; TRENDMODE = b.dataset.m; saveJSON('dchk.trendmode', TRENDMODE); logEvent('trendmode', {mode:TRENDMODE}); buildTrendPicker(); buildStrips(); });
+  host.appendChild(mode);
+  const chans = trendChannels(), nSel = chans.filter(c => trendSel.has(c.id)).length, full = TRENDMODE === 'stack' && nSel >= STACK_MAX;
+  for (const c of chans){
+    const l = document.createElement('label'); const on = trendSel.has(c.id);
+    l.innerHTML = `<input type="checkbox" id="tp-${c.id}" ${on ? 'checked' : ''} ${full && !on ? 'disabled' : ''}> ${c.label}${TARGET_OF[c.id] && D.num[TARGET_OF[c.id]] && D.num[TARGET_OF[c.id]].some(isN) ? ' <small>+target</small>' : ''}`;
+    if (full && !on) l.title = `Overlay shows ${STACK_MAX} readings at a time; untick one first`;
+    l.querySelector('input').addEventListener('change', e => { if (e.target.checked) trendSel.add(c.id); else trendSel.delete(c.id); saveJSON('dchk.trends', [...trendSel]); buildTrendPicker(); buildStrips(); });
     host.appendChild(l);
   }
 }
 const strips = [];
 function buildStrips(){
   const host = $('#strips'); host.innerHTML = ''; strips.length = 0;
-  for (const c of trendChannels()){
-    if (!trendSel.has(c.id)) continue;
+  const sel = trendChannels().filter(c => trendSel.has(c.id));
+  if (TRENDMODE === 'stack'){
+    const use = sel.slice(0, STACK_MAX);
+    const row = document.createElement('div'); row.className = 'strip stack';
+    row.innerHTML = `<div class="tlegend"></div><canvas height="240"></canvas>` + (sel.length > STACK_MAX ? `<p class="note">Showing the first ${STACK_MAX} of ${sel.length} ticked readings; untick some to bring the others in.</p>` : '') + (!use.length ? '<p class="note">Tick up to five readings above to overlay them here.</p>' : '');
+    host.appendChild(row);
+    if (use.length){ const s = {cs:use, cv:row.querySelector('canvas'), legend:row.querySelector('.tlegend')}; strips.push(s); wireStrip(s); }
+  } else for (const c of sel){
+    const ta = targetArr(c);
     const row = document.createElement('div'); row.className = 'strip';
-    row.innerHTML = `<div class="h"><b>${c.label}</b><span class="num"></span></div><canvas height="76"></canvas>`;
+    row.innerHTML = `<div class="h"><b>${c.label}</b><span class="num"></span>${ta ? `<span class="lg"><i class="sw" style="background:var(--ink)"></i>logged <i class="sw dash" style="border-color:${TARGETCOL}"></i>target</span>` : ''}</div><canvas height="76"></canvas>`;
     host.appendChild(row);
     const s = {c, cv:row.querySelector('canvas'), valEl:row.querySelector('.num')}; strips.push(s); wireStrip(s);
   }
@@ -2907,7 +2972,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v49';
+const APP_VERSION = 'v50';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
