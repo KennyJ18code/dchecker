@@ -110,9 +110,18 @@ body.landpage .wrap{max-width:1600px}
 .diag > svg{position:absolute;inset:0;width:100%;height:100%}
 .hint{text-align:center;font-size:12px;color:var(--muted);padding:0 14px 10px}
 .nowline{height:calc(2 * 1.35em + 14px);box-sizing:border-box;overflow:hidden;font-size:12.5px;line-height:1.35;color:var(--ink2);padding:6px 10px;margin:0 6px 6px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-family:var(--mono)}
+.zonebar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 10px 8px;font-size:12px;color:var(--muted)}
+.zonebar button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:4px 12px;font-weight:800;font-size:12px}
+.zonebar button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.zonebar button.warn{border-color:var(--warn)}
 .nowline b{color:var(--ink);font-weight:700}.nowline .w{color:var(--warn)}.nowline .a{color:var(--alarm)}.nowline .g{color:var(--ok)}
 body.no-narr .nowline{display:none}
-@media (max-width:600px){.nowline{font-size:11px;height:calc(3 * 1.35em + 14px)}}
+@media (max-width:600px){.nowline{font-size:11px;height:calc(3 * 1.35em + 14px)}
+  .viewbar{gap:8px;padding:8px 10px 0}.viewbar .viewlbl,.viewbar .thermtog,.viewbar .viewnote{display:none}
+  .viewsel button{padding:5px 9px;font-size:12px}
+  .eqtog{width:100%;justify-content:space-between}.eqtog select{flex:1;min-width:0;margin-left:8px}
+  .chips{height:76px}.nowbar{grid-template-rows:auto}body.no-chips .nowbar .chips{height:0}
+  .diagwrap{padding:2px}}
 .synhead{padding:10px 14px 4px;font-size:15px;font-weight:700;line-height:1.4}
 .synfacts{display:flex;flex-wrap:wrap;gap:6px 16px;padding:4px 14px 10px;font-size:13px;color:var(--ink2)}.synfacts b{color:var(--ink)}
 .synlist{display:flex;flex-direction:column;gap:8px;padding:0 14px 12px}
@@ -458,6 +467,7 @@ body.no-cabinet #indoor-var .cab{display:none}
         <span class="viewnote" id="viewnote"></span>
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
       </div>
+      <div class="zonebar" id="zonebar" hidden></div>
       <div class="nowline" id="nowline"></div>
       <div class="diagwrap"><div class="diag" id="diag">
         <svg viewBox="0 0 780 1520" aria-hidden="true" id="dsvg">
@@ -639,6 +649,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <section><h3>Header and bottom bar</h3>
         <label><input type="checkbox" data-s="chips"> Status chip band</label>
         <label><input type="checkbox" data-s="events"> Control-event chips (startup, defrost, demand…)</label>
+        <label><input type="checkbox" id="thermal2"> Thermal pipes (colour the tubing by its logged temperature)</label>
         <label><input type="checkbox" data-s="narr"> "What it is doing now" line above the diagram</label>
         <label><input type="checkbox" data-s="synEnd"> Open the Synopsis when playback reaches the end of the recording</label>
         <label><input type="checkbox" data-s="sigs"> Signature chips (blue)</label>
@@ -1031,13 +1042,15 @@ const SCENE_LAND = `
 // outdoor unit (no shared trunk — that is a VRV thing). The liquid/gas headers, port EEVs and port thermistors live inside the outdoor box.
 const MZL = {colX:k => 20 + k*300, colW:300, hdrY:78, lLine:x0 => x0 + 140, gLine:x0 => x0 + 154, lHdr:648, gHdr:632};
 const hopUp = (x, y) => `V${y + 8} A8 8 0 0 0 ${x} ${y - 8}`;   // landscape geometry
+let ZVIS = null;   // Set of zone indexes the tech wants on screen (null = all)
+function zoneCols(){ const z = D ? D.zones : [0, 1, 2]; const v = z.filter(k => !ZVIS || ZVIS.has(k)); return v.length ? v : z; }
 function mzGeo(){
-  const nZ = Math.max(2, Math.min(MZ.ports, D && D.zones.length ? Math.max(...D.zones) + 1 : 3));   // columns = highest port present
+  const cols = zoneCols(), nZ = Math.max(1, cols.length);   // one column per visible head
   const colW = 748 / nZ, two = colW >= 236, k = nZ >= 5 ? 0.70 : nZ === 4 ? 0.75 : nZ === 3 ? 0.66 : 0.75;
   const tw = Math.round(148 * k), th = Math.round(58 * k), tt = Math.round(81 * k);          // tag width / height / tall height at this scale
   const zoneH = two ? 176 + 3 * (th + 8) : 176 + 6 * (th + 8);
   const oy = 56 + zoneH + 16;                                                                  // outdoor box top
-  const g = {nZ, colW, two, k, tw, th, tt, zoneH, oy, H: oy + 920, x0:j => 16 + j*colW, lx:j => 16 + (j+1)*colW - 26, gx:j => 16 + (j+1)*colW - 12,
+  const g = {nZ, cols, col:k => cols.indexOf(k), colW, two, k, tw, th, tt, zoneH, oy, H: oy + 920, x0:j => 16 + j*colW, lx:j => 16 + (j+1)*colW - 26, gx:j => 16 + (j+1)*colW - 12,
              gHdr: oy + 300, lHdr: oy + 320, fw:[400, oy + 400], comp:[250, oy + 620], acc:[400, oy + 470], coil:[670, oy + 440, 60, 240], fan:[610, oy + 840]};
   return g;
 }
@@ -1045,7 +1058,7 @@ function multiScene(land){
   let h = '';
   if (!land){
     const G = mzGeo(), oy = G.oy;
-    for (let k = 0; k < MZ.ports; k++){ const L = MZ.letters[k]; if (k >= G.nZ){ h += `<g id="zone-${k}" class="zone hidden-eq"></g>`; continue; } const x0 = G.x0(k), cx = x0 + Math.min(G.colW, 250) / 2 - 8 + 8, lx = G.lx(k), gx = G.gx(k);
+    for (let k = 0; k < MZ.ports; k++){ const L = MZ.letters[k], j = G.col(k); if (j < 0){ h += `<g id="zone-${k}" class="zone hidden-eq"></g>`; continue; } const x0 = G.x0(j), lx = G.lx(j), gx = G.gx(j);
       const hx = x0 + 8, hw = Math.min(100, G.colW - 44);                   // head icon box
       h += `<g id="zone-${k}" class="zone"><rect class="box" x="${x0 + 3}" y="56" width="${G.colW - 6}" height="${G.zoneH}" rx="12"/>
         <text class="boxlbl" x="${x0 + 12}" y="76">ZONE ${L}</text><text class="hdrtxt" x="${x0 + 12}" y="92" id="zhdr-${k}"></text>
@@ -1063,7 +1076,8 @@ function multiScene(land){
       <g id="fourway"><rect class="fw-body" x="${fx - 30}" y="${fy - 30}" width="60" height="60" rx="9"/><path id="fw-a" class="fw-link off" d=""/><path id="fw-b" class="fw-link off" d=""/></g>
       <text class="sublbl" x="${fx - 36}" y="${fy - 40}" text-anchor="end" id="fwlbl">4-WAY VALVE</text><text class="state" x="${fx - 36}" y="${fy - 24}" text-anchor="end" id="fwstate">—</text></g>`;
   } else {
-    for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), L = MZ.letters[k], lx = MZL.lLine(x0);
+    const cols = zoneCols();
+    for (let k = 0; k < MZ.ports; k++){ const j = cols.indexOf(k); if (j < 0){ h += `<g id="zone-${k}" class="zone hidden-eq"></g>`; continue; } const x0 = MZL.colX(j), L = MZ.letters[k], lx = MZL.lLine(x0);
       h += `<g id="zone-${k}" class="zone"><rect class="box" x="${x0}" y="60" width="${MZL.colW - 8}" height="450" rx="12"/>
         <text class="boxlbl" x="${x0 + 14}" y="${MZL.hdrY}">ZONE ${L}</text><text class="hdrtxt" x="${x0 + 14}" y="${MZL.hdrY + 16}" id="zhdr-${k}"></text>
         <rect class="cab" x="${x0 + 100}" y="96" width="100" height="72" rx="8"/><g id="zcoil-${k}"></g><g id="zfan-${k}"></g>
@@ -1091,23 +1105,24 @@ function multiPipes(land){
   const out = [];
   if (!land){
     const G = mzGeo(), oy = G.oy, [fx, fy] = G.fw, [cx, cy] = G.comp, [ax, ay] = G.acc, coilX = G.coil[0] + 30, coilTop = G.coil[1], coilBot = G.coil[1] + G.coil[3];
-    const gxLast = G.gx(G.nZ - 1), lxLast = G.lx(G.nZ - 1);
+    const gxLast = G.gx(G.nZ - 1);
     out.push({id:'disch', d:`M${cx} ${cy - 55} V${fy - 50} H${fx} V${fy - 30}`, hi:true},
              {id:'suct', d:`M${fx} ${fy + 30} V${ay} M${ax} ${ay + 100} V${cy} H${cx + 55}`, lo:true},
              {id:'oc-in', d:`M${fx + 30} ${fy} H${coilX} V${coilTop}`, cool:'hi', heat:'lo', rev:true},
              {id:'oc-out', d:`M${coilX} ${coilBot} V${coilBot + 60} H764 V${G.lHdr} H${G.lx(0)}`, cool:'hi', heat:'lo', rev:true},
              {id:'griser', d:`M${gxLast} ${G.gHdr} H${fx - 60} V${fy} H${fx - 30}`, cool:'lo', heat:'hi', rev:true});
-    for (let k = 0; k < MZ.ports; k++){ if (k >= G.nZ){ out.push({id:'zl'+k, d:'M0 0', cool:'hi', heat:'lo', zone:k}, {id:'zg'+k, d:'M0 0', cool:'lo', heat:'hi', zone:k}); continue; }
-      const x0 = G.x0(k), lx = G.lx(k), gx = G.gx(k), hr = x0 + 8 + Math.min(100, G.colW - 44);   // head icon right edge
+    for (let k = 0; k < MZ.ports; k++){ const j = G.col(k); if (j < 0){ out.push({id:'zl'+k, d:'M0 0', cool:'hi', heat:'lo', zone:k}, {id:'zg'+k, d:'M0 0', cool:'lo', heat:'hi', zone:k}); continue; }
+      const x0 = G.x0(j), lx = G.lx(j), gx = G.gx(j), hr = x0 + 8 + Math.min(100, G.colW - 44);   // head icon right edge
       // liquid: header → up the port (EV, thermistor) → out the top of the outdoor unit → up beside the column → into the head (cooling direction is header → head)
       out.push({id:'zl'+k, d:`M${lx} ${G.lHdr} ${hop(lx, G.gHdr)} V150 H${hr}`, cool:'hi', heat:'lo', rev:true, zone:k},
                {id:'zg'+k, d:`M${hr} 120 H${gx} V${G.gHdr}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
   } else {
+    const cols = zoneCols(), nC = cols.length;
     out.push({id:'disch', d:'M1180 738 V620 H1060 V640', hi:true}, {id:'suct', d:'M1060 700 V740 M1060 840 V860 H1180 V842', lo:true},
              {id:'oc-in', d:'M1090 670 H1110 V585 H1546 V620', cool:'hi', heat:'lo', rev:true}, {id:'oc-out', d:`M1546 860 V872 H1386 V${MZL.lHdr} H${MZL.lLine(MZL.colX(0))}`, cool:'hi', heat:'lo', rev:true},
              {id:'griser', d:`M${MZL.gLine(MZL.colX(0))} ${MZL.gHdr} H1010 V670 H1030`, cool:'lo', heat:'hi', rev:true});   // gas header enters the 4-way's left port
-    for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), lx = MZL.lLine(x0), gx = MZL.gLine(x0);
-      out.push({id:'zl'+k, d:`M${k ? MZL.lLine(MZL.colX(k-1)) : lx} ${MZL.lHdr} H${lx} ${hopUp(lx, MZL.gHdr)} V168`, cool:'hi', heat:'lo', rev:true, zone:k}, {id:'zg'+k, d:`M${gx} 168 V${MZL.gHdr} H${k ? MZL.gLine(MZL.colX(k-1)) : gx}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
+    for (let k = 0; k < MZ.ports; k++){ const j = cols.indexOf(k); if (j < 0){ out.push({id:'zl'+k, d:'M0 0', cool:'hi', heat:'lo', zone:k}, {id:'zg'+k, d:'M0 0', cool:'lo', heat:'hi', zone:k}); continue; } const x0 = MZL.colX(j), lx = MZL.lLine(x0), gx = MZL.gLine(x0);
+      out.push({id:'zl'+k, d:`M${j ? MZL.lLine(MZL.colX(j-1)) : lx} ${MZL.lHdr} H${lx} ${hopUp(lx, MZL.gHdr)} V168`, cool:'hi', heat:'lo', rev:true, zone:k}, {id:'zg'+k, d:`M${gx} 168 V${MZL.gHdr} H${j ? MZL.gLine(MZL.colX(j-1)) : gx}`, cool:'lo', heat:'hi', rev:true, zone:k}); }
   }
   return out;
 }
@@ -1122,7 +1137,7 @@ function multiTags(land){
            {ch:'fan', x:c1, y:r(2 * tt + 2 * gap), target:'tfan'}, {ch:'ochex', x:c2, y:r(2 * tt + 2 * gap), from:[G.coil[0], G.coil[1] + 120], mk:'temp'},
            {ch:'fin', x:c1, y:r(3 * tt + 3 * gap)}, {ch:'syscur', x:c2, y:r(3 * tt + 3 * gap)},
            {ch:'volt', x:c1, y:r(3 * tt + th + 4 * gap)}, {ch:'oat', x:c2, y:r(3 * tt + th + 4 * gap)}, {ch:'appr', x:c1, y:r(3 * tt + 2 * th + 5 * gap), adv:true});
-    for (let k = 0; k < MZ.ports; k++){ if (k >= G.nZ) continue; const x0 = G.x0(k), a = x0 + 8, b = a + tw + gap, lx = G.lx(k), gx = G.gx(k);
+    for (let k = 0; k < MZ.ports; k++){ const j = G.col(k); if (j < 0) continue; const x0 = G.x0(j), a = x0 + 8, b = a + tw + gap, lx = G.lx(j), gx = G.gx(j);
       // head readings under the head icon
       const hy = 180, rows = G.two ? [[a, hy], [b, hy], [a, hy + th + gap], [b, hy + th + gap], [a, hy + 2 * (th + gap)], [b, hy + 2 * (th + gap)]] : [0, 1, 2, 3, 4, 5].map(j => [a, hy + j * (th + gap)]);
       const ids = ['ra', 'ihx', 'dd', 'sp', 'ifan', 'zdt'];
@@ -1137,7 +1152,8 @@ function multiTags(land){
     T.push({ch:'disch', x:1240, y:600, from:[1180,690], mk:'temp', target:'tdisch', targetLabel:'target'}, {ch:'tderr', x:1240, y:680}, {ch:'rpserr', x:1240, y:740, sub:'trps', subLabel:'target'},
            {ch:'maxhz', x:40, y:700, sub:'minhz', subLabel:'floor'}, {ch:'fin', x:190, y:700}, {ch:'syscur', x:340, y:700}, {ch:'volt', x:490, y:700}, {ch:'appr', x:640, y:700, adv:true},
            {ch:'ochex', x:1400, y:600, from:[1516,700], mk:'temp'}, {ch:'oat', x:1400, y:660}, {ch:'fan', x:1400, y:720, target:'tfan'});
-    for (let k = 0; k < MZ.ports; k++){ const x0 = MZL.colX(k), a = x0 + 4, b = x0 + 168;
+    const cols = zoneCols();
+    for (let k = 0; k < MZ.ports; k++){ const j = cols.indexOf(k); if (j < 0) continue; const x0 = MZL.colX(j), a = x0 + 4, b = x0 + 168;
       T.push({ch:'ra'+k, x:a, y:180, zone:k}, {ch:'ihx'+k, x:b, y:180, zone:k}, {ch:'dd'+k, x:a, y:236, zone:k}, {ch:'sp'+k, x:b, y:236, zone:k},
              {ch:'ifan'+k, x:a, y:292, zone:k}, {ch:'zdt'+k, x:b, y:292, zone:k},
              {ch:'pevp'+k, x:a, y:348, bar:true, sub:'pev'+k, subLabel:'', subUnit:true, zone:k}, {ch:'rmliq'+k, x:b, y:348, from:[MZL.lLine(x0), 614], mk:'temp', zone:k},
@@ -1151,12 +1167,13 @@ function buildMulti(){
   else { coil(go, 'oc', 1516, 620, 60, 240, 'v'); fan($('#ofan'), 1450, 840, 30, 'ofanb'); }
   for (let k = 0; k < MZ.ports; k++){
     const zc = $('#zcoil-' + k), zf = $('#zfan-' + k); if (!zc || !zf) continue; zc.innerHTML = '';
-    if (!land){ const G = mzGeo(); if (k >= G.nZ) continue; const x0 = G.x0(k), hw = Math.min(100, G.colW - 44); coil(zc, 'ic' + k, x0 + 14, 106, hw - 12, 26, 'h'); fan(zf, x0 + 8 + hw / 2, 152, 12, 'ifanb' + k); }
-    else { const x0 = MZL.colX(k); coil(zc, 'ic' + k, x0 + 108, 104, 84, 30, 'h'); fan(zf, x0 + 150, 152, 13, 'ifanb' + k); }
+    const j = zoneCols().indexOf(k); if (j < 0) continue;
+    if (!land){ const G = mzGeo(); const x0 = G.x0(j), hw = Math.min(100, G.colW - 44); coil(zc, 'ic' + k, x0 + 14, 106, hw - 12, 26, 'h'); fan(zf, x0 + 8 + hw / 2, 152, 12, 'ifanb' + k); }
+    else { const x0 = MZL.colX(j); coil(zc, 'ic' + k, x0 + 108, 104, 84, 30, 'h'); fan(zf, x0 + 150, 152, 13, 'ifanb' + k); }
   }
   const ac = EQ.out === 'ac';
   for (const id of ['fourway','fwlbl','fwstate']){ const e = document.getElementById(id); if (e) e.classList.toggle('hidden-eq', ac); }
-  const zones = D ? D.zones : [0, 1, 2];
+  const zones = zoneCols();
   for (let k = 0; k < MZ.ports; k++){ const on = zones.includes(k); const z = document.getElementById('zone-' + k); if (z) z.classList.toggle('hidden-eq', !on); for (const id of ['p-zl'+k, 'f-zl'+k, 'p-zg'+k, 'f-zg'+k]){ const e = document.getElementById(id); if (e) e.classList.toggle('hidden-eq', !on); } }
   const outlines = document.querySelectorAll('#pipes .pipe-o'); PIPES.forEach((p, j) => { if (p.zone != null && outlines[j]) outlines[j].classList.toggle('hidden-eq', !zones.includes(p.zone)); });
 }
@@ -1177,6 +1194,8 @@ let VIEW = loadJSON('dchk.view', 'num');
 let LAND = null;   // null = automatic (set from settings)
 const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play'};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
+// phones start with the legend and hint hidden unless the tech turned them on
+if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
 function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); }
 function applySettings(){
@@ -1245,10 +1264,21 @@ function applyEquipment(){
   const famTxt = detFam === 'multi' ? `Mini split ${det.out === 'hp' ? 'heat pump' : 'AC'} · ${D.zones.length} zone${D.zones.length === 1 ? '' : 's'}` : names[det.out];
   $('#eqsel').options[0].textContent = D ? `Auto: ${famTxt}${det.why.startsWith('model') ? ' · ' + det.why.slice(6) : ''}` : 'Auto-detect';
   $('#eqsel').title = EQ.auto ? EQ.guess : 'set by hand';
+  buildZoneBar();
   setLayout();
 }
+// heads on / off on screen (mini splits) — saved per log
+function buildZoneBar(){
+  const bar = $('#zonebar'); bar.innerHTML = ''; bar.hidden = !(FAM === 'multi' && D && D.zones.length > 1);
+  if (bar.hidden) return;
+  const lab = document.createElement('span'); lab.textContent = 'Heads'; bar.appendChild(lab);
+  for (const k of D.zones){ const b = document.createElement('button'); b.type = 'button'; const on = !ZVIS || ZVIS.has(k); b.setAttribute('aria-pressed', on); b.textContent = 'Zone ' + MZ.letters[k]; b.title = on ? 'Tap to hide this head' : 'Tap to show this head';
+    b.addEventListener('click', () => { const vis = new Set(ZVIS || D.zones); if (vis.has(k)){ if (vis.size === 1) return; vis.delete(k); } else vis.add(k); ZVIS = vis; saveJSON('dchk.zvis.' + D.name, [...vis]); logEvent('zones', {shown:[...vis]}); buildZoneBar(); setLayout(); if (evalCache && evalCache.length === D.n) renderCycle(cur); });
+    bar.appendChild(b); }
+  const all = document.createElement('button'); all.type = 'button'; all.textContent = 'All'; all.setAttribute('aria-pressed', !ZVIS || ZVIS.size === D.zones.length); all.addEventListener('click', () => { ZVIS = null; saveJSON('dchk.zvis.' + D.name, null); buildZoneBar(); setLayout(); if (evalCache && evalCache.length === D.n) renderCycle(cur); }); bar.appendChild(all);
+}
 let THERMAL = !!loadJSON('dchk.thermal', false);
-function setThermal(on){ if (THERMAL !== !!on) logEvent('thermal', {on:!!on}); THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
+function setThermal(on){ if (THERMAL !== !!on) logEvent('thermal', {on:!!on}); THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; if ($('#thermal2')) $('#thermal2').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
 const VIEWNOTE = {num:'', bar:'fill = where the reading sits in this log\'s range · grey tick = steady-state norm · black tick = target', spark:'trail behind each number = its last 10 minutes · dashed = steady-state norm', dev:'tint = distance from this log\'s steady-state norm (σ) · red high, blue low'};
 function setView(v){ if (VIEW !== v) logEvent('view', {view:v}); VIEW = v; saveJSON('dchk.view', v); const dg = $('#diag'); dg.classList.remove('view-num','view-bar','view-spark','view-dev'); dg.classList.add('view-' + v); document.querySelectorAll('#viewsel button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v)); $('#viewnote').textContent = VIEWNOTE[v] || ''; if (D) renderCycle(cur); }
 function loadJSON(k, d){ try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(e){ return d; } }
@@ -1291,6 +1321,8 @@ function buildDataset(text, name){
   const n = rows.length - 1;
   const t = new Array(n), num = {}, str = {};
   for (let i = 0; i < n; i++) t[i] = parseDate(rows[i+1][0]);
+  // the PC app writes timestamps without seconds, so two 30-second rows share one stamp; spread them across the minute so every row has its own time (as the phone log does)
+  { let i = 0; while (i < n){ let j = i; while (j + 1 < n && t[i] && t[j+1] && t[j+1].getTime() === t[i].getTime()) j++; const cnt = j - i + 1; if (cnt > 1 && t[i].getSeconds() === 0) for (let q = i; q <= j; q++) t[q] = new Date(t[i].getTime() + Math.round((q - i) * 60000 / cnt)); i = j + 1; } }
   const conv = (c, raw) => {
     if (raw == null) return null; raw = raw.trim(); if (!raw || raw === '---' || raw === '-') return null;
     let v = parseFloat(raw); if (!Number.isFinite(v)) return null;
@@ -1874,7 +1906,7 @@ function buildTags(){
         else togglePin(tg.ch); });
       e.addEventListener('pointercancel', () => { drag = null; });
     } else e.addEventListener('click', () => { const id = tagCh(tg, D ? (D.mode[cur] === 'cool' ? 'cool' : 'heat') : 'heat'); if (id) togglePin(id); });
-    const eqHidden = !!(tg.hp && EQ.out === 'ac') || (tg.zone != null && !!D && !D.zones.includes(tg.zone)); e.hidden = eqHidden;
+    const eqHidden = !!(tg.hp && EQ.out === 'ac') || (tg.zone != null && !!D && !zoneCols().includes(tg.zone)); e.hidden = eqHidden;
     host.appendChild(e);
     if (tg.from && !eqHidden){
       const [fx, fy] = P(tg.from[0], tg.from[1]);
@@ -1975,7 +2007,7 @@ function renderCycle(i){
   TAGS.forEach((tg, k) => {
     const e = document.getElementById('tag-' + k);
     const id = tagCh(tg, m);
-    if (!id || (tg.adv && !S.physics) || (tg.hp && EQ.out === 'ac') || (tg.zone != null && !D.zones.includes(tg.zone))){ e.hidden = true; return; } e.hidden = false;
+    if (!id || (tg.adv && !S.physics) || (tg.hp && EQ.out === 'ac') || (tg.zone != null && !zoneCols().includes(tg.zone)) || (tg.custom && D.num[id] && !D.num[id].some(isN))){ e.hidden = true; return; } e.hidden = false;
     const ch = chById[id]; const v = D.num[id][i];
     e.querySelector('.l').textContent = (pick(tg.label, m) || ch.short) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
     e.querySelector('.n').textContent = fmt(v, ch);
@@ -2675,7 +2707,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v42';
+const APP_VERSION = 'v43';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -2790,6 +2822,7 @@ document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('c
 /* ---------- load ---------- */
 function load(text, name, model){
   try { D = buildDataset(text, name); D._text = text; D.model = model || null; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
+  { const v = loadJSON('dchk.zvis.' + name, null); ZVIS = Array.isArray(v) && v.length ? new Set(v.filter(k => D.zones.includes(k))) : null; if (ZVIS && !ZVIS.size) ZVIS = null; }
   if (playing) togglePlay();
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
@@ -2806,6 +2839,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 $('#viewsel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
 setView(VIEW);
 $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
+$('#thermal2').addEventListener('change', e => setThermal(e.target.checked));
 
 if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: landscape)').addEventListener('change', () => { if (LAND === null) setLayout(); });
 $('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); logEvent('equipment', {value:e.target.value}); applyEquipment(); if (D) renderCycle(cur); });
