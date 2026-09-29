@@ -21,3 +21,7 @@ Known differences from the PC export: the phone recording keeps seconds on every
 ## Multi-zone mini splits
 
 Logs from 2–5 port MXS/MXL outdoor units (columns `Rm_A gas temp`, `Port A EV`…) are detected automatically and drawn as one zone per port with a shared outdoor unit. See `docs/outdoor-circuits.md` §5.
+
+## Rulebook
+
+`docs/rulebook.md` is the Daikin inverter rules spec (laws L1–L6, FIT rules S1–S15, mini-split rules M1–M18). The app evaluates the rules it has data for on every row (gated on a speed-locked compressor, L1) and shows them as chips with their ids, in the narration line, and as synopsis cards with Why and Fix steps. Thresholds live in `RT` in the source and are field starting points, not Daikin limits.
