@@ -215,7 +215,7 @@ body.no-narr .nowline{display:none}
 body.anim-off .flow,body.anim-off .fanb.on{animation-play-state:paused}
 body.anim-off .tag.alarm{animation:none}
 .flow.rev{animation-direction:reverse}
-.diag.idle .flow{animation-play-state:paused;opacity:0}
+.diag.idle .flow,.flow.idle{animation-play-state:paused;opacity:0}
 @keyframes flow{to{stroke-dashoffset:-18}}
 @media (prefers-reduced-motion:reduce){.flow{animation:none;opacity:0}}
 .leader{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:2 3;fill:none}
@@ -1224,7 +1224,8 @@ function renderMulti(i, m, running){
     const L = MZ.letters[k], mode = s['zmode'+k][i], err = s['zerr'+k][i], addr = s['zaddr'+k][i], fl = s['zflow'+k][i];
     const hd = document.getElementById('zhdr-' + k); if (hd) hd.textContent = [addr != null ? 'addr ' + addr : null, mode, fl ? 'fan ' + fl : null, err != null ? 'err ' + err : null].filter(Boolean).join(' · ');
     const fb = document.getElementById('ifanb' + k); if (fb) fb.classList.toggle('on', isN(num['ifan'+k][i]) ? num['ifan'+k][i] > 0 : running);
-    const tube = document.getElementById('ic' + k); if (tube){ tube.classList.remove('hi','lo'); if (running) tube.classList.add(m === 'heat' ? 'hi' : 'lo'); if (THERMAL && running){ const c = thermColor(avg(num['rmgas'+k][i], num['rmliq'+k][i])); tube.style.stroke = c || ''; } else tube.style.stroke = ''; }
+    const on = running && !(isN(num['pev'+k][i]) && num['pev'+k][i] === 0);
+    const tube = document.getElementById('ic' + k); if (tube){ tube.classList.remove('hi','lo'); if (on) tube.classList.add(m === 'heat' ? 'hi' : 'lo'); if (THERMAL && running){ const c = thermColor(avg(num['rmgas'+k][i], num['rmliq'+k][i])); tube.style.stroke = c || ''; } else tube.style.stroke = ''; }
     const ev = document.getElementById('pev-' + k); if (ev) ev.classList.toggle('closed', isN(num['pev'+k][i]) && num['pev'+k][i] === 0);
   }
   const oh = document.getElementById('oduhdr'); if (oh) oh.textContent = [s.opmode[i], s.fwmode[i] ? '4-way ' + s.fwmode[i] : null, s.etype[i] != null ? 'err ' + s.etype[i] : null].filter(Boolean).join(' · ');
@@ -2216,10 +2217,12 @@ function segTemp(seg, i, m){
 function renderCycle(i){
   const m = D.mode[i] === 'cool' ? 'cool' : 'heat', running = D.runSec[i] >= 0;
   $('#diag').classList.toggle('idle', !running);
+  // a head whose port EEV sits at 0 pulses gets no refrigerant: its line set and coil go idle (no flow, idle colour) while the compressor serves the others
+  const zoneOn = k => running && !(isN(D.num['pev'+k][i]) && D.num['pev'+k][i] === 0);
   for (const p of PIPES){
-    const side = p.hi ? 'hi' : p.lo ? 'lo' : p[m];
-    const pe = document.getElementById('p-' + p.id); pe.classList.remove('hi','lo','off'); pe.classList.add(running ? side : 'off');
-    document.getElementById('f-' + p.id).classList.toggle('rev', !!p.rev && m === 'heat');
+    const side = p.hi ? 'hi' : p.lo ? 'lo' : p[m], on = p.zone != null ? zoneOn(p.zone) : running;
+    const pe = document.getElementById('p-' + p.id); pe.classList.remove('hi','lo','off'); pe.classList.add(on ? side : 'off');
+    const fe = document.getElementById('f-' + p.id); fe.classList.toggle('rev', !!p.rev && m === 'heat'); fe.classList.toggle('idle', !on);
   }
   const tube = (id, side) => { const t = document.getElementById(id); if (!t) return; t.classList.remove('hi','lo'); if (running) t.classList.add(side); };
   const mm = EQ.out === 'ac' ? 'cool' : m;
@@ -2995,7 +2998,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v47';
+const APP_VERSION = 'v48';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
