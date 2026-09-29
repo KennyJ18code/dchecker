@@ -1209,7 +1209,7 @@ function buildDataset(text, name){
   const interval = n > 1 ? Math.max(1, span / (n - 1)) : 30;
   const runSec = new Array(n); let startIdx = -1;
   for (let i = 0; i < n; i++){ const on = isN(num.rps[i]) ? num.rps[i] > 0 : (str.compcmd[i] === 'ON'); if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
-  const zones = fam === 'multi' ? [...Array(MZ.ports).keys()].filter(k => num['rmgas'+k].some(isN) || num['pev'+k].some(isN) || str['zaddr'+k].some(v => v != null)) : [];
+  const zones = fam === 'multi' ? [...Array(MZ.ports).keys()].filter(k => num['rmgas'+k].some(isN) || num['rmliq'+k].some(isN) || num['pev'+k].some(v => isN(v) && v > 0) || str['zaddr'+k].some(v => v != null)) : [];
   return {name, n, t, num, str, mode, runSec, interval, head, fam, zones};
 }
 
@@ -2493,9 +2493,12 @@ function untar(u8){
 }
 const DL_OPMODE = {0:'Stop', 1:'Heating', 2:'Cooling', 3:'Fan', 4:'Dry'};   // 1 confirmed on a FIT heat pump; others provisional
 function dlParseLabels(text){
+  // multi-split logs repeat one indoor-unit label block per head, all pointing at the same group id; the k-th repeat reads the k-th copy of that group in each record
+  const seen = new Map();
   return text.replace(/^\uFEFF/, '').split(/\r?\n/).map((line, i) => {
     const f = line.split(','); if (line.startsWith('#') || f.length < 17) return null;
-    return {n:i + 1, grp:parseInt(f[0], 16), off:+f[1], size:+f[2], type:+f[3], vis:f[6] === '1', label:f[9], kind:+f[16], plot:+(f[18] || 0)};
+    const key = f[0] + '|' + f[1] + '|' + f[2] + '|' + f[3] + '|' + f[9]; const inst = seen.get(key) || 0; seen.set(key, inst + 1);
+    return {n:i + 1, grp:parseInt(f[0], 16), off:+f[1], size:+f[2], type:+f[3], vis:f[6] === '1', label:f[9], kind:+f[16], plot:+(f[18] || 0), inst};
   });
 }
 function dlSplit(raw){
@@ -2503,20 +2506,23 @@ function dlSplit(raw){
   while (p + 14 <= raw.length){
     const ts = td.decode(raw.subarray(p, p + 14)); p += 14; const groups = {};
     if (!/^\d{14}$/.test(ts)) break;
-    while (p + 2 <= raw.length){ if (raw[p] === 0xFF && raw[p + 1] === 0xFF){ p += 2; break; } const gid = raw[p], ln = raw[p + 2]; p += 3; groups[gid] = raw.subarray(p, p + ln); p += ln; }
+    while (p + 2 <= raw.length){ if (raw[p] === 0xFF && raw[p + 1] === 0xFF){ p += 2; break; } const gid = raw[p], ln = raw[p + 2]; p += 3; (groups[gid] = groups[gid] || []).push(raw.subarray(p, p + ln)); p += ln; }
     recs.push({ts, groups});
   }
   return recs;
 }
-function dlValue(l, g){
-  if (!g) return '---'; const o = l.off, t = l.type;
+const DL_FWMODE = {0:'Cooling', 1:'Heating'}, DL_AIRFLOW = {0:'Auto'}, DL_TX = {1:'Normal'};
+function dlValue(l, gl){
+  const g = gl ? gl[l.inst || 0] : null;
+  if (!g || g.length < l.off + l.size) return '---'; const o = l.off, t = l.type;
   const i16 = () => (g[o] | (g[o + 1] << 8)) << 16 >> 16, u16 = () => g[o] | (g[o + 1] << 8);
   const f1 = v => { const s = v.toFixed(1); return s.endsWith('.0') ? s.slice(0, -2) : s; };
   if (t === 105 || t === 107){ const v = i16(); if (v === -32768) return '---'; const c = v / 10; return f1(l.kind === 1 ? c * 1.8 + 32 : l.kind === 3 ? c * 1.8 : l.kind === 2 ? c * 14.223 : c); }
   if (t === 151) return String(u16());
+  if (t === 152 && l.kind === 3) return String(Math.round(g[o] * 1.8));              // ΔD in °C steps → °F
   if (t === 152 || t === 220) return String(g[o]);
   if (t === 211) return g[o] === 0 ? 'OFF' : String(g[o]);
-  if (t === 161) return f1(g[o] / 2);
+  if (t === 161){ const c = g[o] / 2; return f1(l.kind === 1 ? c * 1.8 + 32 : c); }   // FIT: demand % (÷2); multi: half-degree °C setpoints / discharge / fin
   if (t === 164) return String(g[o] * 5);
   if (t === 217) return DL_OPMODE[g[o]] || ('Mode ' + g[o]);
   if (t === 313) return DL_OPMODE[g[o] >> 4] || ('Mode ' + (g[o] >> 4));
@@ -2527,11 +2533,25 @@ function dlValue(l, g){
   if (t === 311) return String(g[o] & 15);
   if (t === 314) return u16().toString(16).toUpperCase().padStart(4, '0');
   if (t === 801) return 'R410A';
+  // ---- multi-split (Multi_Split.txt) value types, derived byte-for-byte against the PC app's export of the same recording ----
+  if (t === 155) return f1(u16() / 10);                                            // AC / DC volts
+  if (t === 162){ if (g[o] === 0) return '---'; const c = (g[o] - 64) / 2; return f1(l.kind === 1 ? c * 1.8 + 32 : c); }   // half-degree °C offset at 64 (coil, pipe, air thermistors)
+  if (t === 163) return String(g[o] * 0.25);                                          // amps in quarter steps
+  if (t === 165){ const v = u16(); return v === 0x8000 ? '0' : String(v); }           // timers
+  if (t === 200) return g[o] ? 'ON' : 'OFF';
+  if (t === 201 || t === 202) return DL_OPMODE[g[o]] || ('Mode ' + g[o]);
+  if (t === 204) return String(g[o]);
+  if (t === 205) return DL_FWMODE[g[o]] || ('Mode ' + g[o]);
+  if (t === 206) return (g[o] & 0x80 ? 'Auto ' : '') + 'tap ' + (g[o] & 0x7f);
+  if (t === 207) return 'P' + g[o];
+  if (t === 208) return String(g[o]);
+  if (t === 209) return DL_AIRFLOW[g[o]] || ('Level ' + g[o]);
+  if (t === 210) return DL_TX[g[o]] || ('Error ' + g[o]);
   return '?';
 }
 function dlToCsv(labels, recs){
   const cols = labels.filter(l => l && l.vis && l.type !== 995 && l.type !== 998);
-  const unit = l => l.kind === 1 || (l.kind === 3 && l.plot) ? '(F)' : l.kind === 2 ? '(psi)' : '';
+  const unit = l => l.kind === 1 || (l.kind === 3 && (l.plot || /Delta-D/i.test(l.label))) ? '(F)' : l.kind === 2 ? '(psi)' : '';
   const q = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   const lines = ['DateTime,' + cols.map(l => q(l.n + ':' + l.label + unit(l))).join(',')];
   for (const r of recs){ const t = r.ts; const stamp = `${+t.slice(4, 6)}/${+t.slice(6, 8)}/${t.slice(0, 4)} ${+t.slice(8, 10)}:${t.slice(10, 12)}:${t.slice(12, 14)}`; lines.push(stamp + ',' + cols.map(l => dlValue(l, r.groups[l.grp])).join(',')); }
@@ -2570,7 +2590,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v43';
+const APP_VERSION = 'v44';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);

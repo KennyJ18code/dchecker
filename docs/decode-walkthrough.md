@@ -106,3 +106,36 @@ app print `---` for those cells.
 
 To re-run the check: open the app with the test server, load the .tgz through `window.dchkOpen`, read
 `window.dchkCsv()` and diff against `sample.csv`. The Python twin of the decoder is `tools/dlog_decode.py`.
+
+## 7. Multi-split recordings use a different type set (verified 2026-09-28, app v44)
+
+`header.txt` names `Multi_Split.txt` instead of `INV_Unitary_<model>.txt`, the label file has 292 lines, and the
+record carries **one copy of groups 0x41/0x42 per indoor head** (three copies on a 3-head system). The label file
+repeats the indoor block once per head on the same group id, so repeat k reads copy k. Column numbering matches the
+PC export (outdoor 1–95, head k at 97 + 28·k).
+
+| type | bytes | rule | example |
+|---|---|---|---|
+| 151 | uint16 | as is | port EV pulses, fan rpm |
+| 152 | uint8 | as is; kind 3 (ΔD) = °C steps → `round(v × 1.8)` °F | `04` → **7** |
+| 155 | uint16 | ÷10 | `df07` → **201.5** V |
+| 161 | uint8 | ÷2 = °C → °F (kind 1) | `2c` → **71.6** (setpoint) |
+| 162 | uint8 | 0 = `---`; (v − 64) ÷ 2 = °C → °F | `54` → **50** (coil) |
+| 163 | uint8 | × 0.25 A | `09` → **2.25** |
+| 165 | uint16 | timers; 0x8000 → `0` | |
+| 200 | uint8 | `ON` / `OFF` | |
+| 201 / 202 | enum | 0 Stop, 1 Heating, 2 Cooling, 3 Fan, 4 Dry (2 confirmed) | |
+| 204 | uint8 | error code, decimal | `00` → **0** |
+| 205 | enum | 4-way mode: 0 Cooling, 1 Heating | |
+| 206 / 207 / 208 / 209 / 210 | enum | fan tap, flap `P<n>`, flap setting, airflow (0 Auto), transmission (1 Normal) | |
+
+Comparison of the phone recording `samples/minisplit-20260920.tgz` against the PC export of the same recording
+(`samples/minisplit-3head.csv`): 1248 paired rows, 73 common columns, header identical, **every status, control and
+error cell identical**; the only differing cells are the PC app's whole-degree truncation (`60` for 60.8 °F, 369 cells
+across nine temperature columns). The phone log holds 1258 records; the PC dropped 10.
+
+The PC export ("REC only") writes only 73 of the 289 visible columns: it skips items that never held a value in the
+recording (Hz limits, timers, ODU monitors, humidity, per-head pipe temps, second fan) and a few enums it does not
+decode (fan tap). The app exports every visible column; the extra columns are empty or constant here, and the app
+maps channels by column number so they do no harm. Unconnected ports still log EV = 0, so the zone count comes from
+gas/liquid thermistors, a non-zero EV, or an indoor address, not from the EV column alone.
