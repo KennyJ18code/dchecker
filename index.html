@@ -311,6 +311,13 @@ body.no-parts #parts{display:none}
 .dstrip .x{border:0;background:transparent;color:var(--muted);font-size:16px;line-height:1;padding:4px;border-radius:4px}
 .dstrip .x:hover{background:var(--panel2);color:var(--ink)}
 @media (max-width:480px){.dstrip{grid-template-columns:86px 1fr 24px}.dstrip .h b{font-size:10px}.dstrip canvas{height:50px}}
+.dockbar{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;color:var(--muted);padding:0 2px}
+.dockbar .tmode{margin:0}.dockbar .tmode button{padding:2px 8px;font-size:11px}
+.dstrip.stack{grid-template-columns:1fr;gap:2px;padding:4px 8px}
+.dstrip.stack canvas{height:110px}
+.dstrip.stack .tlegend{gap:2px 12px}.dstrip.stack .tlegend .li .r{display:none}
+.tlegend .li .x{border:0;background:transparent;color:var(--muted);font-size:14px;line-height:1;padding:0 2px 0 6px;cursor:pointer;vertical-align:middle}.tlegend .li .x:hover{color:var(--ink)}
+@media (max-width:600px){.dstrip.stack canvas{height:96px}.dstrip.stack .tlegend .li .t{display:none}.strip.stack canvas{height:200px}.tlegend{gap:2px 10px}.tlegend .li .r{display:none}}
 .transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .transport .btn{min-width:38px;text-align:center;font-family:var(--mono)}
 .transport .grow{flex:1}
@@ -349,6 +356,8 @@ input[type=range].scrub{width:100%;margin:0;accent-color:var(--accent);height:22
 .tmode{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-right:6px}
 .tmode button{border:0;background:var(--panel);padding:3px 10px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer}.tmode button.on{background:var(--ink);color:var(--panel)}
 .trendbar label small{color:var(--muted);font-weight:600}
+.pickbox summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--ink2);padding:8px 14px 0}.pickbox[open] summary{padding-bottom:0}
+@media (max-width:600px){#panel-trends{display:flex;flex-direction:column}#panel-trends h2{order:0}.strips{order:1;padding-top:8px}.pickbox{order:2;padding-bottom:10px}}
 .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:6px;z-index:50;white-space:nowrap;font-family:var(--mono);font-weight:500}
 .tip[hidden]{display:none}
 
@@ -529,7 +538,7 @@ body.no-cabinet #indoor-var .cab{display:none}
   <!-- TRENDS -->
   <section class="panel card" id="panel-trends" hidden>
     <h2>Trends · click or drag on any strip to move the cursor</h2>
-    <div class="trendbar" id="trendpick"></div>
+    <details class="pickbox" id="pickbox" open><summary id="picksum">Readings</summary><div class="trendbar" id="trendpick"></div></details>
     <div class="strips" id="strips"></div>
   </section>
 
@@ -2704,7 +2713,7 @@ function drawOverlay(s, hover){
   });
   g.strokeStyle = P('--accent'); g.lineWidth = hover != null ? 1 : 1.5; g.beginPath(); g.moveTo(x(ci), 0); g.lineTo(x(ci), H); g.stroke();
   for (const q of series) if (isN(q.a[ci])){ g.fillStyle = q.col; g.beginPath(); g.arc(x(ci), q.y(q.a[ci]), 4, 0, 7); g.fill(); g.strokeStyle = P('--panel'); g.lineWidth = 2; g.stroke(); }
-  if (s.legend) s.legend.innerHTML = series.map(q => `<span class="li"><i style="background:${q.col}"></i><b>${q.c.short}</b> <span class="v">${fmt(q.a[ci], q.c)}${q.c.unit ? ' ' + q.c.unit : ''}</span>${q.ta ? `<span class="t"><i class="dash" style="border-color:${q.col}"></i>target ${fmt(q.ta[ci], q.c)}</span>` : ''}<span class="r">${fmt(q.lo, q.c)} – ${fmt(q.hi, q.c)}</span></span>`).join('');
+  if (s.legend) s.legend.innerHTML = series.map(q => `<span class="li"><i style="background:${q.col}"></i><b>${q.c.short}</b> <span class="v">${fmt(q.a[ci], q.c)}${q.c.unit ? ' ' + q.c.unit : ''}</span>${q.ta ? `<span class="t"><i class="dash" style="border-color:${q.col}"></i>target ${fmt(q.ta[ci], q.c)}</span>` : ''}<span class="r">${fmt(q.lo, q.c)} – ${fmt(q.hi, q.c)}</span>${s.unpin ? `<button class="x" type="button" data-id="${q.c.id}" title="Unpin">×</button>` : ''}</span>`).join('');
 }
 function drawStrip(s, hover){
   if (s.cs) return drawOverlay(s, hover);
@@ -2767,16 +2776,30 @@ const dockStrips = [];
 function togglePin(id){
   logEvent('pin', {id, on:!pins.includes(id)});
   const k = pins.indexOf(id);
-  if (k >= 0) pins.splice(k, 1); else { pins.push(id); if (pins.length > 3) pins.shift(); }
+  if (k >= 0) pins.splice(k, 1); else { pins.push(id); if (pins.length > STACK_MAX) pins.shift(); }
   saveJSON('dchk.pins', pins); buildDock(); renderCycle(cur);
 }
+let DOCKMODE = loadJSON('dchk.dockmode', 'stack');   // pinned trends under the cycle: 'stack' = one chart, 'sep' = a strip each
 function buildDock(){
   const host = $('#dock'); host.innerHTML = ''; dockStrips.length = 0;
-  for (const id of pins){
-    const c = chById[id]; if (!c || !D) continue;
+  const cs = D ? pins.map(id => chById[id]).filter(Boolean) : [];
+  if (!cs.length) return;
+  if (cs.length >= 2){
+    const bar = document.createElement('div'); bar.className = 'dockbar';
+    bar.innerHTML = `<span>Pinned trends · ${cs.length} of ${STACK_MAX}</span><span class="tmode"><button type="button" data-m="stack" class="${DOCKMODE === 'stack' ? 'on' : ''}">Overlay</button><button type="button" data-m="sep" class="${DOCKMODE === 'sep' ? 'on' : ''}">Separate</button></span>`;
+    bar.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; DOCKMODE = b.dataset.m; saveJSON('dchk.dockmode', DOCKMODE); logEvent('dockmode', {mode:DOCKMODE}); buildDock(); });
+    host.appendChild(bar);
+  }
+  if (DOCKMODE === 'stack' && cs.length >= 2){
+    const row = document.createElement('div'); row.className = 'dstrip stack';
+    row.innerHTML = `<div class="tlegend"></div><canvas height="110"></canvas>`;
+    row.querySelector('.tlegend').addEventListener('click', e => { const b = e.target.closest('.x'); if (b) togglePin(b.dataset.id); });
+    host.appendChild(row);
+    const s = {cs, cv:row.querySelector('canvas'), legend:row.querySelector('.tlegend'), unpin:true}; dockStrips.push(s); wireStrip(s);
+  } else for (const c of cs){
     const row = document.createElement('div'); row.className = 'dstrip';
     row.innerHTML = `<div class="h"><b>${c.short}</b><span class="num"></span></div><canvas height="58"></canvas><button class="x" type="button" title="Unpin">×</button>`;
-    row.querySelector('.x').addEventListener('click', () => togglePin(id));
+    row.querySelector('.x').addEventListener('click', () => togglePin(c.id));
     host.appendChild(row);
     const s = {c, cv:row.querySelector('canvas'), valEl:row.querySelector('.num')}; dockStrips.push(s); wireStrip(s);
   }
@@ -2798,6 +2821,7 @@ function buildTrendPicker(){
   mode.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; TRENDMODE = b.dataset.m; saveJSON('dchk.trendmode', TRENDMODE); logEvent('trendmode', {mode:TRENDMODE}); buildTrendPicker(); buildStrips(); });
   host.appendChild(mode);
   const chans = trendChannels(), nSel = chans.filter(c => trendSel.has(c.id)).length, full = TRENDMODE === 'stack' && nSel >= STACK_MAX;
+  $('#picksum').textContent = `Readings · ${nSel} ticked` + (TRENDMODE === 'stack' ? ` · overlay shows up to ${STACK_MAX}` : ''); if (!$('#pickbox').dataset.init){ $('#pickbox').dataset.init = 1; if (window.matchMedia && window.matchMedia('(max-width: 600px)').matches) $('#pickbox').open = false; }   // phones start with the picker folded so the chart is on screen
   for (const c of chans){
     const l = document.createElement('label'); const on = trendSel.has(c.id);
     l.innerHTML = `<input type="checkbox" id="tp-${c.id}" ${on ? 'checked' : ''} ${full && !on ? 'disabled' : ''}> ${c.label}${TARGET_OF[c.id] && D.num[TARGET_OF[c.id]] && D.num[TARGET_OF[c.id]].some(isN) ? ' <small>+target</small>' : ''}`;
@@ -3110,7 +3134,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v50';
+const APP_VERSION = 'v51';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);

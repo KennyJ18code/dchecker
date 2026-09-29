@@ -5,6 +5,8 @@ const q = new URLSearchParams(location.search);
 localStorage.setItem('dchk.settings', JSON.stringify({land: q.get('land') || 'auto', anim:'off', legend:false}));
 localStorage.setItem('dchk.thermal', q.get('thermal') === '0' ? 'false' : 'true');
 if (q.get('tm')) localStorage.setItem('dchk.trendmode', JSON.stringify(q.get('tm')));
+if (q.get('dm')) localStorage.setItem('dchk.dockmode', JSON.stringify(q.get('dm')));
+if (q.get('pins')) localStorage.setItem('dchk.pins', JSON.stringify(q.get('pins').split(',')));
 if (q.get('ts')) localStorage.setItem('dchk.trends', JSON.stringify(q.get('ts').split(',')));
 const f = document.getElementById('f'); if (q.get('w')) f.style.width = q.get('w') + 'px';
 f.src = '../index.html?x=' + Date.now();

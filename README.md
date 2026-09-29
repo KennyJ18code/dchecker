@@ -24,7 +24,7 @@ Logs from 2–5 port MXS/MXL outdoor units (columns `Rm_A gas temp`, `Port A EV`
 
 ## Trends
 
-Each strip in the Trends tab draws the reading's logged target on the same scale as an orange dashed line when the log has one (discharge target, target comp speed, target OU fan, target SH/SC, requested airflow); the picker marks those readings "+target". The Overlay button puts up to five ticked readings on one chart, each on its own scale in its own colour with its target dashed in that colour, and a legend showing the value at the cursor and the range of each line.
+Each strip in the Trends tab draws the reading's logged target on the same scale as an orange dashed line when the log has one (discharge target, target comp speed, target OU fan, target SH/SC, requested airflow); the picker marks those readings "+target". The Overlay button puts up to five ticked readings on one chart, each on its own scale in its own colour with its target dashed in that colour, and a legend showing the value at the cursor and the range of each line. On phones the reading picker folds to one line so the chart is on screen. Tapping a reading on the Cycle screen pins it to the bottom bar (up to five); with two or more pinned, the bar overlays them on one chart with the same legend (each entry has its own unpin ×), or shows a strip each with the Separate switch.
 
 ## Refrigerant and PT chart
 
