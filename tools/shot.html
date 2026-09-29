@@ -1,0 +1,26 @@
+<!doctype html><!-- dev harness for headless screenshots: chrome --headless=new --screenshot=out.png --window-size=1400,1000 --virtual-time-budget=12000 "http://localhost:8765/tools/shot.html?land=on&y=0.45"  (params: land=on|off, w=390 iframe width, file=samples/x.tgz, at=0.6 seek fraction, y=0.45 scroll fraction of the diagram, thermal=0) --><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#0F151C">
+<iframe id="f" style="border:0;width:100vw;height:100vh;display:block"></iframe>
+<script>
+const q = new URLSearchParams(location.search);
+localStorage.setItem('dchk.settings', JSON.stringify({land: q.get('land') || 'auto', anim:'off', legend:false}));
+localStorage.setItem('dchk.thermal', q.get('thermal') === '0' ? 'false' : 'true');
+const f = document.getElementById('f'); if (q.get('w')) f.style.width = q.get('w') + 'px';
+f.src = '../index.html?x=' + Date.now();
+f.onload = async () => {
+  const w = f.contentWindow, d = w.document;
+  await new Promise(r => setTimeout(r, 800));
+  const r = await fetch('../' + (q.get('file') || 'samples/minisplit-20260920.tgz')); const b = await r.blob();
+  await w.dchkOpen([new File([b], (q.get('file') || 'log.tgz').split('/').pop())]);
+  await new Promise(r => setTimeout(r, 1500));
+  const zs = q.get('zones');
+  if (zs){ for (const btn of d.querySelectorAll('#zonebar button')){ const t = btn.textContent.trim(); if (/^Zone /.test(t) && !zs.includes(t.slice(5))) btn.click(); } await new Promise(r => setTimeout(r, 400)); }
+  const s = d.querySelector('input[type=range]'); s.value = Math.round(s.max * (q.get('at') ? +q.get('at') : 0.6)); s.dispatchEvent(new Event('input'));
+  await new Promise(r => setTimeout(r, 600));
+  const R = d.querySelector('#dsvg').getBoundingClientRect();
+  w.scrollTo(0, w.scrollY + R.top + R.height * (+q.get('y') || 0) - (+q.get('off') || 0));
+  const de = d.documentElement, dg = d.querySelector('#diag').getBoundingClientRect(), wide = [...d.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > w.innerWidth + 2 && !e.closest('#tags') && !e.closest('svg')).slice(0, 12).map(e => e.tagName + '#' + e.id + '.' + e.className + ':' + Math.round(e.getBoundingClientRect().right));
+  const m = {iw:w.innerWidth, sw:de.scrollWidth, bodyW:d.body.scrollWidth, diag:[dg.left, dg.width], svg:d.querySelector('#dsvg').getBoundingClientRect().width, wide};
+  document.body.insertAdjacentHTML('beforeend', '<pre id="m">' + JSON.stringify(m) + '</pre>');
+  document.title = 'ready';
+};
+</script></body></html>

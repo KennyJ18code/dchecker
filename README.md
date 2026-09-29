@@ -20,7 +20,7 @@ Known differences from the PC export: the phone recording keeps seconds on every
 
 ## Multi-zone mini splits
 
-Logs from 2–5 port MXS/MXL outdoor units (columns `Rm_A gas temp`, `Port A EV`…) are detected automatically and drawn as one zone per port with a shared outdoor unit. See `docs/outdoor-circuits.md` §5.
+Logs from 2–5 port MXS/MXL outdoor units (columns `Rm_A gas temp`, `Port A EV`…) are detected automatically and drawn as one zone per port with a shared outdoor unit. Each head's gas and liquid line drops on its own into the outdoor unit and lands on its own junction of a header block (gas bar and liquid bar in one manifold); nothing is shared between heads (that is a VRV trunk, not a mini split). A liquid line that has to pass the gas bar is drawn with a break. The port EEV splits each liquid line into a header-side segment (coloured by the outdoor coil) and a line-set segment (coloured by the port thermistor), so the letdown across the valve is visible in thermal mode. See `docs/outdoor-circuits.md` §5. `tools/shot.html` is a headless-Chrome screenshot harness for checking the drawing.
 
 ## Rulebook
 
