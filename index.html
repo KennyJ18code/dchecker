@@ -1626,7 +1626,7 @@ function runRulebook(){
 function rulebookFindings(){
   const F = [], n = D.n, dt = D.interval / 60, num = D.num, s = D.str;
   const agg = new Map();
-  for (let i = 0; i < n; i++) for (const x of (D.sig[i] || [])) if (x.st === 'rule'){ const a = agg.get(x.code) || {R:x.rule, rows:0, first:i, detail:x.detail}; a.rows++; agg.set(x.code, a); }
+  for (let i = 0; i < n; i++) for (const x of (D.sig[i] || [])) if (x.st === 'rule' && RULEBOOK.includes(x.rule)){ const a = agg.get(x.code) || {R:x.rule, rows:0, first:i, detail:x.detail}; a.rows++; agg.set(x.code, a); }
   for (const a of agg.values()) F.push({rid:a.R.rid || a.R.id, sev:a.R.sev, st:SEVCLS[a.R.sev], title:a.R.title, why:`${f0(a.rows * dt)} min (${a.rows} rows), first at ${fmtTime(D.t[a.first])} — ${a.detail}. ${a.R.why}`, fix:a.R.fix});
   // L2: with the compressor off ≥ 30 min, outdoor thermistors should read within ~3°F of outdoor air
   { const off = []; let offMin = 0; for (let i = 0; i < n; i++){ offMin = D.runSec[i] < 0 ? offMin + dt : 0; if (offMin >= RT.atRestMin) off.push(i); }
@@ -1644,6 +1644,91 @@ function rulebookFindings(){
   // M12: heads that satisfy in under 10 min of port-open time
   if (D.fam === 'multi'){ for (const k of D.zones){ const ep = episodes(i => isN(num['pev'+k][i]) && num['pev'+k][i] > 0 && D.runSec[i] >= 0, 1); if (ep.length >= 3){ const avg = ep.reduce((a, e) => a + (e.b - e.a + 1) * dt, 0) / ep.length; if (avg < RT.shortHead) F.push({rid:'M12', sev:'moderate', st:'sig', title:`Zone ${MZ.letters[k]}: satisfies in ${f0(avg)} min on average (${ep.length} calls)`, why:'A head that satisfies its room in under ~10 minutes cannot dehumidify; the coil barely gets below dew point before it stops.', fix:['Dry mode, fan on auto or low, avoid Powerful mode.','Long term: right-size the head, or a smaller head on the multi.']}); } } }
   return F;
+}
+/* ---------- sensor sanity (under L2 / M10) and EEV response (under S2 / M3) ----------
+   A thermistor or transducer that holds one exact value while the compressor speed and its neighbours move is stuck.
+   A reading far outside what its neighbours allow is implausible. An EEV whose pulses move while the temperatures it
+   meters do not follow is not responding. */
+const XT = {stuckMin:20, stuckMinAir:90, stuckMinPress:15, otherMove:5, rpsMove:8, wildMin:10, wildVsOat:90, coilVsAir:45, portGasLiq:45, idCoil:60, spikeF:30, spikePsi:100, spikeN:3,
+            evMove:{ev:40, iev:60, pev:60}, evSettle:3, evWindow:8, evResp:1.0, evMinMoves:5, evBadFrac:0.7, evOkFrac:0.3};
+function sensorList(){
+  const L = [];
+  const add = (id, gate, kind) => { if (chById[id] && chById[id].present && D.num[id] && D.num[id].some(isN)) L.push({id, gate, kind:kind || chById[id].kind || 'temp'}); };
+  if (D.fam === 'multi'){ add('oat', null, 'air'); ['ochex','disch','fin'].forEach(id => add(id, null)); for (const k of D.zones){ add('rmgas'+k, i => isN(D.num['pev'+k][i]) && D.num['pev'+k][i] > 0); add('rmliq'+k, i => isN(D.num['pev'+k][i]) && D.num['pev'+k][i] > 0); add('ra'+k, i => isN(D.num['ifan'+k][i]) && D.num['ifan'+k][i] > 0, 'air'); add('ihx'+k, i => isN(D.num['pev'+k][i]) && D.num['pev'+k][i] > 0); } }
+  else { add('oat', null, 'air'); ['ochex','ocmid','disch','suct','liq','hp','lp','iliq','igas','ipress','fin'].forEach(id => add(id, null)); }
+  return L;
+}
+function sensorChecks(){
+  const n = D.n, num = D.num, dt = D.interval / 60, F = [], marks = [];
+  const run = i => D.runSec[i] >= 0;
+  const list = sensorList();
+  const mark = (a, b, rule, detail) => { for (let i = a; i <= b; i++) D.sig[i].push({code:'R:' + rule.id + ':' + rule.title, rule, label:rule.rid + ' ' + rule.title, detail, st:'rule', sev:rule.sev}); };
+  for (const S of list){
+    const a = num[S.id], ch = chById[S.id], isPress = S.kind === 'press';
+    // ---- stuck: identical value for stuckMin while the system is running and moving ----
+    { let st = -1; const need = S.kind === 'air' ? XT.stuckMinAir : isPress ? XT.stuckMinPress : XT.stuckMin; const eps = [];
+      const flush = (a0, b0) => { const len = (b0 - a0 + 1) * dt; if (len < need) return;
+        let rpsLo = Infinity, rpsHi = -Infinity, otherMoved = false;
+        for (let j = a0; j <= b0; j++){ const r = num.rps[j]; if (isN(r)){ rpsLo = Math.min(rpsLo, r); rpsHi = Math.max(rpsHi, r); } }
+        for (const O of list){ if (O.id === S.id || O.kind !== S.kind) continue; let lo = Infinity, hi = -Infinity; for (let j = a0; j <= b0; j++){ const v = num[O.id][j]; if (isN(v)){ lo = Math.min(lo, v); hi = Math.max(hi, v); } } if (hi - lo >= (isPress ? 10 : XT.otherMove)){ otherMoved = true; break; } }
+        if (rpsHi - rpsLo >= XT.rpsMove || otherMoved){ const rule = {id:'X1', rid:'L2', sev:'major', title:`Stuck sensor: ${ch.label}`}; const detail = `held exactly ${fmt(a[a0], ch)} ${ch.unit} for ${f0(len)} min from ${fmtTime(D.t[a0])} while comp speed ran ${f0(rpsLo)}–${f0(rpsHi)} rps${otherMoved ? ' and neighbouring sensors moved' : ''}`; mark(a0, b0, rule, detail); eps.push({len, detail}); } };
+      for (let i = 0; i < n; i++){ const on = run(i) && isN(a[i]) && (!S.gate || S.gate(i)); if (on && st >= 0 && a[i] === a[st]) continue; if (st >= 0) flush(st, i - 1); st = on ? i : -1; }
+      if (st >= 0) flush(st, n - 1);
+      if (eps.length){ const worst = eps.slice().sort((x, y) => y.len - x.len)[0]; F.push({rid:'L2', sev:'major', st:'warn', title:`Stuck sensor: ${ch.label}${eps.length > 1 ? ` (${eps.length} episodes)` : ''}`, why:`${worst.detail}. A live thermistor never sits on one exact value that long while the system is changing; an open or shorted one throws a code, a stuck or bridged one does not.`, fix:['Compare the sensor to a clamp probe at its location.','Resistance-check it against the service manual table; check the connector, pinched leads and clip contact before blaming the board.']}); } }
+    // ---- rail: the same value for the entire recording (unpopulated or open input) ----
+    { const vals = a.filter(isN); if (vals.length >= 20 && vals.every(v => v === vals[0])) F.push({rid:'L2', sev:'minor', st:'info', title:`${ch.label} never changed (${fmt(vals[0], ch)} ${ch.unit})`, why:'A reading that is identical for the whole recording is either an unpopulated input or a sensor that is not connected.', fix:['Confirm the model actually has this sensor; if it does, check its connector.']}); }
+    // ---- spikes: a jump that reverses on the next row ----
+    { let sp = 0, first = -1; const thr = isPress ? XT.spikePsi : XT.spikeF; for (let i = 1; i < n - 1; i++){ const p0 = a[i-1], p1 = a[i], p2 = a[i+1]; if (isN(p0) && isN(p1) && isN(p2) && Math.abs(p1 - p0) > thr && Math.abs(p2 - p0) < thr / 3){ sp++; if (first < 0) first = i; } }
+      if (sp >= XT.spikeN) F.push({rid:'L2', sev:'major', st:'warn', title:`Noisy sensor: ${ch.label} spiked ${sp} times`, why:`Single-row jumps of more than ${thr} ${ch.unit} that vanish on the next row, first at ${fmtTime(D.t[first])}. Refrigerant temperatures cannot move that fast; a loose connector or chafed lead can.`, fix:['Wiggle-test the connector and harness at the board and at the sensor; look for chafe where the lead passes sheet metal.']}); }
+  }
+  // ---- implausible against neighbours (running, settled ≥ 5 min) ----
+  const wild = [];   // [rule title, test(i) → string|null]
+  const oat = num.oat, multi = D.fam === 'multi';
+  const coilIds = multi ? ['ochex'] : ['ochex','ocmid','suct','liq'];
+  for (const id of coilIds) if (chById[id].present) wild.push([`${chById[id].label} vs outdoor air`, i => (isN(num[id][i]) && isN(oat[i]) && Math.abs(num[id][i] - oat[i]) > XT.wildVsOat) ? `${chById[id].short} ${f1s(num[id][i])}°F with outdoor air ${f1s(oat[i])}°F` : null]);
+  if (chById.disch.present && chById.ochex.present) wild.push(['Discharge colder than the outdoor coil', i => (isN(num.disch[i]) && isN(num.ochex[i]) && num.disch[i] < num.ochex[i] - 5) ? `discharge ${f1s(num.disch[i])}°F, coil ${f1s(num.ochex[i])}°F` : null]);
+  if (!multi && chById.hp.present && chById.lp.present) wild.push(['High pressure below low pressure', i => (isN(num.hp[i]) && isN(num.lp[i]) && num.hp[i] <= num.lp[i]) ? `HP ${f0(num.hp[i])} psi, LP ${f0(num.lp[i])} psi` : null]);
+  if (!multi && chById.igas.present && chById.iliq.present) wild.push(['Indoor gas vs liquid pipe', i => (isN(num.igas[i]) && isN(num.iliq[i]) && Math.abs(num.igas[i] - num.iliq[i]) > XT.idCoil) ? `ID gas ${f1s(num.igas[i])}°F, ID liquid ${f1s(num.iliq[i])}°F` : null]);
+  if (multi) for (const k of D.zones){ const L = MZ.letters[k];
+    wild.push([`Zone ${L} coil vs return air`, i => (isN(num['ifan'+k][i]) && num['ifan'+k][i] > 0 && isN(num['ihx'+k][i]) && isN(num['ra'+k][i]) && Math.abs(num['ihx'+k][i] - num['ra'+k][i]) > XT.coilVsAir) ? `coil ${f1s(num['ihx'+k][i])}°F, return air ${f1s(num['ra'+k][i])}°F` : null]);
+    wild.push([`Port ${L} gas vs liquid`, i => (isN(num['pev'+k][i]) && num['pev'+k][i] > 0 && isN(num['rmgas'+k][i]) && isN(num['rmliq'+k][i]) && Math.abs(num['rmgas'+k][i] - num['rmliq'+k][i]) > XT.portGasLiq) ? `gas ${f1s(num['rmgas'+k][i])}°F, liquid ${f1s(num['rmliq'+k][i])}°F` : null]); }
+  for (const [title, test] of wild){ const ep = episodes(i => run(i) && D.runSec[i] >= 300 && !!test(i), Math.max(2, Math.round(XT.wildMin / dt)));
+    if (ep.length){ const e = ep[0], rule = {id:'X2', rid:'L2', sev:'major', title:`Implausible reading: ${title}`}; const detail = test(e.a); for (const q of ep) mark(q.a, q.b, rule, test(q.a));
+      F.push({rid:'L2', sev:'major', st:'warn', title:`Implausible reading: ${title}`, why:`${detail} for ${f0((e.b - e.a + 1) * dt)} min from ${fmtTime(D.t[e.a])}${ep.length > 1 ? ` (${ep.length} episodes)` : ''}. The refrigerant cannot be in that state; one of the two sensors is wrong, misplaced or reading the wrong pipe.`, fix:['Clamp a probe next to each of the two sensors and see which one disagrees with reality.','Check the sensor is on the right pipe and clipped tight; then resistance-check it.']}); } }
+  D.sensorFindings = F;
+}
+// ---- EEV response: after a real pulse move at steady speed, the metered temperature must follow within a few minutes ----
+function evChecks(){
+  const n = D.n, num = D.num, dt = D.interval / 60, F = [], multi = D.fam === 'multi';
+  const k3 = Math.max(1, Math.round(XT.evSettle / dt)), k8 = Math.max(k3 + 1, Math.round(XT.evWindow / dt));
+  const valves = [];
+  if (!multi){
+    if (chById.ev.present) valves.push({id:'V1', name:'Outdoor EV', pls:'ev', thr:XT.evMove.ev, modes:{heat:{ch:'sh', sign:-1, what:'suction superheat'}}});                       // heating: meters the outdoor coil; cooling: bypassed by the check valve
+    if (chById.iev.present) valves.push({id:'V2', name:'Indoor EV', pls:'iev', thr:XT.evMove.iev, modes:{cool:{ch:'coildt', sign:-1, what:'indoor coil gas − liquid'}, heat:{ch:'sc', sign:-1, what:'subcooling'}}});
+  } else for (const k of D.zones) valves.push({id:'V1', name:`Port ${MZ.letters[k]} EV`, pls:'pev'+k, thr:XT.evMove.pev, zone:k, modes:{cool:{ch:'ihx'+k, sign:-1, what:`zone ${MZ.letters[k]} coil temp`}, heat:{ch:'ihx'+k, sign:+1, what:`zone ${MZ.letters[k]} coil temp`}}});
+  const mean = (ch, a, b) => { let s = 0, c = 0; for (let j = a; j <= b; j++){ const v = num[ch][j]; if (isN(v)){ s += v; c++; } } return c ? s / c : null; };
+  for (const V of valves){
+    const pls = num[V.pls]; let moves = 0, dead = 0, firstDead = -1; const deadRows = [];
+    for (let i = k3; i + k8 < n; i++){
+      const m = D.mode[i], exp = V.modes[m]; if (!exp) continue;
+      if (D.runSec[i] < 300 || D.runSec[i + k8] < 0 || D.sinceDefrost[i] <= 5) continue;
+      const p0 = pls[i - k3], p1 = pls[i]; if (!isN(p0) || !isN(p1) || Math.abs(p1 - p0) < V.thr) continue;
+      if (V.zone != null && !(p0 > 0 && p1 > 0)) continue;                                              // a port opening from closed / closing to zero is a call, not a modulation
+      const r0 = num.rps[i - k3], r1 = num.rps[i + k8]; if (!isN(r0) || !isN(r1) || Math.abs(r1 - r0) > Math.max(3, 0.05 * r0)) continue;   // speed must be steady or the response is ambiguous
+      const before = mean(exp.ch, i - k3, i), after = mean(exp.ch, i + k3, i + k8); if (!isN(before) || !isN(after)) continue;
+      moves++; const want = Math.sign(p1 - p0) * exp.sign, got = after - before;
+      if (!(got * want >= XT.evResp)){ dead++; if (firstDead < 0) firstDead = i; deadRows.push([i + k3, i + k8, `${V.name} ${p1 - p0 > 0 ? '+' : ''}${f0(p1 - p0)} pls at ${fmtTime(D.t[i])}, ${exp.what} ${got >= 0 ? '+' : ''}${f1s(got)}°F (expected ${want > 0 ? 'rise' : 'fall'} ≥ ${XT.evResp}°F)`]); }
+      i += k8;
+    }
+    if (moves >= XT.evMinMoves){
+      if (dead / moves >= XT.evBadFrac){ const rule = {id:V.id, rid:V.id, sev:'major', title:`${V.name} not responding`}; for (const [a, b, d] of deadRows) for (let j = a; j <= b; j++) D.sig[j].push({code:'R:' + V.id + ':' + V.name, rule, label:`${V.id} ${V.name} not responding`, detail:d, st:'rule', sev:'major'});
+        F.push({rid:V.id, sev:'major', st:'warn', title:`${V.name} not responding: ${dead} of ${moves} pulse moves changed nothing`, why:`Moves of ≥${V.thr} pulses at steady compressor speed should change ${V.modes[Object.keys(V.modes)[0]].what} by ≥${XT.evResp}°F within ${XT.evWindow} min; first unanswered move at ${fmtTime(D.t[firstDead])}. The board is commanding the valve and the refrigerant is not following.`,
+                fix:['Check the EEV coil: resistance per the service manual, connector seated, no broken lead.','Watch the pulse count and the metered temperature together: if pulses move and the temperature never follows, the valve body is stuck or the coil is slipping steps — replace the coil first, then the body.','Rule out a starved circuit (low charge or a restriction upstream) which also mutes the valve\'s effect.']}); }
+      else if (dead / moves <= XT.evOkFrac) F.push({rid:V.id, sev:'law', st:'ok', title:`${V.name} responds: ${moves - dead} of ${moves} pulse moves answered`, why:`Moves of ≥${V.thr} pulses at steady speed were followed by the expected change in ${V.modes[Object.keys(V.modes)[0]].what}.`, fix:['The valve and its coil are doing what the board asks.']});
+      else F.push({rid:V.id, sev:'minor', st:'info', title:`${V.name}: inconsistent response (${moves - dead} of ${moves} moves answered)`, why:`Some pulse moves changed ${V.modes[Object.keys(V.modes)[0]].what} as expected and some did not; on a multi the other ports share the compressor, which can mask a single port's effect.`, fix:['Run this head alone at a fixed speed and watch its coil temperature follow the pulses before condemning the valve.']});
+    }
+  }
+  D.evFindings = F;
 }
 function analyze(){
   const n = D.n, num = D.num, s = D.str;
@@ -1748,6 +1833,9 @@ function analyze(){
   const raw = D.sig.map(a => a.slice());
   for (let i = 0; i < n; i++) D.sig[i] = raw[i].filter(x => x.st !== 'fault' || ((has(i-1, x.code) && has(i-2, x.code)) || (has(i-1, x.code) && has(i+1, x.code)) || (has(i+1, x.code) && has(i+2, x.code))) );
   try { runRulebook(); } catch(e){ console.warn('rulebook', e); }
+  D.sensorFindings = []; D.evFindings = [];
+  try { sensorChecks(); } catch(e){ console.warn('sensor checks', e); }
+  try { evChecks(); } catch(e){ console.warn('ev checks', e); }
 }
 
 /* ---------- formatting ---------- */
@@ -2248,7 +2336,7 @@ function renderNow(i){
   const sigs = e.sigs.slice().sort((a,b) => (b.conf||0) - (a.conf||0) || (a.st === 'fault' ? -1 : 1));
   for (const x of sigs){ if (x.st === 'rule') continue; if (x.st === 'fault' && !S.faults) continue; if (x.st === 'sig' && !S.sigs) continue; if (x.st === 'info' && !S.events) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
   if (S.rulebook){ const ord = {critical:0, major:1, moderate:2, minor:3, law:4}; const rl = e.sigs.filter(x => x.st === 'rule').sort((a, b) => ord[a.sev] - ord[b.sev]).slice(0, 3);
-    for (const x of rl){ const c = document.createElement('span'); c.className = 'chip rule ' + x.sev; c.innerHTML = `<b>${synEsc(x.rule.rid || x.rule.id)}</b>${synEsc(x.rule.title)}`; c.title = x.detail; mc.appendChild(c); } }
+    const seen = new Set(); for (const x of rl){ if (seen.has(x.code)) continue; seen.add(x.code); const c = document.createElement('span'); c.className = 'chip rule ' + x.sev; c.innerHTML = `<b>${synEsc(x.rule.rid || x.rule.id)}</b>${synEsc(x.rule.title)}`; c.title = x.detail; mc.appendChild(c); } }
   // always-visible demand / call readout
   { const dm = D.num.demand[i], op = (D.str.opmode[i] || D.str.imode[i] || '—'), th = D.str.therm[i];
     const s = D.str, ph = s.defrost[i] === 'ON' ? 'DEFROST' : s.oilret[i] === 'ON' ? 'OIL RETURN' : s.startup[i] === 'ON' ? 'STARTUP' : s.restart[i] === 'ON' ? 'RESTART STANDBY' : s.freeze[i] === 'ON' ? 'FREEZE PROTECT' : ['dropDisch','dropInv','dropHp','dropLp','dropFin'].some(id => s[id][i] === 'ON') ? 'DROP CTRL' : (D.runSec[i] >= 0 ? (D.steady[i] ? 'STEADY' : 'RUNNING') : 'OFF');
@@ -2370,6 +2458,7 @@ function synopsisFindings(){
   const drop = rows.filter(i => D.dropout[i]).length; if (drop >= 3) F.push({st:'info', title:`${drop} rows with sensor dropouts`, why:`HP, LP or Tc read zero`, do:'Ignore those rows; if they cluster, check the D-Checker cable and the pressure sensor connectors.'});
   if (!F.length) F.push({st:'ok', title:'Nothing stood out in this recording', why:`${f0(runMin)} min of run time, ${steadyRows.length ? f0(steadyRows.length * dt) + ' min steady' : 'never reached steady state'}`, do:'If there is a complaint, record longer, through a full cycle, or in the complaint conditions.'});
   try { for (const r of rulebookFindings()) F.push(r); } catch(e){ console.warn('rulebook findings', e); }
+  for (const r of (D.sensorFindings || [])) F.push(r); for (const r of (D.evFindings || [])) F.push(r);
   const order = {alarm:0, warn:1, sig:2, info:3, ok:4}; F.sort((a, b) => order[a.st] - order[b.st]);
   return F;
 }
@@ -2874,7 +2963,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v45';
+const APP_VERSION = 'v46';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);

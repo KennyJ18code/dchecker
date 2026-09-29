@@ -1143,3 +1143,40 @@ THEN educate_no_repair
 IF trend(t_indoor_coil at locked speed) drifting > 4F from baseline
 THEN clean_airpath
 ```
+
+## Appendix: rules added by the app (not in the original spec)
+
+### X1: Stuck sensor (under L2 / M10)
+
+- **severity:** `major`
+- **Rule:** A thermistor or transducer that holds one exact value for 20+ minutes (60 for outdoor air, 15 for pressures) while the compressor speed moves 5+ rps or a neighbouring sensor of the same kind moves 3+ °F is stuck.
+- **Why:** A live sensor never sits on one exact value that long while the system changes. Open or shorted sensors throw codes; stuck or bridged ones do not.
+- **Fix:** Clamp a probe at the sensor; resistance-check against the service manual; connector, pinched leads, clip contact.
+- **Logic:** `same_value_minutes >= 20 AND (rps_range >= 5 OR any(other_sensor_range >= 3))`
+
+### X2: Implausible reading against neighbours (under L2 / M10)
+
+- **severity:** `major`
+- **Rule:** For 10+ minutes while settled: an outdoor coil or pipe sensor more than 90 °F from outdoor air; discharge colder than the outdoor coil; high pressure at or below low pressure; indoor gas vs liquid more than 60 °F apart; a head coil more than 45 °F from its return air while its fan runs; a port's gas and liquid more than 45 °F apart while the port is open.
+- **Why:** The refrigerant cannot be in that state, so one of the two sensors is wrong, misplaced or on the wrong pipe.
+- **Fix:** Probe next to each sensor to find which one disagrees with reality; check placement and clip; resistance-check.
+
+### X3: Noisy sensor
+
+- **severity:** `major`
+- **Rule:** Three or more single-row jumps of more than 30 °F (100 psi) that vanish on the next row.
+- **Fix:** Wiggle-test the connector and harness; look for chafe at sheet-metal pass-throughs.
+
+### V1 / V2: EEV not responding (under S2 / M3)
+
+- **severity:** `major`
+- **Rule:** After a pulse move of 40+ pulses (60 on the FIT indoor EV) at steady compressor speed, the temperature that valve meters must change by at least 1 °F in the expected direction within 8 minutes. FIT outdoor EV in heating: suction superheat falls when it opens. FIT indoor EV: coil gas − liquid falls (cooling), subcooling falls (heating). Mini-split port EV: that head's coil temperature falls when it opens in cooling, rises in heating. Four or more moves with 70 %+ unanswered = not responding.
+- **Why:** The board is commanding the valve and the refrigerant is not following — a stuck body, a coil slipping steps, or a starved circuit that mutes the valve.
+- **Fix:** EEV coil resistance and connector; watch pulses and the metered temperature together; replace coil, then body; rule out a starved circuit.
+- **Logic:**
+```
+FOR each move WHERE |Δpulses| >= thr AND |Δrps| <= 5%:
+  response = mean(metric, t+3..t+8) - mean(metric, t-3..t)
+  answered = response * expected_sign >= 1.0
+IF moves >= 4 AND unanswered/moves >= 0.7 -> eev_not_responding
+```
