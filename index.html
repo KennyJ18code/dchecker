@@ -357,7 +357,7 @@ input[type=range].scrub{width:100%;margin:0;accent-color:var(--accent);height:22
 .tmode button{border:0;background:var(--panel);padding:3px 10px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer}.tmode button.on{background:var(--ink);color:var(--panel)}
 .trendbar label small{color:var(--muted);font-weight:600}
 .pickbox summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--ink2);padding:8px 14px 0}.pickbox[open] summary{padding-bottom:0}
-@media (max-width:600px){#panel-trends{display:flex;flex-direction:column}#panel-trends h2{order:0}.strips{order:1;padding-top:8px}.pickbox{order:2;padding-bottom:10px}}
+@media (max-width:600px){#panel-trends:not([hidden]){display:flex;flex-direction:column}#panel-trends h2{order:0}.strips{order:1;padding-top:8px}.pickbox{order:2;padding-bottom:10px}}
 .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:6px;z-index:50;white-space:nowrap;font-family:var(--mono);font-weight:500}
 .tip[hidden]{display:none}
 
@@ -3134,7 +3134,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v51';
+const APP_VERSION = 'v52';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
