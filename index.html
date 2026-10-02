@@ -238,11 +238,6 @@ body.no-narr .nowline{display:none}
 .tag .viz .tgt{position:absolute;top:0;bottom:0;width:calc(.4cqw * var(--k));background:var(--ink);opacity:.85;display:none}
 .tag .viz .ghost{position:absolute;top:0;bottom:0;width:calc(.3cqw * var(--k));background:var(--muted);opacity:.6;display:none}
 .tag .spark{display:none;position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.55}
-.tag .gsvg{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.26}
-.tag .gsvg polyline{fill:none;stroke:var(--ink);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-.tag .gsvg .cur{stroke:var(--accent);stroke-width:1.2;vector-effect:non-scaling-stroke}
-.tag .gsvg circle{fill:var(--accent)}
-.diag.view-spark .tag .gsvg{opacity:.12}
 .tag .spark polyline{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .tag .spark .base{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 2}
 .tag .spark circle{fill:var(--accent)}
@@ -504,7 +499,6 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .sgrid label select{margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;font-size:12px}
 .sgrid label .num{min-width:4ch;text-align:right;color:var(--ink2);font-size:12px}
 body.no-leaders #leaders,body.no-leaders #markers{display:none}
-body.no-ghosts .tag .gsvg{display:none}
 body.no-arrows .tag .tr{display:none}
 body.no-air .air{display:none}
 body.no-flow .flow{display:none}
@@ -711,7 +705,6 @@ body.no-cabinet #indoor-var .cab{display:none}
       </section>
       <section><h3>On the diagram</h3>
         <label><input type="checkbox" data-s="leaders"> Sensor markers and leader lines</label>
-        <label><input type="checkbox" data-s="ghosts"> Ghost graphs behind readings</label>
         <label><input type="checkbox" data-s="arrows"> Change arrows (▲▼ vs previous row)</label>
         <label><input type="checkbox" data-s="air"> Air streams through the coils</label>
         <label>Motion (flow dashes, air, fans) <select data-s="anim"><option value="play">Only while playing</option><option value="always">Always</option><option value="off">Off</option></select></label>
@@ -1341,7 +1334,7 @@ function renderMulti(i, m, running){
 let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
@@ -1350,7 +1343,7 @@ function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#pan
 function applySettings(){
   saveJSON('dchk.settings', S); syncAnim();
   const b = document.body;
-  for (const k of ['leaders','ghosts','arrows','air','flow','sv','legend','chips','dock','cabinet','parts','narr']) b.classList.toggle('no-' + k, !S[k]);
+  for (const k of ['leaders','arrows','air','flow','sv','legend','chips','dock','cabinet','parts','narr']) b.classList.toggle('no-' + k, !S[k]);
   LAND = S.land === 'auto' ? null : S.land === 'on';
   $('#diag').style.setProperty('--k', (isLandLay() ? S.kLand * (FAM === 'multi' ? mzl().kf : 1) : S.kPort * (FAM === 'multi' ? mzGeo().k : 1)));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
@@ -2476,7 +2469,7 @@ function buildTags(){
     const [px, py] = P(tg.x, tg.y);
     e.style.left = (px / LAY.W * 100) + '%'; e.style.top = (py / LAY.H * 100) + '%';
     e.id = 'tag-' + k;
-    e.innerHTML = `<span class="l"></span><span class="v"><span class="n">—</span><small></small><span class="tr"></span><span class="dz"></span></span><span class="viz"><i class="fill"></i><i class="ghost"></i><i class="tgt"></i></span><svg class="gsvg" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""></polyline><line class="cur" x1="0" y1="0" x2="0" y2="30"></line><circle r="1.8" cx="0" cy="15"></circle></svg><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="base" points="0,15 100,15"></polyline><polyline class="line" points=""></polyline><circle r="2.2" cx="100" cy="15"></circle></svg>` + ((tg.sub || tg.target) ? `<span class="s"></span>` : '') + (tg.bar ? `<span class="bar"><i></i></span>` : '');
+    e.innerHTML = `<span class="l"></span><span class="v"><span class="n">—</span><small></small><span class="tr"></span><span class="dz"></span></span><span class="viz"><i class="fill"></i><i class="ghost"></i><i class="tgt"></i></span><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="base" points="0,15 100,15"></polyline><polyline class="line" points=""></polyline><circle r="2.2" cx="100" cy="15"></circle></svg>` + ((tg.sub || tg.target) ? `<span class="s"></span>` : '') + (tg.bar ? `<span class="bar"><i></i></span>` : '');
     if (tg.custom){
       e.classList.add('custom');
       let drag = null;
@@ -2617,13 +2610,6 @@ function renderCycle(i){
       else se.hidden = true;
     }
     if (tg.bar){ const b = e.querySelector('.bar i'); b.style.width = (isN(v) && ch.max ? Math.min(100, v/ch.max*100) : 0) + '%'; }
-    // whole-log ghost graph + cursor
-    { const g = e.querySelector('.gsvg'), gp = ghostPts[id];
-      if (gp){ if (e.dataset.gch !== id){ g.querySelector('polyline').setAttribute('points', gp.pts); e.dataset.gch = id; }
-        const gx = ((i/Math.max(1, D.n-1))*100).toFixed(1); const ln = g.querySelector('.cur'); ln.setAttribute('x1', gx); ln.setAttribute('x2', gx);
-        const c = g.querySelector('circle'); if (isN(v)){ c.setAttribute('cx', gx); c.setAttribute('cy', (30 - (v-gp.lo)/(gp.hi-gp.lo)*30).toFixed(1)); c.style.display = ''; } else c.style.display = 'none';
-        g.style.display = ''; }
-      else g.style.display = 'none'; }
     // view-specific pieces
     const rg = D.range[id], tg0 = pick(tg.target, m);
     if (rg){
@@ -3160,23 +3146,9 @@ function buildDataTable(){
 }
 function highlightRow(){ const host = $('#datawrap'); host.querySelectorAll('tr.cur').forEach(t => t.classList.remove('cur')); const tr = host.querySelector(`tr[data-i="${cur}"]`); if (tr){ tr.classList.add('cur'); if (!$('#panel-data').hidden) tr.scrollIntoView({block:'nearest'}); } }
 
-/* ---------- ghost graphs (whole log) behind each tag ---------- */
-let ghostPts = {};
-function buildGhosts(){
-  ghostPts = {};
-  const step = Math.max(1, Math.ceil(D.n / 240));
-  for (const ch of ALLCH){
-    const a = D.num[ch.id], rg = D.range[ch.id]; if (!a || !rg) continue;
-    const span = (rg.max - rg.min) || 1, lo = rg.min - span*0.1, hi = rg.max + span*0.1;
-    const pts = [];
-    for (let j = 0; j < D.n; j += step){ const v = a[j]; if (!isN(v) || D.dropout[j]) continue; pts.push(((j/(D.n-1))*100).toFixed(1) + ',' + (30 - (v-lo)/(hi-lo)*30).toFixed(1)); }
-    ghostPts[ch.id] = {pts:pts.join(' '), lo, hi};
-  }
-}
-
 /* ---------- custom tags: settings UI ---------- */
 function refreshAfterCustom(){
-  if (D){ const text = D._text, model = D.model; D = buildDataset(text, D.name); D._text = text; D.model = model; analyze(); applyRefrigerant(); evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
+  if (D){ const text = D._text, model = D.model; D = buildDataset(text, D.name); D._text = text; D.model = model; analyze(); applyRefrigerant(); evalAll(); buildTrendPicker(); buildStrips(); buildDataTable(); buildDock(); }
   setLayout(); renderCustomList();
   document.querySelectorAll('#cbuild .chan').forEach(o => { const v = o.value; const n = chanSelect(v); o.replaceWith(n); n.addEventListener('change', () => { n.nextElementSibling.hidden = n.value !== '__const'; updatePreview(); }); });
 }
@@ -3404,7 +3376,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v58';
+const APP_VERSION = 'v59';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -4204,7 +4176,7 @@ function load(text, name, model){
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
   applyEquipment(); applyRefrigerant(); buildErrRef();
-  evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns(); buildSynopsis();
+  evalAll(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns(); buildSynopsis();
   $('#rulejson').value = JSON.stringify(rules, null, 1);
   setCur(0);
   const nflag = evalCache.filter(e => e.worst==='alarm'||e.worst==='warn'||e.worst==='sig').length;
