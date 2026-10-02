@@ -454,6 +454,9 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .datawrap{overflow:auto;max-height:70vh;padding:0 14px 14px}
 .ptbox{margin:0 14px 10px;border:1px solid var(--line);border-radius:10px;padding:6px 12px}.ptbox summary{cursor:pointer;font-weight:700;font-size:13px}.ptbox .note{margin:8px 0}
 .ptnow{font-family:var(--mono);font-size:12px;color:var(--ink2);margin:0 0 8px}
+.errsearch{width:100%;max-width:420px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--panel);color:var(--ink);margin:0 0 8px}
+.errwrap{display:block;max-height:60vh}.pt.err td{text-align:left;white-space:normal;vertical-align:top;font-family:var(--sans);font-size:12px;max-width:420px}.pt.err td.code{font-family:var(--mono);font-weight:800;white-space:nowrap}.pt.err td.u{color:var(--muted);white-space:nowrap}
+@media (max-width:600px){.pt.err td.u,.pt.err th:nth-child(3){display:none}.pt.err td,.pt.err th{padding:3px 6px}}
 .ptwrap{max-height:50vh;overflow:auto;display:inline-block;border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
 .ptbox table.pt{width:auto;border-collapse:collapse;font-family:var(--mono);font-size:12px}.pt th,.pt td{padding:2px 12px;text-align:right;border-bottom:1px solid var(--line)}.pt th{font-family:var(--sans);font-size:11px;color:var(--muted)}.pt .cur{background:var(--panel2);font-weight:700}
 .datawrap table{font-family:var(--mono);font-size:12px}
@@ -679,6 +682,7 @@ body.no-cabinet #indoor-var .cab{display:none}
 
   <!-- DATA -->
   <section class="panel card" id="panel-data" hidden>
+    <details class="ptbox"><summary>Error codes · what they mean and what to check first</summary><div id="errref"></div></details>
     <details class="ptbox"><summary>PT chart · R-410A and R-32</summary><div id="ptchart"></div></details>
     <h2>Rows · click a row to jump to it</h2>
     <div class="datawrap" id="datawrap"></div>
@@ -907,7 +911,7 @@ const STAT = [
   {id:'dropOther',col:51,label:'Other drop ctrl'}, {id:'fourway', lab:/^4 ?way/i,col:80,mcol:82,label:'4-way'}, {id:'svhot', lab:/^SV \(hot gas\)/i,col:88,label:'Hot gas SV'},
   {id:'compcmd', lab:/^Comp op command/i,col:104,mcol:73,label:'Comp cmd'}, {id:'fancmd', lab:/^Fan1? op command/i,col:105,label:'Fan cmd'}, {id:'iaddr', lab:/^IDU address/i,col:112,label:'IDU addr'}, {id:'imode', lab:/^Indoor operation mode/i,col:113,label:'IDU mode'}, {id:'ierr', lab:/^(Indoor err code|Error code)$/i, last:true,col:116,label:'IDU error'},
   {id:'fwmode', mcol:83, label:'4-way mode'},
-  {id:'refrig', col:1, label:'Refrigerant'}, {id:'svdrain', lab:/^SV \(drain pan\)/i, label:'Drain pan SV'}, {id:'fancmd2', lab:/^Fan2 op command/i, label:'Fan 2 cmd'},
+  {id:'refrig', col:1, label:'Refrigerant'}, {id:'ecodes', lab:/^(OU )?Error code/i, col:38, label:'Error code (raw)'}, {id:'svdrain', lab:/^SV \(drain pan\)/i, label:'Drain pan SV'}, {id:'fancmd2', lab:/^Fan2 op command/i, label:'Fan 2 cmd'},
 ];
 for (let k = 0; k < MZ.ports; k++){ const L = MZ.letters[k], b = 97 + 28*k;
   STAT.push({id:'zaddr'+k, mcol:b, label:`Zone ${L} addr`}, {id:'zmode'+k, mcol:b+1, label:`Zone ${L} mode`}, {id:'zerr'+k, mcol:b+3, label:`Zone ${L} error`}, {id:'zflow'+k, mcol:b+23, label:`Zone ${L} airflow`}, {id:'ztx'+k, mcol:b+27, label:`Zone ${L} transmission`}); }
@@ -1280,6 +1284,104 @@ function applyRefrigerant(){
   $('#refsel').value = saved; $('#refsel').options[0].textContent = D ? `Auto: ${REFNAME[det.ref]}` : 'Auto'; $('#refsel').title = REF.why;
   buildPtChart();
 }
+/* ---------- Daikin error codes ----------
+   The log stores an error as one byte (two hex digits on a FIT, a decimal on a multi). Daikin packs the code letter in the high
+   nibble (0 A, 1 C, 2 E, 3 F, 4 H, 5 J, 6 L, 7 P, 8 U) and the second character in the low nibble (0–9, then A C E F H J), so 0x84
+   reads U4 and 0x33 reads F3. That convention is taken from Daikin's bus protocol; it has not yet been confirmed against a
+   recording of a real fault, so the raw byte is always shown next to the decoded code.
+   The table is the general Daikin inverter code list (FIT / unitary and MXS / MXL multi share it); a few codes mean something
+   slightly different on a given model, so the service manual still has the last word. */
+const ERR_LETTERS = 'ACEFHJLPU', ERR_LOW = '0123456789ACEFHJ';
+function errDecode(raw, hex){
+  if (raw == null) return null; const s = String(raw).trim(); if (!s || /^(normal|0+|00)$/i.test(s)) return null;
+  if (/^[A-Z][0-9A-Z]$/i.test(s)) return {code:s.toUpperCase(), raw:s};                      // already a code
+  let m = /^error\s+(\d+)$/i.exec(s); if (m) return {code:null, raw:s, type:+m[1]};           // "Error n" = the board's error type, no code
+  if (!/^[0-9A-Fa-f]+$/.test(s)) return {code:null, raw:s};
+  const b = hex ? parseInt(s, 16) : parseInt(s, 10); if (!b) return null;
+  const hi = b >> 4, lo = b & 15, code = hi < ERR_LETTERS.length ? ERR_LETTERS[hi] + ERR_LOW[lo] : null;
+  return {code, raw:(hex ? s.toUpperCase() : '0x' + b.toString(16).toUpperCase().padStart(2, '0')), byte:b};
+}
+// t = what the code means · u = which unit raises it · ch = readings that bear on it · c = first checks, in order
+const ERRCODES = {
+  A1:{t:'Indoor PCB failure', u:'indoor', ch:[], c:['Power cycle; if it returns, check the indoor board connectors and supply voltage.', 'Replace the indoor PCB if it repeats with good power.']},
+  A3:{t:'Drain level / float switch', u:'indoor', ch:['cfm'], c:['Check the drain pan, trap and condensate line for a blockage.', 'Test the float switch and its wiring.']},
+  A5:{t:'Indoor coil freeze / high-pressure protection', u:'indoor', ch:['iliq','igas','cfm','ipress'], c:['Cooling: look for low airflow (filter, blower, duct) and a coil that ran below 32°F; check charge.', 'Heating: look for restricted airflow or an overcharged system driving head pressure up.']},
+  A6:{t:'Indoor fan motor lock or overload', u:'indoor', ch:['cfm','reqcfm'], c:['Spin the blower wheel by hand; check for debris or a seized bearing.', 'Check the motor connector and the motor supply; compare requested and actual airflow in the log.']},
+  AJ:{t:'Indoor capacity setting error', u:'indoor', ch:[], c:['Check the capacity DIP or setting on the indoor board matches the model.']},
+  C4:{t:'Indoor liquid pipe thermistor fault', u:'indoor', ch:['iliq'], c:['Check the thermistor connector on the indoor board; resistance-check the sensor.', 'Watch the Indoor liquid reading: open or shorted shows as ---, pegged or wildly off.']},
+  C5:{t:'Indoor gas pipe thermistor fault', u:'indoor', ch:['igas'], c:['Check the connector; resistance-check the sensor on the indoor coil gas pipe.']},
+  C9:{t:'Indoor return air thermistor fault', u:'indoor', ch:[], c:['Check the return air thermistor and its connector.']},
+  CJ:{t:'Thermostat / remote controller thermistor fault', u:'indoor', ch:[], c:['Check the thermostat or controller sensor and its wiring.']},
+  E1:{t:'Outdoor PCB failure', u:'outdoor', ch:[], c:['Power cycle; check the outdoor board connectors and supply.', 'Replace the outdoor PCB if it repeats.']},
+  E3:{t:'High pressure switch tripped', u:'outdoor', ch:['hp','cond','ochex','fan','oat','iliq'], c:['Cooling: dirty or blocked outdoor coil, outdoor fan not running, overcharge, non-condensables.', 'Heating: low indoor airflow (filter, blower, closed registers) or a closed stop valve.', 'Check the HPS and its wiring if the logged high pressure never reached the trip point.']},
+  E4:{t:'Low pressure protection', u:'outdoor', ch:['lp','evap','suct','ev','iev'], c:['Low charge, a restriction (strainer, EEV, drier), or low indoor airflow in cooling.', 'Heating: check the outdoor coil for ice and the defrost cycle.']},
+  E5:{t:'Compressor motor lock / overload', u:'outdoor', ch:['rps','inv1','disch','hp'], c:['Check the compressor windings and insulation and the inverter output.', 'Look for liquid flood-back or very high head pressure at the time of the trip.']},
+  E6:{t:'Compressor startup error', u:'outdoor', ch:['rps','inv1','volt'], c:['Check supply voltage and the compressor leads; look for a stuck or seized compressor.', 'Check for liquid refrigerant in the compressor at start (crankcase heat, off-cycle migration).']},
+  E7:{t:'Outdoor fan motor fault', u:'outdoor', ch:['fan','tfan','fan2','tfan2'], c:['Spin the fan by hand; check for obstruction, debris or a failed bearing.', 'Check the fan motor connector and the motor supply; compare target and actual fan rpm.']},
+  E8:{t:'Input overcurrent', u:'outdoor', ch:['syscur','inv1','volt'], c:['Check supply voltage and the reactor; look for a compressor drawing high current under a high-head condition.']},
+  E9:{t:'Outdoor EEV coil fault', u:'outdoor', ch:['ev','evpct','evinj'], c:['Check the EEV coil connector and coil resistance; make sure the coil is seated on the valve body.']},
+  EA:{t:'Reversing (4-way) valve fault', u:'outdoor', ch:['disch','suct','igas','iliq'], c:['Check the 4-way coil and its connector.', 'Compare discharge and suction behaviour at a mode change; a valve stuck mid-way shows as hot suction and a cool discharge.']},
+  F3:{t:'Discharge pipe temperature too high', u:'outdoor', ch:['disch','dsh','sh','ev','evinj','liq'], c:['Low charge or a restriction starving the compressor: check superheat and subcooling.', 'Check the discharge thermistor is clipped tight on the pipe.', 'On a multi, a port EEV that will not open starves the compressor the same way.']},
+  F6:{t:'Refrigerant overcharge / high pressure control', u:'outdoor', ch:['hp','cond','sc','liq'], c:['Check subcooling against target; recover and weigh the charge.']},
+  H0:{t:'Compressor sensor system fault', u:'outdoor', ch:['rps','inv1'], c:['Check the inverter board current sensors and connectors.']},
+  H3:{t:'High pressure switch fault', u:'outdoor', ch:['hp'], c:['Check HPS wiring and connector; the switch may be open with normal pressure.']},
+  H6:{t:'Compressor position detection fault', u:'outdoor', ch:['rps','inv1'], c:['Check the compressor leads and connector; check the inverter board.']},
+  H7:{t:'Outdoor fan motor signal fault', u:'outdoor', ch:['fan','fan2'], c:['Check the fan motor feedback connector and the motor.']},
+  H8:{t:'Compressor current sensor fault', u:'outdoor', ch:['inv1','inv2'], c:['Check the current transformer and the inverter board.']},
+  H9:{t:'Outdoor air thermistor fault', u:'outdoor', ch:['oat'], c:['Check the outdoor air thermistor connector; resistance-check the sensor.']},
+  J1:{t:'Pressure sensor fault', u:'outdoor', ch:['hp','lp'], c:['Check the pressure sensor connectors; compare logged pressures with gauges.']},
+  J3:{t:'Discharge pipe thermistor fault', u:'outdoor', ch:['disch'], c:['Check the discharge thermistor connector; resistance-check the sensor.']},
+  J5:{t:'Suction pipe thermistor fault', u:'outdoor', ch:['suct'], c:['Check the suction thermistor connector; resistance-check the sensor.']},
+  J6:{t:'Outdoor coil thermistor fault', u:'outdoor', ch:['ochex','ocmid'], c:['Check the coil (defrost) thermistor connector; resistance-check the sensor.']},
+  J7:{t:'Outdoor coil mid / liquid thermistor fault', u:'outdoor', ch:['ocmid','liq'], c:['Check the thermistor connector; resistance-check the sensor.']},
+  J8:{t:'Liquid pipe thermistor fault', u:'outdoor', ch:['liq'], c:['Check the liquid pipe thermistor connector; resistance-check the sensor.']},
+  J9:{t:'Gas pipe / subcooling thermistor fault', u:'outdoor', ch:['igas','suct'], c:['Check the thermistor connector; resistance-check the sensor.']},
+  JA:{t:'High pressure sensor fault', u:'outdoor', ch:['hp','cond'], c:['Check the HP sensor connector; compare the logged high pressure with a gauge.']},
+  JC:{t:'Low pressure sensor fault', u:'outdoor', ch:['lp','evap'], c:['Check the LP sensor connector; compare the logged low pressure with a gauge.']},
+  L1:{t:'Inverter PCB fault', u:'outdoor', ch:['inv1','fin'], c:['Check inverter board connectors and supply; replace the inverter PCB if it repeats.']},
+  L3:{t:'Electrical box temperature rise', u:'outdoor', ch:['fin','oat'], c:['Check the box for blocked ventilation and the fin / box fan.']},
+  L4:{t:'Inverter fin temperature too high', u:'outdoor', ch:['fin','oat','liq'], c:['Check the fin heatsink for dirt and airflow; on a liquid-cooled board check the liquid line is clamped to the plate.', 'High fin temperature with normal ambient points at the fin thermistor or the board.']},
+  L5:{t:'Inverter instantaneous overcurrent', u:'outdoor', ch:['inv1','rps','hp'], c:['Check the compressor windings and the inverter output; look for a locked compressor or a very high head.']},
+  L8:{t:'Compressor overcurrent (electronic thermal)', u:'outdoor', ch:['inv1','rps','hp'], c:['Check compressor current against speed in the log; look for high head pressure or a failing compressor.']},
+  L9:{t:'Compressor stall prevention', u:'outdoor', ch:['rps','inv1'], c:['Check for liquid in the compressor at start and for a seized or hard-starting compressor.']},
+  LC:{t:'Transmission error: inverter to control PCB', u:'outdoor', ch:[], c:['Check the connector between the control and inverter boards.']},
+  P1:{t:'Inverter open phase / voltage imbalance', u:'outdoor', ch:['volt','syscur'], c:['Check the supply voltage on both legs under load and the service disconnect and contactor.']},
+  P4:{t:'Inverter fin thermistor fault', u:'outdoor', ch:['fin'], c:['Check the fin thermistor connector; resistance-check the sensor.']},
+  PJ:{t:'Outdoor capacity setting error', u:'outdoor', ch:[], c:['Check the capacity setting on the outdoor board matches the model.']},
+  U0:{t:'Refrigerant shortage', u:'outdoor', ch:['sc','sh','evpct','iev','disch','lp','pev0','pev1','pev2','pev3','pev4'], c:['Leak search the flares first, then brazed joints, then the coils.', 'Recover, repair, evacuate to 500 microns with a decay test, weigh in the nameplate charge plus the line-set adder.', 'In the log: wide-open EEVs with low subcooling and high superheat before the code.']},
+  U1:{t:'Reverse phase / open phase', u:'outdoor', ch:['volt'], c:['Check the supply wiring and phase sequence.']},
+  U2:{t:'Supply voltage low or dropped', u:'outdoor', ch:['volt','syscur'], c:['Measure voltage at the unit under load; check the disconnect, breaker and wire size.', 'In the log: AC voltage sagging as compressor speed rises.']},
+  U3:{t:'Check operation not completed', u:'outdoor', ch:[], c:['Run the test / check operation from the outdoor board or controller.']},
+  U4:{t:'Transmission error: indoor to outdoor', u:'comm', ch:[], c:['Check the communication wire between units: polarity, loose terminals, shield, splices.', 'Check that both boards have power; look for a tripped indoor fuse.']},
+  U5:{t:'Transmission error: indoor to thermostat / controller', u:'comm', ch:[], c:['Check the controller wiring and connector.']},
+  U7:{t:'Transmission error between outdoor units / central control', u:'comm', ch:[], c:['Check the outdoor-to-outdoor or central control wiring.']},
+  U8:{t:'Transmission error between main and sub controllers', u:'comm', ch:[], c:['Check the controller wiring and the main / sub setting.']},
+  U9:{t:'Transmission error: another indoor unit on the system', u:'comm', ch:[], c:['On a multi, find the head reporting the fault and check its wiring.']},
+  UA:{t:'Indoor / outdoor combination or field setting mismatch', u:'comm', ch:[], c:['Check that this indoor unit is an approved match for the outdoor and that the field settings agree.']},
+  UC:{t:'Central controller address duplicated', u:'comm', ch:[], c:['Check the address settings.']},
+  UE:{t:'Transmission error with the central controller', u:'comm', ch:[], c:['Check the central control wiring.']},
+  UF:{t:'Piping and wiring mismatch', u:'comm', ch:[], c:['On a multi, make sure each head\'s line set and communication wire go to the same port.', 'Run the check operation again after correcting.']},
+  UH:{t:'System abnormality: address undefined', u:'comm', ch:[], c:['Set the addresses and run the check operation.']},
+};
+function errInfo(raw, hex){ const d = errDecode(raw, hex); if (!d) return null; const k = d.code && ERRCODES[d.code]; return Object.assign(d, {t:k ? k.t : (d.code ? 'Code not in the table' : d.type != null ? `Board error type ${d.type}` : 'Unknown code'), k}); }
+function errLabel(raw, hex){ const e = errInfo(raw, hex); if (!e) return null; return (e.code || e.raw) + (e.k ? ' · ' + e.k.t : ''); }
+// the unit's error state on a row: outdoor code (the FIT logs it as a hex byte, the multi as a decimal), indoor code, and the board's error type
+function rowErrors(i){
+  const s = D.str, out = [], multi = D.fam === 'multi';
+  const oc = multi ? s.etype[i] : (s.ecodes ? s.ecodes[i] : null); const e = errInfo(oc, !multi); const tp = !multi && s.etype[i] && /^error\s+(\d+)$/i.exec(s.etype[i]); if (e){ if (tp) e.type = +tp[1]; out.push(Object.assign({who:'Outdoor'}, e)); }
+  if (!multi && !e && s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim())) out.push({who:'Outdoor', code:null, raw:s.etype[i], t:'Board reports an error, code not logged'});
+  if (s.ierr){ const ie = errInfo(s.ierr[i], true); if (ie) out.push(Object.assign({who:'Indoor'}, ie)); }
+  if (multi) for (const k of D.zones){ const ze = errInfo(s['zerr'+k][i], false); if (ze) out.push(Object.assign({who:'Zone ' + MZ.letters[k]}, ze)); }
+  return out;
+}
+function buildErrRef(){
+  const host = $('#errref'); if (!host) return;
+  const rows = Object.entries(ERRCODES).map(([code, k]) => `<tr><td class="code">${code}</td><td>${k.t}</td><td class="u">${k.u}</td><td>${k.c.map(x => synEsc(x)).join('<br>')}</td></tr>`).join('');
+  host.innerHTML = `<p class="note">Daikin inverter error codes as the unit's board and thermostat show them. The log stores the code as one byte; the app reads the letter from the high nibble and the digit from the low one (0x84 = U4, 0x33 = F3). That reading follows Daikin's bus convention and has not yet been confirmed on a recording of a real fault, so the raw byte is always shown with it. The service manual for the model has the last word on what a code means there.</p>
+    <input class="errsearch" id="errsearch" placeholder="Filter: code or words, e.g. U4, fan, thermistor" aria-label="Filter error codes">
+    <div class="ptwrap errwrap"><table class="pt err"><thead><tr><th>Code</th><th>Meaning</th><th>Unit</th><th>First checks</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  $('#errsearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); host.querySelectorAll('tbody tr').forEach(tr => tr.hidden = !!q && !tr.textContent.toLowerCase().includes(q)); });
+}
 function buildPtChart(){
   const host = $('#ptchart'); if (!host) return;
   let h = `<p class="note">Saturation temperature by gauge pressure (CoolProp 8; R-410A dew point). In use for this log: <b>${REFNAME[REF.ref]}</b> · ${REF.why}. Superheat = suction line temperature − Te sat at LP; subcooling = Tc sat at HP − liquid line temperature.</p><div id="ptnow" class="ptnow"></div>
@@ -1429,8 +1531,7 @@ function evalRow(i){
     if (st === 'warn' || st === 'alarm') out.hits.push({ch:r.ch, st, v, rule:r});
   }
   const s = D.str, ev = [];
-  if (s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim())) ev.push({label:'Error: '+s.etype[i], st:'alarm'});
-  if (s.ierr[i] && !/^0+$/.test(s.ierr[i])) ev.push({label:'IDU error '+s.ierr[i], st:'alarm'});
+  for (const e of rowErrors(i)) if (e.who === 'Outdoor' || e.who === 'Indoor') ev.push({label:`${e.who} ${e.code || e.raw}${e.k ? ' · ' + e.k.t : ''}`, st:'alarm', title:`raw ${e.raw}${e.type != null ? ' · board error type ' + e.type : ''}`});
   for (const id of ['dropDisch','dropInv','dropHp','dropLp','dropFin']) if (s[id][i] === 'ON') ev.push({label:STAT.find(x=>x.id===id).label+' active', st:'warn'});
   if (s.dropOther[i] === 'ON') ev.push({label:'Other drop ctrl', st:'info'});
   if (s.defrost[i] === 'ON') ev.push({label:'Defrost', st:'info'});
@@ -1444,7 +1545,7 @@ function evalRow(i){
   if (D.fam === 'multi'){
     for (const id of ['limpeak','limfrz','limtd','liminv']){ const v = D.num[id][i]; if (isN(v) && v < 255) ev.push({label:chById[id].label.replace('Max Hz limit: ', '') + ' limit ' + v.toFixed(0) + ' rps', st:'warn'}); }
     if (isN(D.num.maxhz[i]) && isN(D.num.rps[i]) && D.num.rps[i] >= D.num.maxhz[i] - 1 && D.num.rps[i] > 0) ev.push({label:'At rps cap ' + D.num.maxhz[i].toFixed(0), st:'info'});
-    for (const k of D.zones){ const e2 = s['zerr'+k][i]; if (e2 && !/^0+$/.test(e2)) ev.push({label:`Zone ${MZ.letters[k]} error ${e2}`, st:'alarm'}); const tx = s['ztx'+k][i]; if (tx && !/normal/i.test(tx)) ev.push({label:`Zone ${MZ.letters[k]} transmission ${tx}`, st:'warn'}); }
+    for (const k of D.zones){ const e2 = errInfo(s['zerr'+k][i], false); if (e2) ev.push({label:`Zone ${MZ.letters[k]} ${e2.code || e2.raw}${e2.k ? ' · ' + e2.k.t : ''}`, st:'alarm', title:'raw ' + e2.raw}); const tx = s['ztx'+k][i]; if (tx && !/normal/i.test(tx)) ev.push({label:`Zone ${MZ.letters[k]} transmission ${tx}`, st:'warn'}); }
   }
   out.events = ev; out.sigs = D.sig ? D.sig[i] : [];
   let worst = 'ok';
@@ -2516,7 +2617,7 @@ function narrateRow(i){
   if (S.rulebook){ const ord = {critical:0, major:1, moderate:2, minor:3, law:4}; const top = (D.sig[i] || []).filter(x => x.st === 'rule').sort((a, b) => ord[a.sev] - ord[b.sev])[0]; if (top) parts.push(`<span class="${top.sev === 'critical' ? 'a' : top.sev === 'major' ? 'w' : ''}">${synEsc((top.rule.rid || top.rule.id) + ' ' + top.rule.title)}</span>`); }
   const sigs = (D.sig[i] || []).filter(x => (x.st === 'sig' && S.sigs) || (x.st === 'fault' && S.faults)).slice(0, 2);
   for (const x of sigs) parts.push(`<span class="${x.st === 'fault' ? 'a' : 'w'}">${synEsc(x.label)}</span>`);
-  const err = (s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim())) ? s.etype[i] : null; if (err) parts.unshift(`<span class="a">ERROR ${synEsc(err)}</span>`);
+  { const errs = rowErrors(i); if (errs.length) parts.unshift(`<span class="a">ERROR ${synEsc(errs.map(e => (e.who === 'Outdoor' ? '' : e.who + ' ') + (e.code || e.raw) + (e.k ? ' ' + e.k.t : '')).join(' · '))}</span>`); }
   return parts.join(' · ');
 }
 // whole-recording findings: {st, title, why, do}
@@ -2533,7 +2634,10 @@ function synopsisFindings(){
   const runMin = runRows.length * dt, spanMin = n * dt;
   // errors and controls
   const errRows = rows.filter(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()));
-  if (errRows.length){ const codes = [...new Set(errRows.map(i => s.etype[i]))]; F.push({st:'alarm', title:`Error code logged: ${codes.join(', ')}`, why:`${errRows.length} rows (${f0(errRows.length * dt)} min), first at ${fmtTime(D.t[errRows[0]])}`, do:'Look this code up first; everything below is secondary until it is cleared.'}); }
+  { const seen = {}; for (const i of rows) for (const e of rowErrors(i)){ if (D.fam === 'multi' && /^Zone/.test(e.who)) continue; const key = e.who + '|' + (e.code || e.raw); (seen[key] = seen[key] || {e, rows:[]}).rows.push(i); }
+    for (const {e, rows:er} of Object.values(seen)){ const chs = e.k ? e.k.ch.filter(id => chById[id] && D.num[id] && D.num[id].some(isN)).map(id => chById[id].short) : [];
+      F.push({st:'alarm', title:`${e.who} error ${e.code || e.raw}: ${e.t}`, why:`${er.length} rows (${f0(er.length * dt)} min), first at ${fmtTime(D.t[er[0]])} · raw byte ${e.raw}${e.type != null ? ` · board error type ${e.type}` : ''}${chs.length ? ` · readings that bear on it: ${chs.join(', ')}` : ''}${e.code && !e.k ? ' · not in the app\'s table — check the service manual' : ''}`,
+        fix:e.k ? e.k.c : ['Look the code up in the service manual for this model.'], do:'Clear this before judging anything else in the recording.'}); } }
   const retry = rows.filter(i => isN(num.retry[i]) && num.retry[i] !== 0);
   if (retry.length) F.push({st:'warn', title:`Retry codes ${[...new Set(retry.map(i => num.retry[i]))].join(', ')}`, why:`${retry.length} rows`, do:'Protection retries mean the unit backed off from a limit; match them to the drop controls below.'});
   for (const id of ['dropDisch','dropInv','dropHp','dropLp','dropFin']){ const r = rows.filter(i => s[id][i] === 'ON'); if (r.length >= 2) F.push({rid:'L5', st:'warn', title:`${STAT.find(x => x.id === id).label} active ${f0(r.length * dt)} min (${pct(r.length, runRows.length)}% of run time)`, why:`first at ${fmtTime(D.t[r[0]])}`, do:{dropDisch:'Discharge-temperature limiting: check charge (low charge runs hot), EV response and condenser airflow.', dropInv:'Inverter-current limiting: high load or a hot compressor; check condenser airflow, charge and line voltage.', dropHp:'High-pressure limiting: condenser airflow, fan speed, overcharge or a restricted liquid line.', dropLp:'Low-pressure limiting: low charge, starved evaporator, dirty filter or low indoor airflow.', dropFin:'Fin-temperature limiting: inverter heatsink hot; check the outdoor fan and the heatsink for debris.'}[id]}); }
@@ -2561,7 +2665,8 @@ function synopsisFindings(){
         if (hxMed >= 52 && openR.length / runRows.length >= 0.3) F.push({rid:'M13', st:'warn', title:`Zone ${L}: coil only ${f0(hxMed)}°F while metering (≤52°F just ${pct(coldShare, 1)}% of the time)`, why:`fan ${f0(fanMed)} rpm${fanMax && fanMed >= fanMax - 5 ? ' (its maximum, the whole time)' : ''}, return air ${f0(med(openR.map(i => ra[i])))}°F`, do:'Too warm to condense much moisture. Turn this head\'s fan down to Auto or Low; a slower coil runs colder and pulls more water per hour.'}); }
       const spv = med(rows.map(i => sp[i])), ram = med(runRows.map(i => ra[i])), ddm = med(runRows.map(i => dd[i]));
       if (cool && isN(spv) && isN(ram) && isN(ddm) && ram <= spv + 1 && ddm >= 4 && openR.length / runRows.length >= 0.8) F.push({rid:'M15', st:'info', title:`Zone ${L}: keeps calling (ΔD ${f0(ddm)}) although return air ${f0(ram)}°F is within 1°F of its ${f0(spv)}°F setpoint`, why:`port open ${pct(openR.length, runRows.length)}% of the time`, do:'The head is not deciding from the return-air sensor: check for the remote\'s "I feel"/room sensor mode, a sensor in a warm spot, or a setback schedule.'});
-      const errs = rows.filter(i => s['zerr'+k][i] && !/^0+$/.test(s['zerr'+k][i])); if (errs.length) F.push({st:'alarm', title:`Zone ${L} error ${[...new Set(errs.map(i => s['zerr'+k][i]))].join(', ')}`, why:`${errs.length} rows`, do:'Look up the indoor error code before anything else on this head.'});
+      { const seen = {}; for (const i of rows){ const e = errInfo(s['zerr'+k][i], false); if (e){ const key = e.code || e.raw; (seen[key] = seen[key] || {e, rows:[]}).rows.push(i); } }
+        for (const {e, rows:er} of Object.values(seen)) F.push({st:'alarm', title:`Zone ${L} error ${e.code || e.raw}: ${e.t}`, why:`${er.length} rows (${f0(er.length * dt)} min), first at ${fmtTime(D.t[er[0]])} · raw ${e.raw}`, fix:e.k ? e.k.c : ['Look the code up in the service manual.'], do:'Clear this before judging anything else on this head.'}); }
       const tx = rows.filter(i => s['ztx'+k][i] && !/normal/i.test(s['ztx'+k][i])); if (tx.length) F.push({st:'warn', title:`Zone ${L} transmission faults`, why:`${tx.length} rows`, do:'Indoor–outdoor communication dropped; check the interconnect wiring at both ends.'});
     }
   } else {
@@ -2605,7 +2710,7 @@ function synopsisTimeline(){
   for (let i = 1; i < n; i++) if (D.mode[i] !== D.mode[i - 1] && D.mode[i] !== 'other' && D.mode[i - 1] !== 'other') add(i, `Mode changed to ${s.opmode[i] || D.mode[i]}`, '');
   const flags = [['startup','Startup control',''],['defrost','Defrost','warn'],['oilret','Oil return',''],['freeze','Freeze protection','warn'],['restart','Restart standby',''],['lownoise','Low-noise mode',''],['dropDisch','Discharge-temp drop control','warn'],['dropInv','INV-current drop control','warn'],['dropHp','HP drop control','warn'],['dropLp','LP drop control','warn'],['dropFin','Fin-temp drop control','warn'],['dropOther','Other drop control',''],['svhot','Hot-gas bypass open','']];
   for (const [id, lab, st] of flags) if (s[id]) for (const e of episodes(i => s[id][i] === 'ON', 1)) E.push({i:e.a, text:lab, st, min:(e.b - e.a + 1) * dt});
-  for (const e of episodes(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()), 1)) E.push({i:e.a, text:`Error ${s.etype[e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
+  for (const e of episodes(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()), 1)) E.push({i:e.a, text:`Error ${rowErrors(e.a).map(x => x.code || x.raw).join(', ') || s.etype[e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
   for (let i = 0; i < n; i++) if (isN(num.retry[i]) && num.retry[i] !== 0 && (i === 0 || num.retry[i] !== num.retry[i - 1])) add(i, `Retry code ${num.retry[i]}`, 'warn');
   const codes = new Map(); for (let i = 0; i < n; i++) for (const x of (D.sig[i] || [])) if (x.st === 'sig' || x.st === 'fault') codes.set(x.code, x.label.replace(/ · \d+\/\d+$/, ''));
   for (const [code, lab] of codes) for (const e of episodes(i => (D.sig[i] || []).some(x => x.code === code), 3)) E.push({i:e.a, text:lab, st:code.startsWith('fault-') ? 'alarm' : 'warn', min:(e.b - e.a + 1) * dt});
@@ -2615,7 +2720,7 @@ function synopsisTimeline(){
     for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k], fan = num['ifan'+k];
       for (const e of episodes(i => isN(ev[i]) && ev[i] === 0 && D.runSec[i] >= 0, Math.max(2, Math.round(2 / dt)))) E.push({i:e.a, text:`Zone ${L} satisfied — port closed${isN(fan[e.a]) && fan[e.a] > 0 ? ', fan ' + f0(fan[e.a]) + ' rpm still running' : ''}`, st:isN(fan[e.a]) && fan[e.a] > 0 && D.mode[e.a] === 'cool' ? 'warn' : '', min:(e.b - e.a + 1) * dt});
       for (let i = 1; i < n; i++){ if (isN(fan[i]) && isN(fan[i - 1]) && fan[i] !== fan[i - 1] && fan[i] > 0 && fan[i - 1] > 0) add(i, `Zone ${L} fan ${f0(fan[i - 1])} → ${f0(fan[i])} rpm`, ''); const m0 = s['zmode'+k][i - 1], m1 = s['zmode'+k][i]; if (m1 && m0 && m1 !== m0) add(i, `Zone ${L} mode ${m0} → ${m1}`, ''); }
-      for (const e of episodes(i => s['zerr'+k][i] && !/^0+$/.test(s['zerr'+k][i]), 1)) E.push({i:e.a, text:`Zone ${L} error ${s['zerr'+k][e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
+      for (const e of episodes(i => s['zerr'+k][i] && !/^0+$/.test(s['zerr'+k][i]), 1)) E.push({i:e.a, text:`Zone ${L} error ${(errInfo(s['zerr'+k][e.a], false) || {}).code || s['zerr'+k][e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
     }
   } else {
     for (const e of episodes(i => isN(num.demand[i]) && num.demand[i] < 100 && D.runSec[i] >= 0, Math.max(2, Math.round(3 / dt)))) E.push({i:e.a, text:`Demand limited to ${f0(num.demand[e.a])}%`, st:'', min:(e.b - e.a + 1) * dt});
@@ -3168,7 +3273,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v56';
+const APP_VERSION = 'v57';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -3967,7 +4072,7 @@ function load(text, name, model){
   if (playing) togglePlay();
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
-  applyEquipment(); applyRefrigerant();
+  applyEquipment(); applyRefrigerant(); buildErrRef();
   evalAll(); buildGhosts(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns(); buildSynopsis();
   $('#rulejson').value = JSON.stringify(rules, null, 1);
   setCur(0);

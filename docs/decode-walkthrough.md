@@ -161,3 +161,12 @@ the same recording, `samples/dh9vs-20261002.csv`.
 - **Result.** 49 paired rows x 69 columns: every cell equal. The phone log holds 50 records; the PC dropped one (11:00:15).
 - **Gaps.** The raw log itself has only 50 of 83 expected samples: eight stretches of 60–210 s with nothing written. The synopsis now
   reports that ("Recording has gaps").
+
+## 9. Error codes (app v57)
+
+The log stores an error as one byte: two hex digits in a FIT export (`38:OU Error code`, `Indoor err code` / `Error code`), a decimal
+in a multi export (`3:Error code`, per-head `Error code`). `37:OU Error type` is the board's error *type* (`Normal` / `Error n`), not the
+code. The app reads the code letter from the high nibble (0 A, 1 C, 2 E, 3 F, 4 H, 5 J, 6 L, 7 P, 8 U) and the second character from the
+low nibble (0–9, then A C E F H J): 0x84 = U4, 0x33 = F3, 0x80 = U0, 0x05 = A5. This follows Daikin's bus convention and **has not yet
+been confirmed against a recording of a real fault** (every recording so far is clean), so the raw byte is always shown with the code.
+The code table (`ERRCODES`) is the general Daikin inverter list with first checks; the model's service manual has the last word.
