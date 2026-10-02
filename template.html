@@ -15,6 +15,7 @@
   --bg:#F3F5F8; --panel:#FFFFFF; --panel2:#E9EDF2; --line:#D5DBE3; --ink:#16202B; --ink2:#4E5A68; --muted:#7A8592;
   --accent:#003A70; --accent-ink:#FFFFFF; --accent-soft:#E3ECF6;
   --hi:#D9482B; --lo:#2B7BD1; --hi-soft:#FBE3DD; --lo-soft:#DCE9F8;
+  --ph-vap:#B83A5E; --ph-mix:#B08510; --ph-liq:#2F6FCC;
   --ok:#2E7D5B; --ok-soft:#DDF0E6; --warn:#B8800A; --warn-soft:#FBEFCF; --alarm:#C62828; --alarm-soft:#F9D9D9;
   --idle:#9AA3AE; --idle-soft:#EDF0F3; --metal:#CFD6DE; --metal2:#B4BEC9;
   --shadow:0 1px 2px rgba(22,32,43,.06),0 4px 14px rgba(22,32,43,.06);
@@ -27,6 +28,7 @@
     --bg:#0F151C; --panel:#182028; --panel2:#212B36; --line:#2E3946; --ink:#E9EEF3; --ink2:#B6C0CB; --muted:#7F8B98;
     --accent:#5B9BE6; --accent-ink:#0F151C; --accent-soft:#1B2A3C;
     --hi:#F0673F; --lo:#5FA0E0; --hi-soft:#3B2217; --lo-soft:#172A3E;
+    --ph-vap:#D45A7C; --ph-mix:#A8841A; --ph-liq:#4F86DB;
     --ok:#5DBB8C; --ok-soft:#173226; --warn:#E0A83A; --warn-soft:#3A2D10; --alarm:#EF6A6A; --alarm-soft:#40191B;
     --idle:#6F7B87; --idle-soft:#1D2630; --metal:#3A4652; --metal2:#4A5966;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35);
@@ -37,6 +39,7 @@
   --bg:#0F151C; --panel:#182028; --panel2:#212B36; --line:#2E3946; --ink:#E9EEF3; --ink2:#B6C0CB; --muted:#7F8B98;
   --accent:#5B9BE6; --accent-ink:#0F151C; --accent-soft:#1B2A3C;
   --hi:#F0673F; --lo:#5FA0E0; --hi-soft:#3B2217; --lo-soft:#172A3E;
+  --ph-vap:#D45A7C; --ph-mix:#A8841A; --ph-liq:#4F86DB;
   --ok:#5DBB8C; --ok-soft:#173226; --warn:#E0A83A; --warn-soft:#3A2D10; --alarm:#EF6A6A; --alarm-soft:#40191B;
   --idle:#6F7B87; --idle-soft:#1D2630; --metal:#3A4652; --metal2:#4A5966;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.35);
@@ -151,6 +154,59 @@ body.no-narr .nowline{display:none}
 .viewbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px 0}
 .viewlbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .viewsel{display:flex;gap:2px;background:var(--panel2);border-radius:8px;padding:3px}
+/* 3D stage */
+.mode3d .diagwrap,.mode3d #viewsel,.mode3d .viewlbl{display:none}
+.v3wrap{position:relative;margin:0 0 6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.v3wrap[hidden]{display:none}
+.v3wrap canvas{display:block;width:100%;height:min(66vh,780px);touch-action:none;cursor:grab;outline:none}
+.v3wrap canvas:active{cursor:grabbing}
+#v3labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.v3chip{position:absolute;left:0;top:0;visibility:hidden;pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:1px 5px 2px;line-height:1.12;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:pointer;will-change:transform}
+.v3chip b{display:block;font-size:8.5px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.v3chip .v{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--ink)}
+.v3chip.warn{border-color:var(--warn);border-width:2px}.v3chip.alarm{border-color:var(--alarm);border-width:2px}
+.v3chip.pin{outline:2px solid var(--accent);outline-offset:1px}
+.v3lead{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.v3lead line{stroke:var(--ink2);stroke-width:1;opacity:.7}.v3lead circle{fill:var(--ink);stroke:var(--panel);stroke-width:1.2}
+.v3lead line.warn{stroke:var(--warn);opacity:1}.v3lead line.alarm{stroke:var(--alarm);opacity:1}.v3lead circle.warn{fill:var(--warn)}.v3lead circle.alarm{fill:var(--alarm)}
+.v3chip.name{background:transparent;border:0;box-shadow:none;padding:0;font-weight:800;font-size:10px;letter-spacing:.14em;color:var(--muted);pointer-events:none}
+.v3btns{position:absolute;right:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:66%}
+.v3btns button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;opacity:.92}
+.v3btns button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.v3modes{position:absolute;left:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap;max-width:30%;z-index:2}
+.v3modes button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;opacity:.95}
+.v3modes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.v3legend{position:absolute;left:8px;bottom:24px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11px;color:var(--ink2);display:flex;flex-direction:column;gap:3px;max-width:min(240px,60%);z-index:2;pointer-events:none}
+.v3legend[hidden]{display:none}.v3legend b{color:var(--ink);font-size:11px}.v3legend span{display:flex;align-items:center;gap:6px}
+.v3legend i{display:inline-block;width:22px;height:9px;border-radius:3px}.v3legend i.lo{opacity:.55}.v3legend small{color:var(--muted);font-size:10px;line-height:1.3}
+.v3card{position:absolute;left:8px;bottom:24px;width:min(380px,calc(100% - 16px));max-height:62%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:10px 12px 12px;font-size:12.5px;line-height:1.45;color:var(--ink2);z-index:4}
+.v3card[hidden]{display:none}
+.v3card .t{display:block;color:var(--ink);font-size:14px;font-weight:800;padding-right:26px}
+.v3card .st{font-size:11.5px;font-weight:700;color:var(--accent);margin-top:2px}
+.v3card p{margin:6px 0}
+.v3card .x{position:absolute;right:6px;top:6px;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
+.v3card .x:hover{background:var(--panel2);color:var(--ink)}
+.v3card .kv{display:flex;flex-direction:column;gap:4px;margin:6px 0;border-top:1px solid var(--line);padding-top:6px}
+.v3card .kv div{display:grid;grid-template-columns:1fr auto;column-gap:10px}
+.v3card .kv span{color:var(--ink2)}.v3card .kv b{color:var(--ink);font-family:var(--mono);font-size:12.5px;text-align:right}
+.v3card .kv i{grid-column:1 / -1;font-style:normal;font-size:11px;color:var(--muted)}
+.v3card .pump{display:flex;gap:10px;align-items:center;margin:6px 0;border-top:1px solid var(--line);padding-top:6px}.v3card .pump svg{width:132px;height:132px;flex:none}.v3card .pump small{font-size:11px;color:var(--muted);line-height:1.35}
+.v3card .phlink{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:6px;padding:5px 8px;font-size:11.5px;font-weight:700;cursor:pointer;margin:6px 0}
+.v3card .rl{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.v3card .rl em{width:100%;font-style:normal;font-size:11px;color:var(--muted)}
+.v3card .rl span{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--ink2)}
+.v3card .rl span.on{border-color:var(--alarm);background:var(--alarm-soft);color:var(--ink);font-weight:700}
+.phbox{margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:8px 10px 10px}
+.phbox[hidden]{display:none}
+.phhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.phhead b{font-size:13px;color:var(--ink)}.phhead span{font-size:11.5px;color:var(--muted)}
+.phcv{position:relative}.phcv canvas{display:block;width:100%;height:300px;touch-action:pan-y}
+@media (max-width:600px){.phcv canvas{height:250px}.v3modes button{padding:3px 7px;font-size:10px}}
+.phtip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:500 11.5px/1.35 var(--mono);padding:6px 8px;border-radius:6px;max-width:260px;z-index:3}
+.phtip[hidden]{display:none}
+.phread{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--ink2);margin-top:4px}.phread b{color:var(--ink);font-family:var(--mono)}
+.phread .note{flex-basis:100%;font-size:11px;color:var(--muted)}
+.v3hint{position:absolute;left:10px;bottom:6px;font-size:10px;color:var(--muted);pointer-events:none}
+.v3msg{position:absolute;left:12px;right:12px;top:44px;font-size:13px;color:var(--ink2);pointer-events:none}
+@media (max-width:600px){.v3wrap canvas{height:min(62vh,640px)}.v3chip .v{font-size:11px}.v3chip b{font-size:8px}.v3btns button{padding:3px 7px;font-size:10px}}
 .viewsel button{border:0;background:transparent;border-radius:6px;padding:5px 11px;font-weight:700;font-size:12px;color:var(--ink2)}
 .viewsel button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
 .viewnote{font-size:12px;color:var(--muted)}
@@ -483,6 +539,7 @@ body.no-cabinet #indoor-var .cab{display:none}
   <section class="panel" id="panel-cycle">
     <div class="card">
       <div class="viewbar">
+        <div class="viewsel" role="group" id="dimsel"><button type="button" data-dim="3d" aria-pressed="false" title="Rotatable 3D model">3D</button><button type="button" data-dim="2d" aria-pressed="true" title="Flat schematic with every reading">2D</button></div>
         <span class="viewlbl">View</span>
         <div class="viewsel" role="group" id="viewsel">
           <button type="button" data-view="num" aria-pressed="true" title="Numbers with change arrows">123</button>
@@ -518,6 +575,17 @@ body.no-cabinet #indoor-var .cab{display:none}
         </svg>
         <div id="tags"></div>
       </div></div>
+      <div class="v3wrap" id="v3wrap" hidden>
+        <canvas id="v3"></canvas>
+        <div id="v3labels"></div>
+        <div class="v3btns" id="v3btns"><button type="button" data-v="reset" title="Back to the starting view">Reset</button><button type="button" data-v="front">Front</button><button type="button" data-v="side">Side</button><button type="button" data-v="top">Top</button><button type="button" data-v="covers" aria-pressed="false" title="Put the cabinets, panels and doors on or take them off">Covers</button><button type="button" data-v="labels" aria-pressed="true" title="Show or hide the readings">Readings</button></div>
+        <div class="v3modes" id="v3modes"><button type="button" data-m="phase" aria-pressed="false" title="Colour the refrigerant by its state: vapour, boiling or condensing mix, liquid">Phase</button><button type="button" data-m="xray" aria-pressed="false" title="See inside the compressor, accumulator, reversing valve and expansion valves">X-ray</button><button type="button" data-m="ph" aria-pressed="false" title="Show this moment's cycle on a pressure-enthalpy chart">P-h</button></div>
+        <div class="v3legend" id="v3legend" hidden></div>
+        <div class="v3card" id="v3card" hidden></div>
+        <div class="v3hint">Tap a part to learn about it · drag to rotate · pinch to zoom · double tap to reset</div>
+        <div class="v3msg" id="v3msg"></div>
+      </div>
+      <div class="phbox" id="phbox" hidden><div class="phhead"><b>Pressure–enthalpy (P-h) chart</b><span id="phsub"></span></div><div class="phcv"><canvas id="phc" aria-label="Pressure-enthalpy chart of the live refrigeration cycle"></canvas><div class="phtip" id="phtip" hidden></div></div><div class="phread" id="phread"></div></div>
       <div class="hint">Tap any reading to pin its trend to the bottom bar · ▲▼ show change from the previous row · readings with a target show the deviation (amber over, red under, green on target)</div>
       <div class="legend">
         <span><i style="background:var(--hi)"></i>High side</span>
@@ -1130,7 +1198,7 @@ let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
-function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); }
+function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); if (V3) V3.kick(); }
 function applySettings(){
   saveJSON('dchk.settings', S); syncAnim();
   const b = document.body;
@@ -1929,6 +1997,7 @@ function setLayout(){
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
   buildDiagram(); buildTags();
     if (D && evalCache && evalCache.length === D.n && cur < D.n) renderCycle(cur);
+  if (V3) V3.build();
 }
 // circuit components as on the Daikin FIT drawing: strainers, filter drier, check valves, muffler, HPS, service port, fusible plug
 function partSym(g, it){
@@ -2194,6 +2263,7 @@ function renderCycle(i){
   const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
   if (!$('#panel-data').hidden) renderPtNow(i);
+  if (V3) V3.setRow(i);
   if (FAM === 'multi') renderMulti(i, m, running);
   else {
   $('#iduhdr').textContent = [im, ia != null ? 'addr ' + ia : null, ie != null ? 'err ' + ie : null].filter(Boolean).join(' · ');
@@ -2996,7 +3066,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v52';
+const APP_VERSION = 'v53';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -3108,6 +3178,662 @@ document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('c
   try { await sbInsert('feedback', {recording_id:CURRENT_REC.id, verdict:b.dataset.v, note:$('#fbnote').value.trim() || null}); toast('Thanks — feedback saved'); $('#fbnote').value = ''; } catch(e){ toast('Could not save feedback: ' + e.message); }
 }));
 
+/* ====================== 3D cycle view (WebGL, no libraries) ======================
+   A rotatable model of the outdoor unit, the line set(s) and the indoor unit or mini-split heads. Pipes take the same thermal
+   colours, flow direction and idle rules as the 2D drawing (same pipe ids, segTemp(), zone gating). Renders on demand; the only
+   continuous work is the flow bands while playing. One finger orbits, two fingers pinch-zoom and pan, double tap resets. */
+/* ====================== learning layer: refrigerant properties, live cycle, phase, component cards ======================
+   PHT rows (CoolProp 8, ASHRAE reference: h = 0 for saturated liquid at −40 °F), every 5 °F from −40 to 150 °F:
+   [T °F, bubble psig, dew psig, h liquid, h vapour, h vapour at +20/+40/+60/+80/+100 °F superheat (at the dew pressure)], h in Btu/lb */
+const PHT = {"R410A":[[-40,10.8,10.7,-0.0,113.0,117.03,120.94,124.83,128.72,132.65],[-35,14.1,14.0,1.66,113.58,117.67,121.63,125.56,129.49,133.46],[-30,17.8,17.7,3.33,114.14,118.3,122.31,126.29,130.26,134.26],[-25,21.9,21.8,5.01,114.7,118.92,122.99,127.01,131.02,135.06],[-20,26.3,26.2,6.69,115.24,119.53,123.65,127.72,131.78,135.85],[-15,31.2,31.0,8.38,115.77,120.13,124.31,128.42,132.52,136.64],[-10,36.5,36.3,10.08,116.29,120.72,124.96,129.12,133.27,137.42],[-5,42.2,42.0,11.8,116.8,121.29,125.59,129.81,134.0,138.2],[0,48.4,48.2,13.52,117.29,121.86,126.22,130.49,134.73,138.97],[5,55.2,54.9,15.25,117.76,122.41,126.83,131.16,135.44,139.73],[10,62.4,62.2,17.0,118.22,122.95,127.44,131.82,136.15,140.48],[15,70.3,70.0,18.75,118.66,123.47,128.03,132.47,136.85,141.23],[20,78.7,78.4,20.52,119.08,123.98,128.61,133.11,137.54,141.96],[25,87.7,87.4,22.31,119.48,124.48,129.18,133.73,138.23,142.69],[30,97.4,97.0,24.11,119.86,124.96,129.73,134.35,138.9,143.42],[35,107.7,107.3,25.92,120.22,125.42,130.27,134.95,139.56,144.13],[40,118.8,118.4,27.75,120.56,125.86,130.79,135.55,140.21,144.83],[45,130.6,130.1,29.6,120.87,126.28,131.3,136.13,140.85,145.52],[50,143.1,142.6,31.47,121.15,126.69,131.8,136.69,141.47,146.2],[55,156.5,156.0,33.36,121.41,127.07,132.27,137.24,142.09,146.88],[60,170.7,170.1,35.27,121.63,127.43,132.73,137.78,142.69,147.54],[65,185.8,185.1,37.21,121.82,127.77,133.17,138.3,143.28,148.18],[70,201.7,201.1,39.17,121.98,128.08,133.59,138.8,143.86,148.82],[75,218.6,217.9,41.15,122.09,128.36,133.99,139.29,144.42,149.45],[80,236.5,235.7,43.17,122.17,128.62,134.37,139.76,144.97,150.06],[85,255.4,254.6,45.22,122.19,128.85,134.72,140.22,145.5,150.66],[90,275.3,274.5,47.3,122.16,129.05,135.06,140.65,146.02,151.25],[95,296.4,295.4,49.42,122.08,129.21,135.36,141.07,146.52,151.82],[100,318.5,317.6,51.58,121.93,129.33,135.65,141.46,147.0,152.38],[105,341.9,340.8,53.79,121.7,129.42,135.9,141.83,147.47,152.92],[110,366.5,365.4,56.05,121.4,129.47,136.13,142.19,147.91,153.45],[115,392.3,391.2,58.38,121.0,129.47,136.33,142.52,148.34,153.96],[120,419.5,418.3,60.77,120.48,129.43,136.5,142.82,148.75,154.46],[125,448.0,446.8,63.25,119.83,129.34,136.63,143.1,149.15,154.94],[130,478.0,476.8,65.84,119.02,129.19,136.73,143.36,149.52,155.4],[135,509.5,508.4,68.56,118.0,128.99,136.79,143.59,149.86,155.84],[140,542.6,541.5,71.47,116.7,128.72,136.82,143.79,150.19,156.26],[145,577.4,576.3,74.65,115.02,128.39,136.81,143.96,150.49,156.67],[150,613.9,613.0,78.26,112.74,127.98,136.75,144.09,150.76,157.05]],"R32":[[-40,11.0,11.0,-0.0,158.55,162.89,167.06,171.16,175.24,179.33],[-35,14.4,14.4,1.93,159.08,163.49,167.72,171.87,175.99,180.12],[-30,18.2,18.2,3.86,159.6,164.08,168.36,172.56,176.73,180.9],[-25,22.3,22.3,5.8,160.09,164.65,168.99,173.24,177.46,181.67],[-20,26.8,26.8,7.76,160.57,165.21,169.61,173.91,178.17,182.43],[-15,31.7,31.7,9.72,161.03,165.74,170.21,174.57,178.88,183.18],[-10,37.1,37.1,11.69,161.47,166.27,170.8,175.22,179.58,183.92],[-5,42.9,42.9,13.67,161.89,166.77,171.38,175.85,180.26,184.65],[0,49.3,49.3,15.66,162.29,167.26,171.93,176.47,180.93,185.37],[5,56.1,56.1,17.66,162.66,167.73,172.48,177.07,181.59,186.08],[10,63.5,63.5,19.68,163.02,168.18,173.0,177.66,182.24,186.78],[15,71.4,71.4,21.7,163.35,168.6,173.51,178.23,182.87,187.46],[20,80.0,80.0,23.75,163.65,169.01,174.0,178.79,183.49,188.14],[25,89.2,89.2,25.8,163.92,169.39,174.46,179.33,184.09,188.79],[30,99.1,99.1,27.87,164.17,169.75,174.91,179.86,184.68,189.44],[35,109.7,109.7,29.96,164.39,170.09,175.34,180.36,185.25,190.07],[40,121.0,121.0,32.07,164.58,170.4,175.75,180.85,185.81,190.69],[45,133.0,133.0,34.19,164.73,170.69,176.13,181.32,186.35,191.29],[50,145.8,145.8,36.34,164.85,170.94,176.5,181.76,186.87,191.88],[55,159.5,159.5,38.5,164.93,171.17,176.84,182.19,187.37,192.45],[60,174.0,174.0,40.69,164.97,171.37,177.15,182.6,187.86,193.0],[65,189.5,189.5,42.9,164.97,171.54,177.44,182.98,188.32,193.54],[70,205.8,205.8,45.13,164.93,171.67,177.7,183.35,188.77,194.06],[75,223.2,223.2,47.4,164.83,171.77,177.93,183.68,189.2,194.56],[80,241.5,241.5,49.69,164.69,171.83,178.14,184.0,189.6,195.05],[85,260.9,260.9,52.02,164.49,171.86,178.31,184.29,189.99,195.51],[90,281.3,281.3,54.38,164.23,171.84,178.46,184.55,190.35,195.96],[95,302.9,302.9,56.78,163.91,171.79,178.57,184.79,190.69,196.38],[100,325.7,325.7,59.23,163.52,171.68,178.64,185.0,191.01,196.79],[105,349.6,349.6,61.72,163.05,171.53,178.69,185.18,191.3,197.18],[110,374.9,374.9,64.26,162.49,171.34,178.69,185.34,191.57,197.54],[115,401.4,401.4,66.86,161.84,171.08,178.66,185.46,191.81,197.88],[120,429.3,429.3,69.53,161.08,170.78,178.59,185.55,192.03,198.21],[125,458.7,458.7,72.28,160.19,170.41,178.48,185.61,192.22,198.5],[130,489.5,489.5,75.11,159.17,169.98,178.33,185.64,192.38,198.78],[135,521.8,521.8,78.06,157.98,169.48,178.13,185.63,192.52,199.03],[140,555.8,555.8,81.13,156.58,168.91,177.88,185.59,192.62,199.25],[145,591.4,591.4,84.36,154.94,168.26,177.59,185.51,192.7,199.45],[150,628.8,628.8,87.8,152.99,167.54,177.24,185.39,192.74,199.62]]};
+const phRows = ref => PHT[ref] || PHT.R410A, PHCRIT = {R410A:[160.4, 696.2, 97.4], R32:[172.6, 824.0, 120.8]};   // critical point: °F, psig, Btu/lb
+function phAt(T, ref, col){ const R = phRows(ref); if (!isN(T)) return null; const x = Math.max(0, Math.min(R.length - 1.001, (T + 40)/5)), k = Math.floor(x), f = x - k; return R[k][col] + (R[k+1][col] - R[k][col])*f; }
+const psigAt = (T, ref) => phAt(T, ref, 2), hLiq = (T, ref) => phAt(T, ref, 3), hSatV = (T, ref) => phAt(T, ref, 4);
+// enthalpy of vapour at temperature T whose saturation temperature is Ts (superheat T − Ts, extrapolated past 100 °F)
+function hVapT(Ts, T, ref){ if (!isN(Ts)) return null; const d = Math.max(0, (isN(T) ? T : Ts) - Ts), pts = [0, 20, 40, 60, 80, 100].map((s, j) => [s, phAt(Ts, ref, 4 + j)]);
+  let k = 1; while (k < pts.length - 1 && d > pts[k][0]) k++; const [a, b] = [pts[k-1], pts[k]]; return a[1] + (b[1] - a[1])*(d - a[0])/(b[0] - a[0]); }
+const PSIA = 14.696;
+
+// the live vapour-compression cycle for row i: saturation temperatures, the four state points and the energy split
+function cycleAt(i){
+  if (!D || !isN(i) || i < 0 || i >= D.n) return null;
+  const v = id => (D.num[id] ? D.num[id][i] : null), ref = REF.ref || 'R410A', run = D.runSec[i] >= 0;
+  const m = EQ.out === 'ac' ? 'cool' : (D.mode[i] === 'cool' ? 'cool' : 'heat'), c = {i, m, run, ref, est:false, notes:[], ok:false};
+  const mean = a => { const b = a.filter(isN); return b.length ? b.reduce((s, x) => s + x, 0)/b.length : null; };
+  if (D.fam !== 'multi'){
+    c.Pc = v('hp'); c.Pe = v('lp'); c.Tc = isN(c.Pc) ? satF(c.Pc, ref) : v('cond'); c.Te = isN(c.Pe) ? satF(c.Pe, ref) : v('evap');
+    if (!isN(c.Pc) && isN(c.Tc)) c.Pc = psigAt(c.Tc, ref); if (!isN(c.Pe) && isN(c.Te)) c.Pe = psigAt(c.Te, ref);
+    c.T1 = v('suct'); c.T2 = v('disch'); c.T3 = c.m === 'heat' ? v('iliq') : v('liq');
+    c.src = {T1:'suction temp', T2:'discharge temp', T3:c.m === 'heat' ? 'indoor liquid temp' : 'liquid pipe temp', P:'high and low pressure sensors'};
+  } else {
+    c.est = true; const open = D.zones.filter(k => isN(v('pev'+k)) && v('pev'+k) > 0), Z = open.length ? open : D.zones, A = p => mean(Z.map(k => v(p + k)));
+    if (c.m === 'cool'){ c.Tc = v('ochex'); c.Te = A('ihx'); c.T1 = A('rmgas'); c.T3 = isN(c.Tc) ? c.Tc - 5 : null; c.notes.push('condenser outlet assumed 5°F subcooled (no liquid sensor before the port EEVs)'); }
+    else { c.Tc = A('ihx'); c.Te = v('ochex'); c.T1 = isN(c.Te) ? c.Te + 5 : null; c.T3 = A('rmliq'); c.notes.push('compressor inlet assumed 5°F superheat (no suction sensor)'); }
+    c.T2 = v('disch'); c.Pc = isN(c.Tc) ? psigAt(c.Tc, ref) : null; c.Pe = isN(c.Te) ? psigAt(c.Te, ref) : null;
+    c.notes.unshift('mini-split boards log no pressures: saturation is taken from the coil temperatures');
+    c.src = {T1:c.m === 'cool' ? 'head gas temps' : 'assumed', T2:'discharge temp', T3:c.m === 'cool' ? 'assumed' : 'head liquid temps', P:'coil temperatures'};
+  }
+  c.sh = isN(c.T1) && isN(c.Te) ? c.T1 - c.Te : null; c.sc = isN(c.T3) && isN(c.Tc) ? c.Tc - c.T3 : null; c.dsh = isN(c.T2) && isN(c.Tc) ? c.T2 - c.Tc : null;
+  if (!run || ![c.Tc, c.Te, c.Pc, c.Pe].every(isN) || c.Tc <= c.Te) return c;
+  c.h1 = hVapT(c.Te, isN(c.T1) ? Math.max(c.T1, c.Te) : c.Te, ref); c.h2 = isN(c.T2) ? hVapT(c.Tc, Math.max(c.T2, c.Tc), ref) : null;
+  c.h3 = hLiq(isN(c.T3) ? Math.min(c.T3, c.Tc) : c.Tc, ref); c.h4 = c.h3;
+  c.ok = [c.h1, c.h2, c.h3].every(isN) && c.h2 > c.h1;
+  if (c.ok){ c.qe = c.h1 - c.h4; c.w = c.h2 - c.h1; c.qc = c.h2 - c.h3; c.cop = (c.m === 'cool' ? c.qe : c.qc)/c.w; c.ratio = (c.Pc + PSIA)/(c.Pe + PSIA); }
+  return c;
+}
+
+// what each pipe carries: [state, side, check]  vap / mix / liq, hi / lo; 'sc' = liquid that flashes if not below Tc, 'sh' = vapour that is wet if not above Te
+function pipeRole(id, m){ const cool = m === 'cool', multi = D && D.fam === 'multi', z = id.replace(/\d$/, '');
+  switch (z){
+    case 'disch': return ['vap', 'hi']; case 'sv': return ['vap', 'hi']; case 'suct': return ['vap', 'lo', 'sh'];
+    case 'oc-in': return cool ? ['vap', 'hi'] : ['vap', 'lo', 'sh'];
+    case 'oc-out': case 'lhdr': case 'zh': return cool ? ['liq', 'hi', 'sc'] : ['mix', 'lo'];
+    case 'liq': return ['liq', 'hi', 'sc'];
+    case 'ic-in': case 'zl': return cool ? ['mix', 'lo'] : ['liq', 'hi', 'sc'];
+    case 'gas': case 'zg': case 'ghdr': case 'griser': return cool ? ['vap', 'lo', 'sh'] : ['vap', 'hi'];
+  } return null; }
+const PHASE_NAME = {vap:'superheated vapour', mix:'liquid + vapour (boiling or condensing)', liq:'subcooled liquid'};
+function phaseOf(id, i, m, cyc){ const r = pipeRole(id, m); if (!r) return null; let [st, side, chk] = r; const t = segTemp(id, i, m);
+  if (cyc && isN(t)){ if (chk === 'sc' && isN(cyc.Tc) && t >= cyc.Tc - 1) st = 'mix'; if (chk === 'sh' && isN(cyc.Te) && t <= cyc.Te + 1) st = 'mix'; }
+  return {st, side, t, flagged:st !== r[0]}; }
+
+/* ---- component cards: what it is, what it is doing in this mode, what the readings mean, which rules watch it ---- */
+const lf0 = x => isN(x) ? Math.round(x).toString() : '—', lf1 = x => isN(x) ? (Math.round(x*10)/10).toString() : '—';
+const KV = (lbl, id, i) => { const c = chById[id]; if (!c || !D.num[id]) return null; const v = D.num[id][i]; return isN(v) ? [lbl || c.short, fmt(v, c) + (c.unit ? ' ' + c.unit : '')] : null; };
+const KB = {
+  compressor:{t:'Compressor (inverter rotary)', ph:'12', rules:['L4','L5','S1','S2','M1','M3','M4'],
+    what:m => 'The pump of the system. It draws low-pressure vapour out of the accumulator and squeezes it into hot, high-pressure vapour, which is what lets the condenser give heat away. The inverter drive changes its speed (rps) to match the load instead of cycling on and off. In a swing compressor the motor sits on top and the pump at the bottom; the diagram shows the pump as it runs. Turn on X-ray to see the same parts moving inside the shell.',
+    live:(i, c) => [KV('Speed', 'rps', i), KV('Target speed', 'trps', i), c && isN(c.dsh) ? ['Discharge superheat', lf0(c.dsh) + ' °F', `Td − Tc. Steady running usually sits between ${RT.dshLo} and ${RT.dshHi}°F: low means liquid is getting back to the compressor, high means it is starved.`] : null, c && c.ok ? ['Compression ratio', lf1(c.ratio) + ' : 1', 'absolute discharge ÷ suction pressure'] : null]},
+  accum:{t:'Suction accumulator', ph:'1', rules:['S1','M3'],
+    what:m => 'A trap in the suction line right before the compressor. Vapour is drawn off the top through a J-tube that rises inside the shell, so liquid that comes back falls to the bottom instead of slugging the compressor. A small hole low in the J-tube meters oil (and a little liquid) back so they cannot collect. In heating and at low load it also stores refrigerant the system does not need.',
+    live:(i, c) => [KV('Suction temp', 'suct', i), c && isN(c.Te) ? ['Evaporating (Te)', lf0(c.Te) + ' °F' + (c.est ? ' est.' : '')] : null, c && isN(c.sh) ? ['Suction superheat', lf0(c.sh) + ' °F', `Ts − Te. Under about ${RT.sshLo}°F means liquid is reaching the accumulator.`] : null]},
+  fourway:{t:'Reversing (4-way) valve', rules:[],
+    what:m => 'Decides which coil is the condenser. A small pilot solenoid uses system pressure to slide a cup inside the valve body. In one position hot discharge gas goes to the outdoor coil (cooling); in the other it goes to the indoor coil (heating). The middle port always returns suction gas to the compressor through the accumulator. Defrost is simply a short switch back to the cooling position.',
+    live:(i, c) => [['Mode now', c ? (c.m === 'cool' ? 'Cooling: hot gas → outdoor coil' : 'Heating: hot gas → indoor coil') : '—'], D.str.fourway && D.str.fourway[i] ? ['Pilot solenoid', D.str.fourway[i]] : null]},
+  ocoil:{t:'Outdoor coil', ph:m => m === 'cool' ? '23' : '41', rules:['S7','S9','M6','M8','M9'],
+    what:m => m === 'cool' ? 'In cooling it is the condenser. Hot vapour enters at the top, gives its heat to the outdoor air, condenses to liquid across the middle of the coil at the condensing temperature (Tc), and leaves the bottom slightly colder than Tc: subcooled.' : 'In heating it is the evaporator. Low-pressure liquid from the expansion valve boils in the tubes at the evaporating temperature (Te) by taking heat out of the outdoor air. When Te falls below freezing the coil frosts, and the unit runs defrost to clear it.',
+    live:(i, c) => [KV('Coil temp', 'ochex', i), KV('Outdoor air', 'oat', i), isN(D.num.ochex && D.num.ochex[i]) && isN(D.num.oat && D.num.oat[i]) ? ['Coil − outdoor air', lf1(D.num.ochex[i] - D.num.oat[i]) + ' °F', c && c.m === 'cool' ? `Condenser approach. Above about ${RT.approachHi}°F at high speed points at a dirty coil or recirculation (S7).` : 'How far below the air the coil runs to pick heat up; very wide means the coil is starved or iced (S9).'] : null]},
+  ofan:{t:'Outdoor fan (batwing propeller)', rules:['S7','M8'],
+    what:m => 'Pulls outdoor air through the coil and throws it out of the front grille. The board varies its speed: in cooling to hold head pressure, in heating to pick up heat. It stops during defrost so the coil can warm up.',
+    live:i => [KV('Fan speed', 'fan', i), KV('Target', 'tfan', i), KV('Outdoor air', 'oat', i)]},
+  oev:{t:'Outdoor expansion valve (EEV)', ph:m => m === 'heat' ? '34' : null, rules:['S9'],
+    what:m => m === 'heat' ? 'A stepper-motor needle valve and, in heating, the metering device: it drops the high-pressure liquid coming back from the indoor coil to low pressure before the outdoor coil. The board steps the needle open or closed to hold superheat at the coil outlet. Under X-ray you can watch the needle lift as it opens.' : 'A stepper-motor needle valve. In cooling it sits well open and trims subcooling toward the target the board logs, while the indoor valve does the main pressure drop. Under X-ray you can watch the needle lift as it opens.',
+    live:(i, c) => [KV('Opening', 'evpct', i), KV('Pulses', 'ev', i), c && c.m === 'heat' && isN(c.sh) ? ['Superheat it is holding', lf0(c.sh) + ' °F'] : null]},
+  disch:{t:'Discharge line', ph:'2', rules:['S2','L5'],
+    what:m => 'From the top of the compressor to the reversing valve: the hottest pipe in the system. The discharge thermistor on it (Td) is the board\'s best view of how hard the compressor is working; it derates speed before Td gets dangerous.',
+    live:(i, c) => [KV('Discharge temp (Td)', 'disch', i), c && isN(c.Tc) ? ['Condensing (Tc)', lf0(c.Tc) + ' °F' + (c.est ? ' est.' : '')] : null, c && isN(c.dsh) ? ['Discharge superheat', lf0(c.dsh) + ' °F'] : null]},
+  suct:{t:'Suction line', ph:'1', rules:['S1'],
+    what:m => 'From the reversing valve to the accumulator: low-pressure vapour heading back to the compressor. The suction thermistor and the low-pressure sensor here give suction superheat, the check that only vapour is coming back.',
+    live:(i, c) => [KV('Suction temp', 'suct', i), KV('Low pressure', 'lp', i), c && isN(c.sh) ? ['Suction superheat', lf0(c.sh) + ' °F'] : null]},
+  ocpipe:{t:'Reversing valve ↔ outdoor coil', ph:m => m === 'cool' ? '2' : '1', rules:[],
+    what:m => m === 'cool' ? 'Cooling: hot discharge gas from the reversing valve into the top of the outdoor coil.' : 'Heating: vapour boiled off in the outdoor coil on its way back to the reversing valve and the compressor.', live:i => []},
+  ocliq:{t:'Outdoor coil liquid side', ph:m => m === 'cool' ? '3' : '4', rules:[],
+    what:m => m === 'cool' ? 'Cooling: subcooled liquid leaving the bottom of the outdoor coil toward the liquid line.' : 'Heating: low-pressure liquid and flash gas leaving the expansion valve on their way into the outdoor coil to boil.', live:i => []},
+  liqline:{t:'Liquid line', ph:'3', rules:['S2'],
+    what:m => `The small pipe of the line set. It carries high-pressure liquid from the condenser to the metering valve (${m === 'cool' ? 'outdoor → indoor in cooling' : 'indoor → outdoor in heating'}). It must stay below its saturation temperature (subcooled), or it starts flashing to gas and starves the valve.`,
+    live:(i, c) => [KV('Liquid pipe', 'liq', i), KV('Indoor liquid', 'iliq', i), KV('Subcooling (Tc − liquid pipe)', 'sc', i), KV('Target subcooling', 'tsc', i), c && c.m === 'heat' && isN(c.sc) ? ['Subcooling leaving the indoor coil', lf0(c.sc) + ' °F', 'Tc − indoor liquid: how far below saturation the liquid is as it leaves the condenser.'] : null, ['What subcooling tells you', '', 'Low means short of charge or flash gas in the line; high means a restriction or too much charge.']]},
+  gasline:{t:'Gas (vapour) line', ph:m => m === 'cool' ? '1' : '2', rules:[],
+    what:m => m === 'cool' ? 'The large pipe of the line set. In cooling it brings low-pressure vapour back from the indoor coil to the compressor; it runs cold and must be insulated or it sweats.' : 'The large pipe of the line set. In heating it carries hot discharge gas from the reversing valve out to the indoor coil.',
+    live:i => [KV('Indoor gas', 'igas', i), KV('Indoor pressure', 'ipress', i)]},
+  iev:{t:'Indoor expansion valve (EEV)', ph:m => m === 'cool' ? '34' : null, rules:['S1','S4'],
+    what:m => m === 'cool' ? 'In cooling this is the metering device: it drops the high-pressure liquid to low pressure right before the indoor coil, and the board steps it to hold superheat at the coil outlet. Under X-ray you can watch the needle lift as it opens.' : 'In heating it sits wide open: the indoor coil is the condenser, and the outdoor valve does the metering.',
+    live:(i, c) => [KV('Opening', 'ievpct', i), KV('Pulses', 'iev', i), KV('Indoor liquid', 'iliq', i)]},
+  dist:{t:'Distributor and feeder tubes', ph:m => m === 'cool' ? '4' : '3', rules:[],
+    what:m => 'Splits the flow evenly into the coil\'s circuits through small feeder tubes of equal length. A blocked or kinked feeder starves part of the coil, which shows as a cold spot and low capacity.', live:i => []},
+  icliq:{t:'Indoor liquid line', ph:m => m === 'cool' ? '4' : '3', rules:[],
+    what:m => m === 'cool' ? 'Cooling: liquid and flash gas leaving the indoor valve for the distributor.' : 'Heating: condensed liquid leaving the indoor coil on its way back to the outdoor unit.', live:i => [KV('Indoor liquid', 'iliq', i)]},
+  icoil:{t:'Indoor coil (A-coil)', ph:m => m === 'cool' ? '41' : '23', rules:['S4','S8','S11'],
+    what:m => m === 'cool' ? 'In cooling it is the evaporator. Refrigerant boils in the tubes at the evaporating temperature (Te), taking heat and moisture out of the house air; water drips off into the drain pan. The coil must stay above 32°F or it ices up.' : 'In heating it is the condenser. Hot gas from the compressor condenses in the tubes and heats the house air passing through.',
+    live:(i, c) => [KV('Indoor liquid', 'iliq', i), KV('Indoor gas', 'igas', i), KV('Airflow', 'cfm', i), c && isN(c.m === 'cool' ? c.Te : c.Tc) ? [c.m === 'cool' ? 'Evaporating (Te)' : 'Condensing (Tc)', lf0(c.m === 'cool' ? c.Te : c.Tc) + ' °F'] : null]},
+  hdr:{t:'Suction headers', ph:m => m === 'cool' ? '1' : '2', rules:[],
+    what:m => m === 'cool' ? 'Collect the vapour leaving each circuit of the slab and join it into the gas line.' : 'In heating they feed hot gas into each circuit of the slab.', live:i => [KV('Indoor gas', 'igas', i)]},
+  blower:{t:'Indoor blower', rules:['S8','S12'],
+    what:m => 'Moves house air through the coil. Airflow is half of the heat transfer: too little and the coil freezes in cooling or head pressure climbs in heating.',
+    live:i => [KV('Airflow', 'cfm', i), KV('Requested', 'reqcfm', i)]},
+  hgsv:{t:'Hot-gas bypass solenoid valve', rules:[],
+    what:m => 'Connects the discharge line to the suction line. It opens during restart standby so the high and low sides equalize and the compressor can start unloaded, and it can open in some protection modes to keep suction pressure up.',
+    live:i => [['State', D.str.svhot && D.str.svhot[i] ? (D.str.svhot[i] === 'ON' ? 'OPEN' : 'closed') : '—']]},
+  svalves:{t:'Service (stop) valves', rules:[],
+    what:m => 'Where the line set joins the outdoor unit. Each has a gauge port, and both can be closed to pump the charge down into the outdoor unit.', live:i => [KV('High pressure', 'hp', i), KV('Low pressure', 'lp', i)]},
+  odu:{t:'Outdoor unit', rules:[], what:m => 'Holds the compressor, the outdoor coil and fan, the reversing valve and the outdoor expansion valve. Turn Covers off to see inside, or X-ray to see inside the parts themselves.', live:i => [KV('Outdoor air', 'oat', i), KV('Speed', 'rps', i)]},
+  ahu:{t:'Air handler', rules:[], what:m => 'Holds the indoor coil, its expansion valve and the blower. The line set enters through the coil door.', live:i => [KV('Airflow', 'cfm', i)]},
+  head:{t:'Wall head', rules:['M13','M14'], what:m => 'A wall-mounted indoor unit: a coil and a cross-flow fan behind the front panel. Turn Covers off to see the coil.', live:(i, c, k) => [KV('Coil', 'ihx' + k, i), KV('Return air', 'ra' + k, i)]},
+  zcoil:{t:'Head coil', ph:m => m === 'cool' ? '41' : '23', rules:['M5','M13','M14'],
+    what:m => m === 'cool' ? 'In cooling each head\'s coil is an evaporator, fed by its own port valve in the outdoor unit.' : 'In heating each head\'s coil is a condenser, heating the room air.',
+    live:(i, c, k) => [KV('Coil', 'ihx' + k, i), KV('Return air', 'ra' + k, i), KV('Gas pipe', 'rmgas' + k, i), KV('Liquid pipe', 'rmliq' + k, i)]},
+  zfan:{t:'Head fan', rules:['M13','M14'], what:m => 'A cross-flow fan that pulls room air through the coil and out of the vane.', live:(i, c, k) => [KV('Return air', 'ra' + k, i)]},
+  pev:{t:'Port expansion valve', ph:m => m === 'cool' ? '34' : '34', rules:['M1','M3'],
+    what:m => 'Every head has its own expansion valve inside the outdoor unit, so each zone is metered on its own. Closed (0 pulses) means that head is not being fed. Under X-ray you can watch the needle lift as it opens.',
+    live:(i, c, k) => [KV('Opening', 'pevp' + k, i), KV('Pulses', 'pev' + k, i), KV('Gas pipe', 'rmgas' + k, i), KV('Liquid pipe', 'rmliq' + k, i)]},
+  lhdr:{t:'Liquid header', ph:m => m === 'cool' ? '3' : '4', rules:[], what:m => 'A shared liquid manifold in the outdoor unit that feeds each head\'s port valve.', live:i => []},
+  ghdr:{t:'Gas header', ph:m => m === 'cool' ? '1' : '2', rules:[], what:m => 'A shared gas manifold where every head\'s gas line lands before the reversing valve.', live:i => []},
+  zgas:{t:'Head gas line', ph:m => m === 'cool' ? '1' : '2', rules:[], what:m => m === 'cool' ? 'Low-pressure vapour returning from this head.' : 'Hot gas going up to this head.', live:(i, c, k) => [KV('Gas pipe', 'rmgas' + k, i)]},
+  zliq:{t:'Head liquid line', ph:m => m === 'cool' ? '4' : '3', rules:[], what:m => m === 'cool' ? 'Low-pressure liquid and flash gas going up to this head after its port valve.' : 'Condensed liquid coming back from this head to its port valve.', live:(i, c, k) => [KV('Liquid pipe', 'rmliq' + k, i)]},
+};
+const PIPE_COMP = {disch:'disch', suct:'suct', 'oc-in':'ocpipe', 'oc-out':'ocliq', liq:'liqline', gas:'gasline', 'ic-in':'icliq', sv:'hgsv', lhdr:'lhdr', ghdr:'ghdr', griser:'ghdr', zh:'lhdr', zl:'zliq', zg:'zgas'};
+const PH_STEP = {'1':'Point 1: compressor inlet (superheated vapour)', '2':'Point 2: compressor outlet (hot vapour)', '3':'Point 3: condenser outlet (subcooled liquid)', '4':'Point 4: after the expansion valve (liquid + flash gas)',
+  '12':'1 → 2: compression', '23':'2 → 3: condensing (heat out)', '34':'3 → 4: expansion (pressure drop)', '41':'4 → 1: evaporating (heat in)'};
+
+// tabled features (code kept): tap-to-learn part cards and the X-ray view. Set true to bring them back.
+const FEAT3 = {cards:false, xray:false};
+var MODE3D = loadJSON('dchk3.mode3d', false);   // the field app opens on the 2D drawing; the 3D | 2D switch remembers a tech's choice
+var V3 = (() => {
+  let gl = null, prog, U = {}, canvas, wrap, labHost, meshes = [], labels = [], bbox = [[-1,-0.1,-1],[1,2,1]];
+  let cam = {az:-0.7, el:0.38, dist:6, tgt:[0,0.8,0]}, home = null, MVP = null, vw = 0, vh = 0;
+  let phase = 0, spin = 0, lastT = 0, rafId = 0, dirty = true, labDirty = true, showLab = loadJSON('dchk3.labels', true), showCov = loadJSON('dchk3.covers', false), flowSpeed = 0.5, inited = false;
+  let showPhase = loadJSON('dchk3.phase', false), showX = FEAT3.xray && loadJSON('dchk3.xray', false), showPH = loadJSON('dchk3.ph', false), sel = null, cyc = null, spinR = 0, phPts = [];
+  // ---- vectors / matrices (column-major) ----
+  const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]], add = (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]], mul = (a, s) => [a[0]*s, a[1]*s, a[2]*s];
+  const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2], cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  const len = a => Math.hypot(a[0], a[1], a[2]), norm = a => { const l = len(a) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+  function persp(fovy, asp, n, f){ const t = 1/Math.tan(fovy/2); return [t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0]; }
+  function lookAt(e, c, up){ const z = norm(sub(e, c)), x = norm(cross(up, z)), y = cross(z, x); return [x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -dot(x,e),-dot(y,e),-dot(z,e),1]; }
+  function mmul(a, b){ const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++){ let s = 0; for (let k = 0; k < 4; k++) s += a[k*4+r]*b[c*4+k]; o[c*4+r] = s; } return o; }
+  const IDENT = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+  function spinYm(c, a){ const cs = Math.cos(a), sn = Math.sin(a); return [cs,0,-sn,0, 0,1,0,0, sn,0,cs,0, c[0]-(cs*c[0]+sn*c[2]), 0, c[2]-(-sn*c[0]+cs*c[2]), 1]; }
+  const tr = d => [1,0,0,0, 0,1,0,0, 0,0,1,0, d[0],d[1],d[2],1];
+  // swing compressor kinematics for shaft angle t: the piston centre orbits the bore at the eccentricity without turning except to keep
+  // its blade pointed through the pivot of the rocking bushing; the bushing turns about its pivot by the same angle
+  function swingM(sw, t){ const ox = sw.e*Math.cos(t), oz = sw.e*Math.sin(t), dx = sw.P[0] - (sw.c0[0] + ox), dz = sw.P[2] - (sw.c0[2] + oz), a = Math.atan2(-dz, dx), a0 = Math.atan2(-(sw.P[2] - sw.c0[2]), sw.P[0] - sw.c0[0]);
+    return sw.part === 'bush' ? spinYm(sw.P, a - a0) : mmul(tr([ox, 0, oz]), spinYm(sw.c0, a)); }
+  function spinZ(c, a){ const cs = Math.cos(a), sn = Math.sin(a); return [cs,sn,0,0, -sn,cs,0,0, 0,0,1,0, c[0]-(cs*c[0]-sn*c[1]), c[1]-(sn*c[0]+cs*c[1]), 0, 1]; }
+  const FOV = 34 * Math.PI/180;
+  function eye(c){ return add(c.tgt, mul([Math.cos(c.el)*Math.sin(c.az), Math.sin(c.el), Math.cos(c.el)*Math.cos(c.az)], c.dist)); }
+  function matFor(c){ return mmul(persp(FOV, vw/Math.max(1, vh), 0.05, 80), lookAt(eye(c), c.tgt, [0,1,0])); }
+  function proj(M, p){ const x = M[0]*p[0]+M[4]*p[1]+M[8]*p[2]+M[12], y = M[1]*p[0]+M[5]*p[1]+M[9]*p[2]+M[13], w = M[3]*p[0]+M[7]*p[1]+M[11]*p[2]+M[15]; return w <= 0.01 ? null : [x/w, y/w, w]; }
+  // ---- colours ----
+  function parseCol(s){ if (!s) return [0.6,0.6,0.6]; let m = /^#?([0-9a-f]{6})$/i.exec(s.trim()); if (m){ const n = parseInt(m[1], 16); return [(n>>16)/255, ((n>>8)&255)/255, (n&255)/255]; }
+    m = /rgba?\(([^)]+)\)/.exec(s); if (m){ const a = m[1].split(',').map(Number); return [a[0]/255, a[1]/255, a[2]/255]; } return [0.6,0.6,0.6]; }
+  const mix = (a, b, f) => [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
+  // ---- geometry: interleaved [x,y,z, nx,ny,nz, s] ----
+  const G = () => ({v:[], i:[]});
+  const pushV = (g, p, n, s) => { g.v.push(p[0], p[1], p[2], n[0], n[1], n[2], s || 0); return g.v.length/7 - 1; };
+  function box(c, sz, g = G()){ const h = [sz[0]/2, sz[1]/2, sz[2]/2];
+    for (let a = 0; a < 3; a++) for (const sg of [-1, 1]){ const n = [0,0,0]; n[a] = sg; const u = (a+1)%3, w = (a+2)%3, b = g.v.length/7;
+      for (const [su, sw] of [[-1,-1],[1,-1],[1,1],[-1,1]]){ const p = c.slice(); p[a] += sg*h[a]; p[u] += su*h[u]; p[w] += sw*h[w]; pushV(g, p, n); }
+      g.i.push(b, b+1, b+2, b, b+2, b+3); }
+    return g; }
+  function boxEdges(c, sz, g = G()){ const h = [sz[0]/2, sz[1]/2, sz[2]/2], b = g.v.length/7;
+    for (let k = 0; k < 8; k++) pushV(g, [c[0]+(k&1?1:-1)*h[0], c[1]+(k&2?1:-1)*h[1], c[2]+(k&4?1:-1)*h[2]], [0,0,0]);
+    for (const [p, q] of [[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]]) g.i.push(b+p, b+q);
+    return g; }
+  function cyl(c, r, h, axis = 'y', seg = 18, g = G()){ const ax = {x:0, y:1, z:2}[axis], u = (ax+1)%3, w = (ax+2)%3, b = g.v.length/7;
+    for (let k = 0; k <= seg; k++){ const a = 2*Math.PI*k/seg, n = [0,0,0]; n[u] = Math.cos(a); n[w] = Math.sin(a);
+      for (const e of [-1, 1]){ const p = c.slice(); p[u] += n[u]*r; p[w] += n[w]*r; p[ax] += e*h/2; pushV(g, p, n); } }
+    for (let k = 0; k < seg; k++){ const q = b + k*2; g.i.push(q, q+1, q+2, q+1, q+3, q+2); }
+    for (const e of [-1, 1]){ const n = [0,0,0]; n[ax] = e; const cc = c.slice(); cc[ax] += e*h/2; const ci = pushV(g, cc, n), rb = g.v.length/7;
+      for (let k = 0; k <= seg; k++){ const a = 2*Math.PI*k/seg, p = cc.slice(); p[u] += Math.cos(a)*r; p[w] += Math.sin(a)*r; pushV(g, p, n); }
+      for (let k = 0; k < seg; k++) g.i.push(ci, rb+k, rb+k+1); }
+    return g; }
+  function cone(c, d, r, h, g = G(), seg = 12){ const ax = Math.abs(d[1]) < 0.9 ? [0,1,0] : [1,0,0], u = norm(cross(d, ax)), w = cross(d, u), b = g.v.length/7, apex = add(c, mul(d, h/2)), base = add(c, mul(d, -h/2));
+    for (let k = 0; k <= seg; k++){ const a = 2*Math.PI*k/seg, dir = add(mul(u, Math.cos(a)), mul(w, Math.sin(a))), n = norm(add(dir, mul(d, r/h))); pushV(g, add(base, mul(dir, r)), n); pushV(g, apex, n); }
+    for (let k = 0; k < seg; k++){ const q = b + k*2; g.i.push(q, q+1, q+2); }
+    const back = mul(d, -1), ci = pushV(g, base, back), rb = g.v.length/7; for (let k = 0; k <= seg; k++){ const a = 2*Math.PI*k/seg; pushV(g, add(base, add(mul(u, Math.cos(a)*r), mul(w, Math.sin(a)*r))), back); }
+    for (let k = 0; k < seg; k++) g.i.push(ci, rb+k, rb+k+1);
+    return g; }
+  function ring(c, r, seg = 40, g = G()){ const b = g.v.length/7; for (let k = 0; k < seg; k++){ const a = 2*Math.PI*k/seg; pushV(g, [c[0]+Math.cos(a)*r, c[1]+Math.sin(a)*r, c[2]], [0,0,0]); g.i.push(b+k, b+(k+1)%seg); } return g; }
+  // surface of revolution about a vertical axis through c: prof = [[radius, y], ...] bottom to top
+  function lathe(c, prof, seg = 24, g = G()){ const b = g.v.length/7;
+    prof.forEach(([r, y], k) => { const a = prof[Math.max(0, k-1)], z = prof[Math.min(prof.length-1, k+1)], dr = z[0] - a[0], dy = z[1] - a[1], l = Math.hypot(dr, dy) || 1, nr = dy/l, ny = -dr/l;
+      for (let j = 0; j <= seg; j++){ const t = 2*Math.PI*j/seg, cs = Math.cos(t), sn = Math.sin(t); pushV(g, [c[0] + cs*r, y, c[2] + sn*r], [cs*nr, ny, sn*nr]); } });
+    for (let k = 0; k < prof.length-1; k++) for (let j = 0; j < seg; j++){ const q = b + k*(seg+1) + j; g.i.push(q, q+seg+1, q+1, q+1, q+seg+1, q+seg+2); }
+    return g; }
+  function rotZ(g, from, piv, a){ const cs = Math.cos(a), sn = Math.sin(a); for (let k = from*7; k < g.v.length; k += 7){ const x = g.v[k]-piv[0], y = g.v[k+1]-piv[1]; g.v[k] = piv[0]+cs*x-sn*y; g.v[k+1] = piv[1]+sn*x+cs*y; const nx = g.v[k+3], ny = g.v[k+4]; g.v[k+3] = cs*nx-sn*ny; g.v[k+4] = sn*nx+cs*ny; } return g; }
+  // square-cornered pipe run → rounded elbows
+  function roundPath(pts, r){ const P = pts.filter((p, k) => k === 0 || len(sub(p, pts[k-1])) > 1e-4); if (P.length < 3) return P; const out = [P[0]];
+    for (let k = 1; k < P.length-1; k++){ const p = P[k], la = len(sub(P[k-1], p)), lb = len(sub(P[k+1], p)), rr = Math.min(r, la*0.48, lb*0.48), p0 = add(p, mul(norm(sub(P[k-1], p)), rr)), p1 = add(p, mul(norm(sub(P[k+1], p)), rr));
+      for (let t = 0; t <= 1.0001; t += 0.2) out.push(add(add(mul(p0, (1-t)*(1-t)), mul(p, 2*(1-t)*t)), mul(p1, t*t))); }
+    out.push(P[P.length-1]); return out; }
+  function tube(pts, rad, g, s0 = 0, sides = 10){ const P = roundPath(pts, rad*3.4); if (P.length < 2) return s0;
+    let s = s0, n = null; const base = g.v.length/7;
+    for (let k = 0; k < P.length; k++){ const t = norm(sub(P[Math.min(P.length-1, k+1)], P[Math.max(0, k-1)]));
+      if (!n){ const ax = Math.abs(t[1]) < 0.9 ? [0,1,0] : [1,0,0]; n = norm(cross(t, ax)); } else n = norm(sub(n, mul(t, dot(n, t))));
+      const b = cross(t, n); if (k) s += len(sub(P[k], P[k-1]));
+      for (let j = 0; j <= sides; j++){ const a = 2*Math.PI*j/sides, d = add(mul(n, Math.cos(a)), mul(b, Math.sin(a))); pushV(g, add(P[k], mul(d, rad)), d, s); } }
+    for (let k = 0; k < P.length-1; k++) for (let j = 0; j < sides; j++){ const q = base + k*(sides+1) + j; g.i.push(q, q+sides+1, q+1, q+1, q+sides+1, q+sides+2); }
+    return s; }
+  // ---- GL plumbing ----
+  const VS = 'attribute vec3 aP;attribute vec3 aN;attribute float aS;uniform mat4 uMVP;uniform mat4 uM;varying vec3 vN;varying float vS;void main(){vec4 w=uM*vec4(aP,1.0);vN=mat3(uM)*aN;vS=aS;gl_Position=uMVP*w;}';
+  const FS = 'precision mediump float;uniform vec4 uC;uniform vec3 uL;uniform vec3 uF;uniform float uFlat;varying vec3 vN;varying float vS;void main(){vec3 n=normalize(vN+vec3(0.0001));float l=0.58+0.42*max(dot(n,uL),0.0)+0.10*max(dot(n,vec3(-0.6,0.2,-0.5)),0.0);l=mix(l,1.0,uFlat);vec3 c=uC.rgb*l;if(uF.z>0.0){float d=fract(vS*uF.x-uF.y);float b=smoothstep(0.0,0.10,d)*(1.0-smoothstep(0.22,0.34,d));c=mix(c,vec3(1.0),b*uF.z);}gl_FragColor=vec4(c,uC.a);}';
+  function compile(){ const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.bindAttribLocation(prog, 0, 'aP'); gl.bindAttribLocation(prog, 1, 'aN'); gl.bindAttribLocation(prog, 2, 'aS'); gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    for (const k of ['uMVP','uM','uC','uL','uF','uFlat']) U[k] = gl.getUniformLocation(prog, k); }
+  function mk(g, o){ if (!g.i.length) return null; const m = Object.assign({kind:'solid', col:[0.6,0.6,0.6,1], flow:0, dir:1, model:null}, o);
+    m.vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, m.vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(g.v), gl.STATIC_DRAW);
+    m.ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(g.i), gl.STATIC_DRAW);
+    m.n = g.i.length; if (m.col.length === 3) m.col = [...m.col, 1];
+    { const lo = [1e9,1e9,1e9], hi = [-1e9,-1e9,-1e9]; for (let k = 0; k < g.v.length; k += 7) for (let a = 0; a < 3; a++){ lo[a] = Math.min(lo[a], g.v[k+a]); hi[a] = Math.max(hi[a], g.v[k+a]); } m.bc = mul(add(lo, hi), 0.5); m.br = len(sub(hi, lo))/2; }
+    meshes.push(m); return m; }
+  function freeAll(){ for (const m of meshes){ gl.deleteBuffer(m.vb); gl.deleteBuffer(m.ib); } meshes = []; }
+  let ACC = [0.2, 0.4, 0.8];
+  function drawMesh(m, col){ let c = col || m.col; if (m.sel && !m.xIn) c = [...mix(c, ACC, 0.55), Math.max(c[3], 0.65)]; gl.bindBuffer(gl.ARRAY_BUFFER, m.vb); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ib);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 28, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 28, 24);
+    gl.uniform4fv(U.uC, c); gl.uniformMatrix4fv(U.uM, false, m.model || IDENT); gl.uniform1f(U.uFlat, m.kind === 'solid' ? 0 : m.kind === 'flat' ? 0.55 : 1);
+    gl.uniform3f(U.uF, 1/0.11, phase*m.dir, m.flow);
+    gl.drawElements(m.kind === 'line' ? gl.LINES : gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0); }
+  // ---- the scene ----
+  function build(){
+    if (!inited || !gl) return; freeAll(); labels = []; labHost.innerHTML = '';
+    const C = k => parseCol(cssVar(k)), metal = C('--metal2'), ink2 = C('--ink2'), brass = [0.74, 0.60, 0.32], glass = [...ink2, 0.09], edge = [...ink2, 0.5], slab = [...C('--line'), 1];
+    const arrowC = [...C('--ink'), 1];
+    const multi = FAM === 'multi', hp = EQ.out === 'hp', H = 0.99, LZ = 0.165, GZ = 0.08, ox = multi ? 0 : -0.80;
+    const cab = (c, sz, a) => { mk(box(c, sz), {kind:'glass', col:[...ink2, a || 0.09]}); mk(boxEdges(c, sz), {kind:'line', col:edge}); };
+    const pipes = [], P = (id, paths, rad, o) => { const g = G(); let s = 0; for (const p of (Array.isArray(paths[0][0]) ? paths : [paths])) s = tube(p, rad*0.9, g, s) + 0.02; const z = id.replace(/\d$/, ''), zk = id === z ? '' : id.slice(-1), m = mk(g, {pipe:Object.assign({id}, o), comp:PIPE_COMP[z] ? PIPE_COMP[z] + (z === 'zh' ? '' : zk) : null, rad}); if (!m) return m; pipes.push(m); m.paths = Array.isArray(paths[0][0]) ? paths : [paths];
+      let best = null; for (const p of (Array.isArray(paths[0][0]) ? paths : [paths])) for (let k = 1; k < p.length; k++){ const l = len(sub(p[k], p[k-1])); if (!best || l > best.l) best = {l, a:p[k-1], b:p[k]}; }
+      if (best && best.l > 0.2){ const c = add(best.a, mul(sub(best.b, best.a), 0.5)), d = norm(sub(best.b, best.a)), R = rad*1.05; for (const sg of [1, -1]) mk(cone(c, mul(d, sg), R*2.3, R*5.5), {arrowOf:m, sign:sg, col:arrowC, kind:'flat', hidden:true}); }
+      return m; };
+    const L = (ch, at, o) => labels.push(Object.assign({ch, at, grp:/^(i|ra\d|rmgas|rmliq|cfm)/.test(ch) ? 'in' : 'out'}, o));
+    const REV = {cool:'hi', heat:'lo', rev:true}, REVG = {cool:'lo', heat:'hi', rev:true};
+    // covers: the sheet metal, doors and grilles as installed (Covers button); everything inside stays modelled underneath
+    const PANEL = [0.89, 0.88, 0.85], DARK = [0.21, 0.23, 0.26], AHP = [0.80, 0.81, 0.80], GALV = [0.70, 0.72, 0.74], WHITE = [0.96, 0.96, 0.95];
+    let covComp = null; const CV = (g, col, kind) => mk(g, {col, kind:kind || 'solid', cover:true, comp:covComp});
+    const XI = (g, o) => mk(g, Object.assign({xIn:true}, o)), tagc = (m, c) => { if (m) m.comp = c; return m; };
+    const grid = (g, a, b, n, step) => { for (let t = 0; t <= 1.0001; t += step){ const p = add(a, mul(n, t)), q = add(b, mul(n, t)), k = g.v.length/7; pushV(g, p, [0,0,0]); pushV(g, q, [0,0,0]); g.i.push(k, k+1); } return g; };
+    // outdoor unit: glass cabinet, pad, L-shaped coil, fan, compressor, accumulator
+    cab([ox, H/2, 0], [0.94, H, 0.36]); mk(box([ox, -0.03, 0], [1.14, 0.06, 0.56]), {col:slab});
+    const coilR = ox + 0.14, coilZ = -0.15, coilTop = H - 0.14, coilBot = 0.10;
+    { const g = box([ox - 0.16, H/2, coilZ], [0.60, H - 0.2, 0.035]); box([ox - 0.445, H/2, -0.02], [0.03, H - 0.2, 0.29], g); mk(g, {key:'oc'});
+      const f = G(); for (let x = ox - 0.44; x < ox + 0.135; x += 0.03){ const b = f.v.length/7; pushV(f, [x, 0.1, coilZ + 0.02], [0,0,0]); pushV(f, [x, H - 0.1, coilZ + 0.02], [0,0,0]); f.i.push(b, b+1); } mk(f, {kind:'line', col:[...ink2, 0.35]}); }
+    const hub = [ox - 0.16, H*0.5, 0.12];
+    // batwing propeller (black), after Daikin part 2026774: three broad sickle blades, each with a long outer edge ending in a
+    // hooked tip on the leading side and a deep V-notch cut into the trailing edge just inside its outer corner
+    { const g = cyl(hub, 0.05, 0.06, 'z', 20), r0 = 0.045, R = 0.262, NR = 36, NA = 12;
+      const KT = [[0, 0.40], [0.58, 0.74], [0.71, 0.38], [0.93, 0.96], [1, 0.88]], lin = (K, t) => { for (let k = 1; k < K.length; k++) if (t <= K[k][0]){ const [a, b] = [K[k-1], K[k]]; return a[1] + (b[1] - a[1])*(t - a[0])/(b[0] - a[0]); } return K[K.length-1][1]; };
+      const lo = t => -lin(KT, t), up = t => 0.42 + 0.68*Math.pow(t, 1.7), pitch = t => 0.55 - 0.25*t;
+      for (let k = 0; k < 3; k++){ const a0 = k*2*Math.PI/3 + 0.3;
+        for (const side of [1, -1]){ const b = g.v.length/7, P3 = (t, u) => { const r = r0 + (R - r0)*t, l = lo(t), h = up(t), c = (l + h)/2, an = l + (h - l)*u, d = (an - c)*r;
+              return [hub[0] + r*Math.cos(a0 + an), hub[1] + r*Math.sin(a0 + an), hub[2] - d*Math.tan(pitch(t)) + 0.010*Math.sin(Math.PI*u) + side*0.002]; };
+          for (let i = 0; i <= NR; i++) for (let j = 0; j <= NA; j++){ const t = i/NR, u = j/NA, p = P3(t, u), dt = sub(P3(Math.min(1, t + 0.01), u), P3(Math.max(0, t - 0.01), u)), du = sub(P3(t, Math.min(1, u + 0.01)), P3(t, Math.max(0, u - 0.01)));
+            pushV(g, p, mul(norm(cross(dt, du)), side)); }
+          for (let i = 0; i < NR; i++) for (let j = 0; j < NA; j++){ const q = b + i*(NA+1) + j; if (side > 0) g.i.push(q, q+NA+1, q+1, q+1, q+NA+1, q+NA+2); else g.i.push(q, q+1, q+NA+1, q+1, q+NA+2, q+NA+1); } } }
+      cyl([hub[0], hub[1], hub[2] + 0.032], 0.022, 0.012, 'z', 16, g);
+      mk(g, {key:'ofan', col:[0.07, 0.07, 0.08], spinC:hub});
+      mk(ring([hub[0], hub[1], 0.178], 0.275), {kind:'line', col:edge}); mk(ring([hub[0], hub[1], 0.178], 0.20), {kind:'line', col:[...ink2, 0.25]}); }
+    // inverter rotary (swing) compressor: domed shell on three rubber-mounted feet, discharge out the top centre of the dome,
+    // terminal cover on the upper shell; the suction accumulator is strapped to the shell side, takes the suction line in its
+    // top and feeds the compressor through a J-tube from its bottom into the lower shell
+    const cx = ox + 0.31, cz = -0.05, ax = cx - 0.07, az = cz + 0.121, ux = (ax - cx)/0.14, uz = (az - cz)/0.14, jIn = [cx + ux*0.088, 0.13, cz + uz*0.088];
+    mk(lathe([cx, 0, cz], [[0, 0.065], [0.05, 0.068], [0.078, 0.078], [0.09, 0.098], [0.09, 0.39], [0.082, 0.425], [0.06, 0.448], [0.03, 0.458], [0, 0.461]]), {key:'comp', col:metal, comp:'compressor', xShell:true});
+    { const g = G(); for (let k = 0; k < 3; k++){ const t = Math.PI/2 + k*2*Math.PI/3; box([cx + Math.cos(t)*0.105, 0.072, cz + Math.sin(t)*0.105], [0.05, 0.008, 0.05], g); cyl([cx + Math.cos(t)*0.115, 0.063, cz + Math.sin(t)*0.115], 0.012, 0.018, 'y', 10, g); } mk(g, {col:ink2, comp:'compressor'}); }
+    mk(box([cx + 0.04, 0.37, cz + 0.085], [0.06, 0.05, 0.022]), {col:ink2, comp:'compressor'});
+    mk(lathe([ax, 0, az], [[0, 0.155], [0.025, 0.158], [0.038, 0.172], [0.04, 0.19], [0.04, 0.41], [0.038, 0.428], [0.025, 0.442], [0, 0.445]], 18), {col:metal, comp:'accum', xShell:true});
+    { const g = G(); for (const y of [0.22, 0.36]) cyl([ax, y, az], 0.042, 0.012, 'y', 18, g); mk(g, {col:ink2, comp:'accum'}); }
+    { // X-ray internals. Compressor: stator windings over the rotor on the shaft, and at the bottom the pump: a cylinder block
+      // with the eccentric roller and its swing blade sweeping round inside it, oil in the sump. Accumulator: the J-tube standpipe
+      // rising inside the shell with its oil-return hole near the bottom, and any liquid pooled below it.
+      const Y0 = [cx, 0, cz], steel = [0.58, 0.60, 0.64], roll = [0.95, 0.70, 0.12];
+      XI(lathe(Y0, [[0.058, 0.235], [0.083, 0.235], [0.083, 0.365], [0.058, 0.365], [0.058, 0.235]], 28), {kind:'glass', col:[0.72, 0.42, 0.18, 0.18], comp:'compressor'});
+      XI(cyl([cx, 0.30, cz], 0.052, 0.12, 'y', 24), {kind:'glass', col:[0.34, 0.36, 0.40, 0.16], comp:'compressor', spinY:Y0, key:'rotor'});
+      XI(cyl([cx, 0.25, cz], 0.012, 0.30, 'y', 12), {col:steel, comp:'compressor', spinY:Y0, key:'rotor'});
+      // swing pump: the eccentric on the shaft carries the piston round the bore without letting it spin; the blade is part of the
+      // piston and slides through a bushing that rocks in a pocket in the cylinder wall. Suction enters just behind the blade (from the
+      // accumulator side), the trapped crescent of gas shrinks as the contact point travels round, and leaves through the discharge port
+      // just ahead of the blade.
+      const PY = 0.1275, ecc = 0.015, rp = 0.062, ap = Math.atan2(uz, ux) - 0.42, PV = [cx + rp*Math.cos(ap), PY, cz + rp*Math.sin(ap)], SW = {c0:[cx, PY, cz], e:ecc, P:PV};
+      XI(lathe(Y0, [[0.05, 0.10], [0.085, 0.10], [0.085, 0.155], [0.05, 0.155], [0.05, 0.10]], 32), {kind:'glass', col:[0.48, 0.50, 0.54, 0.38], comp:'compressor'});
+      XI(cyl([cx + ecc, PY, cz], 0.021, 0.056, 'y', 16), {col:steel, comp:'compressor', spinY:Y0, key:'rotor'});
+      { const g = cyl([cx, PY, cz], 0.035, 0.05, 'y', 24); box([cx + 0.052, PY, cz], [0.046, 0.05, 0.011], g); XI(g, {col:roll, comp:'compressor', swing:Object.assign({part:'piston'}, SW), key:'rotor'}); }
+      { const g = G(); for (const sg of [-1, 1]) box([PV[0], PY, PV[2] + sg*0.0105], [0.026, 0.05, 0.009], g); XI(g, {col:[0.30, 0.32, 0.36], comp:'compressor', swing:Object.assign({part:'bush'}, SW)}); }
+      for (const [da, col] of [[0.42, parseCol(cssVar('--lo'))], [-0.40, parseCol(cssVar('--hi'))]]){ const a = ap + da; XI(box([cx + 0.068*Math.cos(a), PY + 0.012, cz + 0.068*Math.sin(a)], [0.016, 0.016, 0.016]), {col, comp:'compressor'}); }
+      XI(lathe(Y0, [[0, 0.07], [0.074, 0.074], [0.085, 0.088], [0, 0.088]], 24), {kind:'glass', col:[0.85, 0.62, 0.18, 0.25], comp:'compressor'});
+      XI(cyl([ax, 0.285, az], 0.008, 0.25, 'y', 10), {col:steel, comp:'accum'}); XI(box([ax + 0.008, 0.19, az], [0.004, 0.009, 0.009]), {col:[0.1, 0.1, 0.1], comp:'accum'});
+      XI(cyl([ax, 0.176, az], 0.036, 0.03, 'y', 18), {kind:'glass', col:[...parseCol(cssVar('--ph-liq')), 0.6], comp:'accum'}); }
+    // expansion valves: stepper-motor coil on top; under X-ray the needle inside rises as the valve opens
+    const EEVX = (c, h, r, comp, pctId, coilTop = true) => { if (coilTop) mk(cyl([c[0], c[1] + h/2 + 0.019, c[2]], r*1.12, 0.036, 'y', 14), {col:[0.13, 0.13, 0.15], comp}); else mk(box([c[0] + r + 0.016, c[1], c[2]], [0.03, h*0.8, 0.034]), {col:[0.13, 0.13, 0.15], comp});
+      XI(cone([c[0], c[1] - h*0.14, c[2]], [0, -1, 0], r*0.42, h*0.5), {col:[0.76, 0.78, 0.82], comp, dyn:i => { const v = D.num[pctId] ? D.num[pctId][i] : null; return [0, isN(v) ? Math.max(0, Math.min(1, v/100))*h*0.32 : 0, 0]; }}); };
+    const jTube = [[ax, 0.157, az], [ax, 0.11, az], [jIn[0], 0.11, jIn[2]], jIn];
+    const fy = H - 0.25, pD = [cx, fy + 0.028, GZ], pC = [cx - 0.05, fy - 0.028, GZ], pS = [cx, fy - 0.028, GZ], pE = [cx + 0.05, fy - 0.028, GZ];
+    if (hp){ mk(cyl([cx, fy, GZ], 0.03, 0.17, 'x', 14), {col:brass, comp:'fourway', xShell:true});
+      // pilot valve and its solenoid coil on top; inside, the slide that shifts with the mode (suction to the indoor side in cooling, to the outdoor coil in heating)
+      mk(cyl([cx + 0.058, fy + 0.042, GZ], 0.008, 0.05, 'x', 10), {col:brass, comp:'fourway'}); mk(box([cx + 0.058, fy + 0.066, GZ], [0.03, 0.03, 0.028]), {key:'fwc', col:ink2, comp:'fourway'});
+      XI(box([cx, fy - 0.006, GZ], [0.075, 0.03, 0.034]), {col:[0.24, 0.25, 0.29], comp:'fourway', dyn:i => [(EQ.out !== 'ac' && D.mode[i] !== 'cool') ? -0.025 : 0.025, 0, 0]}); }
+    // discharge, coil in/out, suction
+    if (hp){ P('disch', [[cx, 0.46, cz], [cx, H - 0.10, cz], [cx, H - 0.10, GZ], pD], 0.012, {hi:true});
+      P('oc-in', [pC, [cx - 0.05, fy - 0.09, GZ], [ox + 0.19, fy - 0.09, GZ], [ox + 0.19, fy - 0.09, coilZ], [ox + 0.19, coilTop, coilZ], [coilR, coilTop, coilZ]], 0.013, REV);
+      P('suct', [[pS, [cx, 0.56, GZ], [ax, 0.56, az], [ax, 0.443, az]], jTube], 0.015, {lo:true});
+      // hot-gas bypass (as in the 2D drawing): tee off the discharge line, strainer, solenoid valve, into the suction line ahead of the accumulator
+      if (D && D.str.svhot && D.str.svhot.some(Boolean)){ const bx = cx + 0.10, bz = 0.15, sv = P('sv', [[cx, 0.69, cz], [bx, 0.69, cz], [bx, 0.69, bz], [bx, 0.60, bz], [cx, 0.60, bz], [cx, 0.60, GZ]], 0.007, {hi:true});
+        const parts = [sv, mk(cyl([bx, 0.69, 0.02], 0.012, 0.04, 'z', 12), {col:metal}), mk(cyl([bx, 0.645, bz], 0.013, 0.045, 'y', 12), {col:brass}), mk(box([bx + 0.028, 0.648, bz + 0.004], [0.030, 0.040, 0.030]), {key:'svc', col:ink2})];
+        for (const q of meshes) if (q.arrowOf === sv) parts.push(q); parts.forEach(q => { if (q){ q.svPart = true; q.comp = 'hgsv'; } });
+        labels.push({name:'HOT GAS SV', at:[bx + 0.10, 0.70, bz]}); } }
+    else { P('disch', [[cx, 0.46, cz], [cx, coilTop, cz], [ox + 0.19, coilTop, cz], [ox + 0.19, coilTop, coilZ], [coilR, coilTop, coilZ]], 0.012, {hi:true}); }
+    L('rps', [cx + 0.04, 0.37, cz + 0.097], {pri:1}); L('disch', [cx, H - 0.10, 0.0], {pri:1}); L('ochex', [ox - 0.30, H*0.78, coilZ + 0.03], {pri:2}); L('oat', [ox - 0.42, 0.14, 0.2], {pri:3}); L('fan', [hub[0], hub[1] - 0.2, 0.19], {pri:3});
+    labels.push({name:'OUTDOOR UNIT', at:[ox - 0.12, H + 0.09, 0]});
+    covComp = 'odu';
+    { // outdoor cabinet: top, base pan, solid service side and panel over the compressor, fan grille on the front, wire guards over the coil
+      const e = 0.006, T = 0.012, x0 = ox - 0.47 - e, x1 = ox + 0.47 + e, z0 = -0.18 - e, z1 = 0.18 + e, hx = hub[0], hy = hub[1], a = 0.29, xs = ox + 0.14;
+      CV(box([ox, H + e + T/2, 0], [x1 - x0 + 0.02, T, z1 - z0 + 0.02]), PANEL); CV(box([ox, 0.025, 0], [x1 - x0 + 0.01, 0.05, z1 - z0 + 0.01]), DARK);
+      CV(box([x1 + T/2, H/2, 0], [T, H, z1 - z0]), PANEL);
+      { const g = G(), fz = z1 + T/2; box([(x0 + hx - a)/2, H/2, fz], [hx - a - x0, H, T], g); box([(hx + a + x1)/2, H/2, fz], [x1 - hx - a, H, T], g);
+        box([hx, (0.05 + hy - a)/2, fz], [2*a, hy - a - 0.05, T], g); box([hx, (hy + a + H)/2, fz], [2*a, H - hy - a, T], g); CV(g, PANEL);
+        CV(box([ox + 0.31, H - 0.12, z1 + T + 0.002], [0.16, 0.05, 0.004]), DARK); CV(box([ox + 0.40, 0.45, z1 + T + 0.004], [0.02, 0.10, 0.008]), DARK); }
+      { const g = G(), gz = z1 + T + 0.004; for (let r = 0.06; r < 0.285; r += 0.032) ring([hx, hy, gz], r, 48, g);
+        for (let k = 0; k < 4; k++){ const an = k*Math.PI/4, c = Math.cos(an)*0.28, sn = Math.sin(an)*0.28, b = g.v.length/7; pushV(g, [hx - c, hy - sn, gz], [0,0,0]); pushV(g, [hx + c, hy + sn, gz], [0,0,0]); g.i.push(b, b+1); }
+        CV(g, [...DARK, 1], 'line'); CV(cyl([hx, hy, gz], 0.035, 0.01, 'z', 16), DARK); }
+      CV(box([(xs + x1)/2, H/2, z0 - T/2], [x1 - xs, H, T]), PANEL);
+      CV(grid(G(), [x0, 0.06, z0 - 0.003], [xs, 0.06, z0 - 0.003], [0, H - 0.08, 0], 1/30), [...DARK, 1], 'line');
+      CV(grid(G(), [x0 - 0.003, 0.06, z0], [x0 - 0.003, 0.06, z1], [0, H - 0.08, 0], 1/30), [...DARK, 1], 'line');
+      for (const y of [0.06, H - 0.02]){ CV(box([(x0 + xs)/2, y, z0 - 0.004], [xs - x0, 0.02, 0.008]), PANEL); CV(box([x0 - 0.004, y, 0], [0.008, 0.02, z1 - z0]), PANEL); } }
+    if (!multi){
+      // ---- FIT: one line set through the wall to an upflow air handler ----
+      const ix = 0.95, gx = 0.46, lx = 0.50;
+      // air handler piping as installed: suction stub above the liquid stub, both through the front panel at the
+      // bottom-left of the coil section; liquid → EEV → distributor → feeder tubes into both slabs; suction collects in
+      // a header on the front edge of each slab, joined by a crossover across the front of the A that runs out the upper stub
+      const FZ = 0.30, HZ = 0.26, sx = 0.78, sy = 0.86, qx = 0.88, qy = 0.78, gz2 = 0.40, lz2 = 0.46, slabX = (y, sg) => ix + sg*(0.162 - (y - 0.70)/0.43*0.154);
+      const gasIn = [[[slabX(sy, 1), sy, HZ], [sx, sy, HZ], [sx, sy, gz2], [gx, sy, gz2], [gx, sy, GZ], [gx, 0.30, GZ]]], hdrs = [-1, 1].flatMap(sg => [[[slabX(1.10, sg), 1.10, HZ], [slabX(sy, sg), sy, HZ]], [[slabX(0.72, sg), 0.72, HZ], [slabX(sy, sg), sy, HZ]]]);
+      const liqTo = [[lx, qy, LZ], [lx, qy, lz2], [qx, qy, lz2], [qx, qy, 0.28]];
+      mk(box([0.10, 0.85, 0.05], [0.03, 1.7, 1.3]), {kind:'glass', col:[...ink2, 0.07]}); mk(boxEdges([0.10, 0.85, 0.05], [0.03, 1.7, 1.3]), {kind:'line', col:[...ink2, 0.3]});
+      mk(box([0.80, -0.03, 0.05], [1.36, 0.06, 1.3]), {col:slab});
+      cab([ix, 0.675, 0.05], [0.55, 1.35, 0.5]);
+      { const g = G(); let b = 0; box([ix - 0.085, 0.92, 0.05], [0.04, 0.44, 0.40], g); rotZ(g, 0, [ix - 0.085, 0.92, 0.05], -0.36); b = g.v.length/7; box([ix + 0.085, 0.92, 0.05], [0.04, 0.44, 0.40], g); rotZ(g, b, [ix + 0.085, 0.92, 0.05], 0.36); mk(g, {key:'ic'}); }
+      mk(cyl([ix, 0.36, 0.05], 0.15, 0.32, 'z', 22), {key:'blower', col:metal});
+      mk(cyl([ox + 0.47, 0.30, GZ], 0.024, 0.05, 'x', 12), {col:brass, comp:'svalves'}); mk(cyl([ox + 0.47, 0.20, LZ], 0.018, 0.05, 'x', 12), {col:brass, comp:'svalves'});
+      mk(cyl([qx, 0.71, 0.28], 0.022, 0.07, 'y', 12), {key:'iev', col:brass, comp:'iev', xShell:true}); EEVX([qx, 0.71, 0.28], 0.07, 0.022, 'iev', 'ievpct', false); mk(cyl([ix, 0.685, 0.28], 0.017, 0.035, 'y', 12), {col:brass, comp:'dist'});
+      mk(cyl([sx, sy, FZ], 0.027, 0.035, 'z', 12), {col:brass}); mk(cyl([qx, qy, FZ], 0.020, 0.035, 'z', 12), {col:brass});
+      if (hp){ mk(cyl([ox + 0.33, 0.20, LZ], 0.022, 0.07, 'y', 12), {key:'ev', col:brass, comp:'oev', xShell:true}); EEVX([ox + 0.33, 0.20, LZ], 0.07, 0.022, 'oev', 'evpct');
+        P('oc-out', [[coilR, coilBot, coilZ], [ox + 0.19, coilBot, coilZ], [ox + 0.19, coilBot, LZ], [ox + 0.19, 0.20, LZ], [ox + 0.33, 0.20, LZ]], 0.010, REV);
+        P('liq', [[ox + 0.33, 0.20, LZ], [lx, 0.20, LZ], ...liqTo], 0.010, {cool:'hi', heat:'hi', rev:true});
+        P('gas', [gasIn[0].concat([[cx + 0.13, 0.30, GZ], [cx + 0.13, fy - 0.09, GZ], [cx + 0.05, fy - 0.09, GZ], pE])], 0.016, REVG); tagc(P('gas', hdrs, 0.011, REVG), 'hdr');
+        L('evpct', [ox + 0.33, 0.25, LZ], {pri:3}); }
+      else { P('oc-out', [[coilR, coilBot, coilZ], [ox + 0.19, coilBot, coilZ], [ox + 0.19, coilBot, LZ], [ox + 0.19, 0.20, LZ], [ox + 0.47, 0.20, LZ]], 0.010, {cool:'hi', heat:'hi'});
+        P('liq', [[ox + 0.47, 0.20, LZ], [lx, 0.20, LZ], ...liqTo], 0.010, {cool:'hi', heat:'hi'});
+        P('gas', [gasIn[0].concat([[ox + 0.47, 0.30, GZ]])], 0.016, {cool:'lo', heat:'lo'}); tagc(P('gas', hdrs, 0.011, {cool:'lo', heat:'lo'}), 'hdr');
+        P('suct', [[[ox + 0.47, 0.30, GZ], [cx + 0.13, 0.30, GZ], [cx + 0.13, 0.56, GZ], [ax, 0.56, az], [ax, 0.443, az]], jTube], 0.015, {lo:true}); }
+      { const o = hp ? {cool:'lo', heat:'hi', rev:true} : {cool:'lo', heat:'lo'};
+        P('ic-in', [[qx, qy, 0.28], [qx, 0.66, 0.28], [ix, 0.66, 0.28], [ix, 0.70, 0.28]], 0.010, o);
+        tagc(P('ic-in', [-1, 1].flatMap(sg => [0.73, 0.84].map(y => [[ix, 0.70, 0.28], [ix + sg*0.05, y - 0.01, 0.275], [slabX(y, sg) - sg*0.03, y + 0.01, 0.235]])), 0.0045, o), 'dist'); }
+      L('suct', [ax, 0.56, az], {pri:2}); L('hp', [cx, H - 0.02, cz], {pri:2}); L('lp', [ax, 0.51, az], {pri:3}); L('sh', [cx, 0.62, GZ], {pri:4}); L('sc', [ox + 0.26, 0.12, LZ], {pri:3});
+      L('liq', [-0.12, 0.20, LZ], {pri:2}); L('iliq', [ix - 0.05, 0.66, 0.28], {pri:2}); L('ievpct', [qx, 0.71, 0.30], {pri:3}); L('igas', [slabX(sy, -1) - 0.02, sy, HZ], {pri:2}); L('ipress', [sx, sy, 0.36], {pri:4}); L('cfm', [ix, 0.36, 0.22], {pri:3});
+      labels.push({name:'AIR HANDLER', at:[ix, 1.45, 0.05]});
+      bbox = [[ox - 0.5, 0, -0.25], [1.25, 1.45, 0.48]];
+      covComp = 'ahu';
+      { // air handler: side, back and top panels, supply plenum, blower door and coil door with the line set through the coil door
+        const e = 0.006, T = 0.012, x0 = ix - 0.275 - e, x1 = ix + 0.275 + e, z0 = -0.20 - e, z1 = FZ + e, Y = 1.35;
+        CV(box([x0 - T/2, Y/2, 0.05], [T, Y, z1 - z0]), AHP); CV(box([x1 + T/2, Y/2, 0.05], [T, Y, z1 - z0]), AHP); CV(box([ix, Y/2, z0 - T/2], [x1 - x0 + 2*T, Y, T]), AHP);
+        CV(box([ix, Y + T/2, 0.05], [x1 - x0 + 2*T, T, z1 - z0 + 2*T]), AHP); CV(box([ix, Y + 0.11, 0.05], [0.48, 0.20, 0.42]), GALV);
+        const dz = z1 + T/2; CV(box([ix, 0.315, dz], [x1 - x0 + 2*T, 0.61, T]), AHP); CV(box([ix, 0.98, dz], [x1 - x0 + 2*T, 0.73, T]), AHP);
+        for (const [y, w] of [[0.55, 0.12], [1.28, 0.12], [0.70, 0.12]]) CV(box([ix, y, dz + 0.012], [w, 0.018, 0.012]), DARK);
+        CV(box([ix + 0.12, 0.30, dz + T/2 + 0.001], [0.14, 0.09, 0.002]), [0.93, 0.93, 0.90]);
+        CV(cyl([sx, sy, dz + 0.004], 0.034, 0.02, 'z', 16), DARK); CV(cyl([qx, qy, dz + 0.004], 0.026, 0.02, 'z', 16), DARK); }
+    } else {
+      // ---- mini split: every head has its own line set down the wall to its own port and junction on the header ----
+      const cols = zoneCols(), N = cols.length, xs = cols.map((k, j) => (j - (N-1)/2)*1.05 + 0.1), TX = 0.62, TXL = 0.58, GP = 0.06;
+      const order = cols.map((k, j) => j).sort((a, b) => Math.abs(xs[b] + 0.46 - TX) - Math.abs(xs[a] + 0.46 - TX)), lvl = []; order.forEach((j, n) => lvl[j] = n);
+      const yg = j => 0.22 + 0.105*lvl[j], yl = j => yg(j) - 0.045, ygs = cols.map((k, j) => yg(j)), yls = cols.map((k, j) => yl(j));
+      const x0 = Math.min(-0.7, xs[0] - 0.6), x1 = Math.max(0.9, xs[N-1] + 0.75);
+      mk(box([(x0 + x1)/2, 1.25, -0.30], [x1 - x0, 2.5, 0.03]), {kind:'glass', col:[...ink2, 0.07]}); mk(boxEdges([(x0 + x1)/2, 1.25, -0.30], [x1 - x0, 2.5, 0.03]), {kind:'line', col:[...ink2, 0.3]});
+      P('oc-out', [[coilR, coilBot, coilZ], [ox + 0.19, coilBot, coilZ], [ox + 0.19, coilBot, LZ], [0.33, coilBot, LZ], [0.33, Math.min(...yls), LZ]], 0.010, REV);
+      P('lhdr', [[0.33, Math.min(...yls) - 0.012, LZ], [0.33, Math.max(...yls) + 0.012, LZ]], 0.019, REV);
+      P('ghdr', [[0.41, Math.min(...ygs) - 0.012, GP], [0.41, Math.max(...ygs) + 0.012, GP]], 0.023, REVG);
+      if (hp) P('griser', [[0.41, Math.max(...ygs), GP], [0.41, 0.67, GP], [cx + 0.05, 0.67, GZ], pE], 0.016, REVG);
+      else { P('griser', [[0.41, Math.max(...ygs), GP], [0.41, 0.70, GP], [ax, 0.70, az], [ax, 0.443, az]], 0.016, {cool:'lo', heat:'lo'}); P('suct', jTube, 0.015, {lo:true}); }
+      cols.forEach((k, j) => { const x = xs[j], xg = x + 0.46, xl = xg + (xg >= TX ? 0.05 : -0.05), Y = yg(j), Yl = yl(j), Z = MZ.letters[k];
+        cab([x, 2.05, -0.17], [0.80, 0.28, 0.20], 0.10);
+        mk(box([x - 0.04, 2.08, -0.235], [0.66, 0.17, 0.035]), {key:'zc' + k}); mk(cyl([x - 0.04, 1.95, -0.14], 0.033, 0.64, 'x', 12), {key:'zf' + k, col:metal});
+        mk(cyl([0.40, Yl, LZ], 0.019, 0.05, 'y', 10), {key:'pev' + k, col:brass, comp:'pev' + k, xShell:true}); EEVX([0.40, Yl, LZ], 0.05, 0.019, 'pev' + k, 'pevp' + k);
+        P('zg' + k, [[x + 0.30, 2.11, -0.25], [xg, 2.11, -0.25], [xg, Y, -0.25], [TX, Y, -0.25], [TX, Y, GP], [0.41, Y, GP]], 0.014, {cool:'lo', heat:'hi', rev:true, zone:k});
+        P('zh' + k, [[0.33, Yl, LZ], [0.40, Yl, LZ]], 0.009, {cool:'hi', heat:'lo', rev:true, zone:k});
+        P('zl' + k, [[0.40, Yl, LZ], [TXL, Yl, LZ], [TXL, Yl, -0.25], [xl, Yl, -0.25], [xl, 2.03, -0.25], [x + 0.30, 2.03, -0.25]], 0.009, {cool:'lo', heat:'hi', rev:true, zone:k});
+        labels.push({name:'ZONE ' + Z, at:[x, 2.30, -0.17], zone:k});
+        // wall head shell with its air outlet and vane, and a line-hide cover over the run down the wall
+        covComp = 'head' + k;
+        CV(box([x, 2.06, -0.17], [0.82, 0.27, 0.21]), WHITE); CV(box([x, 1.915, -0.115], [0.70, 0.02, 0.09]), DARK); CV(box([x, 1.905, -0.06], [0.68, 0.012, 0.035]), [0.86, 0.86, 0.85]);
+        CV(box([x + 0.30, 2.04, -0.062], [0.05, 0.012, 0.004]), [0.30, 0.55, 0.85]);
+        { const xa = Math.min(xg, xl) - 0.045, xb = Math.max(xg, xl) + 0.045; CV(box([(xa + xb)/2, (Math.min(Y, Yl) - 0.03 + 2.12)/2, -0.255], [xb - xa, 2.12 - Math.min(Y, Yl) + 0.03, 0.075]), PANEL);
+          CV(box([(x + 0.30 + xb)/2, 2.07, -0.255], [xb - x - 0.30, 0.13, 0.075]), PANEL); }
+        L('ihx' + k, [x - 0.12, 2.08, -0.2], {pri:2}); L('ra' + k, [x - 0.3, 1.93, -0.08], {pri:4}); L('rmgas' + k, [xg, 1.45, -0.25], {pri:3}); L('rmliq' + k, [xl, 1.1, -0.25], {pri:3}); L('pevp' + k, [0.47, Yl, LZ + 0.02], {pri:4}); });
+      bbox = [[Math.min(-0.5, xs[0] - 0.42), 0, -0.3], [Math.max(0.7, xs[N-1] + 0.56), 2.3, 0.2]];
+    }
+    { const KC = {oc:'ocoil', ofan:'ofan', ic:'icoil', blower:'blower'}; for (const q of meshes) if (!q.comp && q.key){ if (KC[q.key]) q.comp = KC[q.key]; else if (/^zc\d$/.test(q.key)) q.comp = 'zcoil' + q.key[2]; else if (/^zf\d$/.test(q.key)) q.comp = 'zfan' + q.key[2]; } }
+    if (sel && !meshes.some(q => q.comp === sel)) sel = null; for (const q of meshes) q.sel = !!sel && q.comp === sel;
+    labels = labels.filter(l => l.name || (chById[l.ch] && D && D.num[l.ch] && D.num[l.ch].some(isN)));
+    for (const l of labels){ const e = document.createElement('div'); e.className = 'v3chip' + (l.name ? ' name' : '');
+      if (l.name) e.textContent = l.name; else { e.innerHTML = `<b>${chById[l.ch].short}</b><span class="v"></span>`; e.addEventListener('click', () => togglePin(l.ch)); }
+      labHost.appendChild(e); l.el = e; }
+    for (const m of meshes){ if (m.cover) m.hidden = !showCov; if (m.xIn) m.hidden = !showX; }
+    resize(); const d = defaultCam(); cam = d; home = Object.assign({}, d, {tgt:d.tgt.slice()}); if (D && evalCache && evalCache.length === D.n && cur < D.n) setRow(cur); dirty = labDirty = true; kick();
+  }
+  function defaultCam(){ const multi = FAM === 'multi', tgt = [(bbox[0][0]+bbox[1][0])/2, (bbox[0][1]+bbox[1][1])/2, (bbox[0][2]+bbox[1][2])/2];
+    const c = {az: multi ? 0.55 : (vw < vh ? -1.02 : -0.5), el: multi ? 0.22 : 0.42, dist:6, tgt}; return fit(c); }
+  function fit(c){ let lo = 0.6, hi = 40; for (let n = 0; n < 22; n++){ c.dist = (lo + hi)/2; const M = matFor(c); let ok = true;
+      for (let k = 0; k < 8 && ok; k++){ const p = proj(M, [bbox[k&1][0], bbox[(k>>1)&1][1], bbox[(k>>2)&1][2]]); if (!p || Math.abs(p[0]) > 0.94 || p[1] > 0.80 || p[1] < -0.90) ok = false; }
+      if (ok) hi = c.dist; else lo = c.dist; } c.dist = hi; return c; }
+  // ---- per-row state: colours, flow, fans, chip values ----
+  function setRow(i){
+    if (!inited || !D || !meshes.length || !evalCache || evalCache.length !== D.n) return;
+    cyc = cycleAt(i); const PHC = st => parseCol(cssVar('--ph-' + st)), dark = (() => { const p = parseCol(cssVar('--panel')); return p[0] + p[1] + p[2] < 1.2; })(), phc = (st, side) => side === 'lo' ? mix(PHC(st), [1, 1, 1], dark ? 0.32 : 0.45) : PHC(st);
+    const m = D.mode[i] === 'cool' ? 'cool' : 'heat', running = D.runSec[i] >= 0, num = D.num, C = k => parseCol(cssVar(k)), HI = C('--hi'), LO = C('--lo'), OFF = C('--metal2'), metal = OFF, ink2c = C('--ink2');
+    const zoneOn = k => running && !(isN(num['pev'+k][i]) && num['pev'+k][i] === 0);
+    const tc = (t, fb) => { const c = THERMAL && running ? thermColor(t) : null; return c ? parseCol(c) : fb; };
+    const rmax = D.range && D.range.rps ? D.range.rps.max : 0; flowSpeed = 0.25 + 0.55*(isN(num.rps[i]) && rmax > 0 ? Math.min(1, num.rps[i]/rmax) : 0.5);
+    for (const q of meshes){
+      if (q.pipe){ const p = q.pipe, side = p.hi ? 'hi' : p.lo ? 'lo' : p[m], on = p.id === 'sv' ? D.str.svhot[i] === 'ON' : p.zone != null ? zoneOn(p.zone) : running;
+        const ph = showPhase && on && running ? phaseOf(p.id, i, EQ.out === 'ac' ? 'cool' : m, cyc) : null;
+        q.col = [...(ph ? phc(ph.st, ph.side) : (p.id === 'sv' || (showPhase && running)) && !on ? OFF : tc(segTemp(p.id, i, m), on ? (side === 'hi' ? HI : LO) : OFF)), 1]; q.flow = on && S.flow ? 0.5 : 0; q.dir = (p.rev && m === 'heat') ? -1 : 1; q.on = on; }
+      else if (showPhase && running && (q.key === 'oc' || q.key === 'ic')){ const cond = (q.key === 'oc') === ((EQ.out === 'ac' ? 'cool' : m) === 'cool'); q.col = [...phc('mix', cond ? 'hi' : 'lo'), 1]; }
+      else if (showPhase && q.key && /^zc\d$/.test(q.key)){ const on = zoneOn(+q.key[2]); q.col = [...(on ? phc('mix', m === 'cool' ? 'lo' : 'hi') : OFF), 1]; }
+      else if (q.key === 'rotor') q.spinOn = running;
+      else if (q.key === 'fwc') q.col = [...(D.str.fourway && D.str.fourway[i] === 'ON' ? C('--ok') : ink2c), 1];
+      else if (q.key === 'oc') q.col = [...tc(num.ochex[i], running ? ((EQ.out === 'ac' ? 'cool' : m) === 'heat' ? LO : HI) : OFF), 1];
+      else if (q.key === 'ic') q.col = [...tc(segTemp('ic', i, m), running ? (m === 'heat' ? HI : LO) : OFF), 1];
+      else if (q.key === 'svc') q.col = [...(D.str.svhot[i] === 'ON' ? C('--ok') : ink2c), 1];
+      else if (q.key === 'comp') q.col = [...(running ? mix(metal, HI, 0.45) : metal), 1];
+      else if (q.key === 'ofan') q.spinOn = isN(num.fan[i]) ? num.fan[i] > 0 : running;
+      else if (q.key === 'blower') q.col = [...((isN(num.cfm[i]) ? num.cfm[i] > 0 : running) ? mix(metal, LO, 0.35) : metal), 1];
+      else if (q.key === 'ev' || q.key === 'iev'){ const v = num[q.key][i]; q.col = [...(isN(v) && v === 0 ? OFF : [0.74, 0.60, 0.32]), 1]; }
+      else if (q.key && /^zc\d$/.test(q.key)){ const k = q.key[2], on = zoneOn(+k); q.col = [...tc(isN(num['ihx'+k][i]) ? num['ihx'+k][i] : avg(num['rmgas'+k][i], num['rmliq'+k][i]), on ? (m === 'heat' ? HI : LO) : OFF), 1]; }
+      else if (q.key && /^zf\d$/.test(q.key)){ const k = q.key[2]; q.col = [...((isN(num['ifan'+k][i]) ? num['ifan'+k][i] > 0 : running) ? mix(metal, LO, 0.4) : metal), 1]; }
+      else if (q.key && /^pev\d$/.test(q.key)){ const v = num[q.key][i]; q.col = [...(isN(v) && v === 0 ? OFF : [0.74, 0.60, 0.32]), 1]; }
+    }
+    for (const q of meshes) if (q.arrowOf) q.hidden = !q.arrowOf.on || !S.arrows || q.arrowOf.dir !== q.sign;
+    for (const q of meshes) if (q.svPart && !S.sv) q.hidden = true; else if (q.svPart && !q.arrowOf) q.hidden = false;
+    for (const q of meshes) if (q.dyn) q.model = tr(q.dyn(i));
+    renderCard(); phDraw();
+    for (const l of labels){ if (l.name) continue; const c = chById[l.ch], v = num[l.ch][i], st = stateOf(l.ch, i);
+      l.el.querySelector('.v').textContent = fmt(v, c) + (c.unit ? ' ' + c.unit : ''); l.el.className = 'v3chip' + (st === 'warn' || st === 'alarm' ? ' ' + st : '') + (pins.includes(l.ch) ? ' pin' : ''); leadCls(l); }
+    dirty = true; kick();
+  }
+  // ---- drawing ----
+  function resize(){ if (!canvas) return; const dpr = Math.min(2, window.devicePixelRatio || 1), w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return;
+    if (canvas.width !== Math.round(w*dpr) || canvas.height !== Math.round(h*dpr)){ canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr); }
+    if (vw !== w || vh !== h){ vw = w; vh = h; dirty = labDirty = true; } }
+  function draw(){
+    resize(); if (!vw) return; MVP = matFor(cam);
+    gl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(prog); gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2);
+    gl.uniformMatrix4fv(U.uMVP, false, MVP); gl.uniform3fv(U.uL, norm([0.45, 0.8, 0.55]));
+    ACC = parseCol(cssVar('--accent'));
+    for (const m of meshes){ if (m.spinC) m.model = spinZ(m.spinC, spin); else if (m.spinY) m.model = spinYm(m.spinY, spinR); else if (m.swing) m.model = swingM(m.swing, spinR); }
+    gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.disable(gl.BLEND);
+    for (const m of meshes) if ((m.kind === 'solid' || m.kind === 'flat') && !m.hidden && !(showX && m.xShell)) drawMesh(m);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    for (const m of meshes) if (m.kind === 'glass' && !m.hidden) drawMesh(m);
+    if (showX) for (const m of meshes) if (m.xShell && !m.hidden) drawMesh(m, [...m.col.slice(0, 3), 0.2]);
+    for (const m of meshes) if (m.kind === 'line' && !m.hidden) drawMesh(m);
+    gl.depthMask(true);
+    if (labDirty) placeLabels(); dirty = labDirty = false;
+  }
+  function placeLabels(){
+    labHost.style.display = showLab ? '' : 'none'; if (!showLab) return;
+    // every reading stays on screen: next to its sensor when there is room, otherwise stacked in a side column
+    // (outdoor readings on the outdoor unit's side, indoor on the other), always tied to the sensor by a leader line
+    const NS = 'http://www.w3.org/2000/svg'; let svg = labHost.querySelector('svg.v3lead');
+    if (!svg){ svg = document.createElementNS(NS, 'svg'); svg.setAttribute('class', 'v3lead'); labHost.prepend(svg); }
+    const bt = $('#v3btns'), top0 = bt ? bt.offsetTop + bt.offsetHeight + 6 : 6, hint = wrap.querySelector('.v3hint'), bot0 = hint && hint.offsetHeight ? hint.offsetTop - 4 : vh - 20, used = bt ? [[bt.offsetLeft - 4, 0, vw, top0]] : [];
+    for (const id of ['#v3modes', '#v3legend', '#v3card']){ const e = wrap.querySelector(id); if (e && !e.hidden && e.offsetWidth) used.push([e.offsetLeft - 4, e.offsetTop - 4, e.offsetLeft + e.offsetWidth + 4, e.offsetTop + e.offsetHeight + 4]); }
+    const hit = r => r[0] < 2 || r[2] > vw - 2 || r[1] < 2 || r[3] > vh - 2 || used.some(u => r[0] < u[2] + 3 && r[2] > u[0] - 3 && r[1] < u[3] + 3 && r[3] > u[1] - 3);
+    const scr = l => { const p = proj(MVP, l.at); return p ? {x:(p[0]*0.5 + 0.5)*vw, y:(1 - (p[1]*0.5 + 0.5))*vh, on:Math.abs(p[0]) < 1 && Math.abs(p[1]) < 1} : null; };
+    const put = (l, r) => { used.push(r); l.r = r; l.el.style.transform = `translate(${r[0].toFixed(1)}px,${r[1].toFixed(1)}px)`; };
+    const sz = l => [l.el.offsetWidth || 56, l.el.offsetHeight || 26];
+    for (const l of labels){ l.r = null; l.p = scr(l); }
+    for (const l of labels) if (l.name && l.p && l.p.on){ const [w, h] = sz(l), r = [l.p.x - w/2, l.p.y - h/2, l.p.x + w/2, l.p.y + h/2]; if (!hit(r)) put(l, r); }
+    const data = labels.filter(l => !l.name).sort((a, b) => (a.pri || 5) - (b.pri || 5)), spill = [];
+    for (const l of data){ const [w, h] = sz(l), p = l.p; let ok = false;
+      if (p && p.on) for (const [dx, dy] of [[-w/2, -h - 9], [-w/2, 9], [12, -h/2], [-w - 12, -h/2], [10, -h - 7], [-w - 10, -h - 7], [10, 7], [-w - 10, 7]]){
+        const r = [p.x + dx, p.y + dy, p.x + dx + w, p.y + dy + h]; if (!hit(r)){ put(l, r); ok = true; break; } }
+      if (!ok) spill.push(l); }
+    const meanX = g => { const a = data.filter(l => l.grp === g && l.p).map(l => l.p.x); return a.length ? a.reduce((s, v) => s + v, 0)/a.length : (g === 'out' ? 0 : vw); };
+    const outLeft = meanX('out') <= meanX('in'), cw = Math.max(0, ...spill.map(l => sz(l)[0]));
+    // columns hug the model's screen footprint (not the far edges of a wide screen)
+    let mL = vw, mR = 0; for (let k = 0; k < 8; k++){ const q = proj(MVP, [bbox[k&1][0], bbox[(k>>1)&1][1], bbox[(k>>2)&1][2]]); if (q){ const x = (q[0]*0.5 + 0.5)*vw; mL = Math.min(mL, x); mR = Math.max(mR, x); } }
+    const xL = Math.max(4, Math.min(vw/2 - cw, mL - cw - 10)), xR = Math.min(vw - 4, Math.max(vw/2 + cw, mR + 10 + cw));
+    const colX = (side, c, w) => { if (side === 'L'){ const x = xL - c*(cw + 4); return x >= 4 ? x : xL + c*(cw + 4); } const r = xR + c*(cw + 4); return (r <= vw - 4 ? r : xR - c*(cw + 4)) - w; };
+    for (const side of ['L', 'R']){
+      const list = spill.filter(l => ((l.grp === 'out') === outLeft) === (side === 'L')).sort((a, b) => (a.p ? a.p.y : vh/2) - (b.p ? b.p.y : vh/2));
+      for (const l of list){ const [w, h] = sz(l), want = Math.max(top0, Math.min(bot0 - h, (l.p ? l.p.y : vh/2) - h/2)); let done = false;
+        for (let c = 0; c < 4 && !done; c++){ const x = colX(side, c, w);
+          for (let k = 0; k < 160 && !done; k++) for (const sg of k ? [1, -1] : [1]){ const y = want + sg*k*3; if (y < top0 || y + h > bot0) continue;
+            const r = [x, y, x + w, y + h]; if (!hit(r)){ put(l, r); done = true; break; } } }
+        if (!done){ const x = colX(side, 0, w); put(l, [x, want, x + w, want + h]); } } }
+    for (const l of labels){ l.el.style.visibility = l.r ? 'visible' : 'hidden'; if (l.name) continue;
+      if (!l.ln){ l.ln = document.createElementNS(NS, 'line'); l.dot = document.createElementNS(NS, 'circle'); l.dot.setAttribute('r', '2.6'); svg.append(l.ln, l.dot); }
+      const r = l.r, p = l.p; if (!r || !p){ l.ln.style.display = l.dot.style.display = 'none'; continue; }
+      const ax = Math.max(0, Math.min(vw, p.x)), ay = Math.max(0, Math.min(vh, p.y)), cx = Math.max(r[0], Math.min(r[2], ax)), cy = Math.max(r[1], Math.min(r[3], ay));
+      l.ln.setAttribute('x1', ax.toFixed(1)); l.ln.setAttribute('y1', ay.toFixed(1)); l.ln.setAttribute('x2', cx.toFixed(1)); l.ln.setAttribute('y2', cy.toFixed(1));
+      l.ln.style.display = Math.hypot(cx - ax, cy - ay) > 3 ? '' : 'none';
+      l.dot.setAttribute('cx', ax.toFixed(1)); l.dot.setAttribute('cy', ay.toFixed(1)); l.dot.style.display = p.on ? '' : 'none'; leadCls(l); }
+  }
+  function leadCls(l){ if (!l.ln) return; const st = l.el.classList.contains('alarm') ? 'alarm' : l.el.classList.contains('warn') ? 'warn' : ''; l.ln.setAttribute('class', st); l.dot.setAttribute('class', st); }
+  // ---- loop: continuous only while the flow is allowed to animate ----
+  const animating = () => MODE3D && !document.body.classList.contains('anim-off') && S.flow && D && D.runSec[cur] >= 0;
+  function frame(t){ rafId = 0; if (!MODE3D || !inited || wrap.hidden) return;
+    const an = animating(); if (an){ if (t - lastT > 45){ const dt = Math.min(0.2, (t - (lastT || t))/1000); lastT = t; phase += dt*flowSpeed/0.085*0.35; if (meshes.some(m => m.spinC && m.spinOn)) spin += dt*7; if (showX && meshes.some(m => m.spinY && m.spinOn)) spinR += dt*(1.2 + 6*flowSpeed); dirty = true; } }
+    else lastT = 0;
+    if (dirty || labDirty) draw();
+    if (an) rafId = requestAnimationFrame(frame); }
+  function kick(){ if (!rafId && MODE3D && inited) rafId = requestAnimationFrame(frame); }
+  // ---- touch / mouse ----
+  function controls(){
+    const pts = new Map(); let lastTap = 0, pinch = null, down = null;
+    const moved = () => { cam.el = Math.max(0.03, Math.min(1.5, cam.el)); cam.dist = Math.max(0.5, Math.min(40, cam.dist)); dirty = labDirty = true; kick(); };
+    canvas.addEventListener('pointerdown', e => { try { canvas.setPointerCapture(e.pointerId); } catch (err){} pts.set(e.pointerId, [e.clientX, e.clientY]); pinch = null; down = pts.size === 1 ? {x:e.clientX, y:e.clientY, t:performance.now(), moved:0} : null;
+      if (pts.size === 1){ const now = performance.now(); if (now - lastTap < 300) reset(); lastTap = now; } });
+    canvas.addEventListener('pointermove', e => { const p = pts.get(e.pointerId); if (!p) return; const dx = e.clientX - p[0], dy = e.clientY - p[1]; pts.set(e.pointerId, [e.clientX, e.clientY]); if (down) down.moved = Math.max(down.moved, Math.hypot(e.clientX - down.x, e.clientY - down.y));
+      if (pts.size === 1){ cam.az -= dx*0.008; cam.el += dy*0.008; moved(); }
+      else if (pts.size === 2){ const [a, b] = [...pts.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]), mid = [(a[0]+b[0])/2, (a[1]+b[1])/2];
+        if (pinch){ cam.dist *= pinch.d/Math.max(20, d); const e0 = eye(cam), z = norm(sub(e0, cam.tgt)), x = norm(cross([0,1,0], z)), y = cross(z, x), k = cam.dist*0.0016; cam.tgt = add(cam.tgt, add(mul(x, -(mid[0]-pinch.mid[0])*k), mul(y, (mid[1]-pinch.mid[1])*k))); moved(); }
+        pinch = {d, mid}; } });
+    const up = e => { const tap = down && pts.size === 1 && e.type === 'pointerup' && down.moved < 8 && performance.now() - down.t < 450; pts.delete(e.pointerId); pinch = null; down = null;
+      if (tap && FEAT3.cards){ const r = canvas.getBoundingClientRect(); select(pick(e.clientX - r.left, e.clientY - r.top)); } }; canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist *= Math.exp(e.deltaY*0.0012); moved(); }, {passive:false});
+  }
+  function reset(){ if (!home) return; cam = Object.assign({}, home, {tgt:home.tgt.slice()}); fit(cam); dirty = labDirty = true; kick(); }
+  function view(name){ if (!home) return; const tgt = [(bbox[0][0]+bbox[1][0])/2, (bbox[0][1]+bbox[1][1])/2, (bbox[0][2]+bbox[1][2])/2];
+    const v = {front:{az:0, el:0.06}, top:{az:0, el:1.45}, side:{az:1.35, el:0.12}}[name]; if (!v) return reset(); cam = fit({az:v.az, el:v.el, dist:6, tgt}); dirty = labDirty = true; kick(); }
+  function pick(px, py){ if (!MVP) return null; const f = (vh/2)/Math.tan(FOV/2), S2 = p => [(p[0]*0.5 + 0.5)*vw, (1 - (p[1]*0.5 + 0.5))*vh]; let best = null;
+    const segD = (x, y, A, B) => { const dx = B[0] - A[0], dy = B[1] - A[1], l2 = dx*dx + dy*dy, t = l2 ? Math.max(0, Math.min(1, ((x - A[0])*dx + (y - A[1])*dy)/l2)) : 0; return Math.hypot(x - A[0] - t*dx, y - A[1] - t*dy); };
+    for (const m of meshes){ if (!m.comp || m.hidden || (showCov ? !m.cover : m.cover)) continue; let d = Infinity, w = 0;
+      if (m.paths){ for (const p of m.paths) for (let k = 1; k < p.length; k++){ const a = proj(MVP, p[k-1]), b = proj(MVP, p[k]); if (!a || !b) continue; const ww = (a[2] + b[2])/2, rr = Math.max(10, (m.rad || 0.01)*1.5*f/ww), dd = segD(px, py, S2(a), S2(b))/rr; if (dd < d){ d = dd; w = ww; } } }
+      else { const c = proj(MVP, m.bc); if (!c) continue; const C = S2(c), rr = Math.max(12, m.br*f/c[2]*0.85); d = Math.hypot(px - C[0], py - C[1])/rr; w = c[2]; }
+      if (d < 1 && (!best || d < best.d - 0.2 || (Math.abs(d - best.d) <= 0.2 && w < best.w))) best = {d, w, comp:m.comp}; }
+    return best ? best.comp : null; }
+  function select(c){ sel = c; for (const q of meshes) q.sel = !!c && q.comp === c; renderCard(); phDraw(); dirty = labDirty = true; kick(); }
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[ch]));
+  const kbOf = c => { if (!c) return {}; const k = /\d$/.test(c) ? +c.slice(-1) : null; return {k, kb:KB[k == null ? c : c.slice(0, -1)]}; };
+  const phOf = (kb, m) => kb ? (typeof kb.ph === 'function' ? kb.ph(m) : kb.ph) : null;
+  function renderCard(){ const el = $('#v3card'); if (!el) return; const {k, kb} = kbOf(sel); if (!sel || !kb || !D){ if (!el.hidden){ el.hidden = true; labDirty = true; } return; }
+    const i = Math.min(cur, D.n - 1), c = cyc, m = c ? c.m : 'cool', base = k == null ? sel : sel.slice(0, -1); let st = '';
+    const pm = meshes.find(q => q.comp === sel && q.pipe); if (pm && c && c.run){ const p = phaseOf(pm.pipe.id, i, m, c); if (p) st = (p.side === 'hi' ? 'High-pressure side' : 'Low-pressure side') + ' · ' + PHASE_NAME[p.st] + (p.flagged ? ' (not what this pipe should carry: check the readings)' : ''); }
+    if (['ocoil', 'icoil', 'zcoil'].includes(base) && c && c.run){ const cond = (base === 'ocoil') === (m === 'cool'); st = cond ? 'High-pressure side · condensing: heat out' : 'Low-pressure side · evaporating: heat in'; }
+    if (c && !c.run) st = 'Compressor off: the refrigerant is not being pumped right now';
+    const live = (kb.live(i, c, k) || []).filter(Boolean), ph = phOf(kb, m), fam = D.fam === 'multi' ? 'multi' : 'unitary', rules = [];
+    for (const id of kb.rules || []){ const R = RULEBOOK.find(r => r.id === id || r.rid === id); if (!R || (R.fam && R.fam !== fam)) continue;
+      const on = (D.sig[i] || []).some(x => x.st === 'rule' && x.rule && (x.rule.id === id || x.rule.rid === id)); rules.push(`<span class="${on ? 'on' : ''}" title="${esc(R.why || '')}">${esc(id)} ${esc(R.title)}${on ? ' · firing now' : ''}</span>`); }
+    el.innerHTML = `<button type="button" class="x" aria-label="Close">×</button><b class="t">${esc(kb.t)}${k != null ? ' · Zone ' + MZ.letters[k] : ''}</b>${st ? `<div class="st">${esc(st)}</div>` : ''}`
+      + (base === 'compressor' ? `<div class="pump"><svg id="pumpsvg" viewBox="-66 -66 132 132" aria-label="Swing compressor pump, cross-section from above"><circle cx="0" cy="0" r="62" fill="var(--panel2)" stroke="var(--ink2)" stroke-width="1.5"/><path id="pm-s" fill="var(--lo)"/><path id="pm-c" fill="var(--hi)"/><circle cx="0" cy="0" r="46" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="-6" y="-60" width="12" height="16" fill="var(--panel2)"/><path id="pm-pt" d="" fill="none"/><rect id="pm-sp" width="9" height="9" fill="var(--lo)"/><rect id="pm-dp" width="9" height="9" fill="var(--hi)"/><polygon id="pm-bl" fill="#E3B341" stroke="var(--ink)" stroke-width="1"/><polygon id="pm-b1" fill="var(--ink2)"/><polygon id="pm-b2" fill="var(--ink2)"/><circle id="pm-pi" r="33" fill="#E3B341" stroke="var(--ink)" stroke-width="1.5"/><circle id="pm-ec" r="15" fill="var(--metal2)" stroke="var(--ink)" stroke-width="1"/><circle cx="0" cy="0" r="6" fill="var(--ink2)"/><line id="pm-cr" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/></svg><small>Inside the pump, seen from above. The shaft's eccentric carries the gold piston round the bore without letting it spin; its blade slides through the rocking bushing at the top. <b style="color:var(--lo)">Blue</b>: gas being drawn in from the accumulator. <b style="color:var(--hi)">Red</b>: gas being squeezed, deeper as the pocket shrinks, until it leaves through the discharge port.${c && c.run ? '' : ' Compressor is off right now.'}</small></div>` : '')
+      + `<p>${esc(kb.what(m))}</p>`
+      + (live.length ? `<div class="kv">${live.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b>${r[2] ? `<i>${esc(r[2])}</i>` : ''}</div>`).join('')}</div>` : '')
+      + (ph && PH_STEP[ph] ? `<button type="button" class="phlink">On the P-h chart: ${esc(PH_STEP[ph])}${showPH ? '' : ' · show it'}</button>` : '')
+      + (rules.length ? `<div class="rl"><em>Rulebook checks that watch this part</em>${rules.join('')}</div>` : '');
+    if (el.hidden){ el.hidden = false; labDirty = true; }
+    pumpRun = base === 'compressor' && !!(c && c.run) && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); pumpDraw(); if (pumpRun && !pumpRaf){ pumpT = performance.now(); pumpRaf = requestAnimationFrame(pumpFrame); } }
+  // swing pump cross-section: same kinematics as the 3D (piston orbits, blade through a rocking bushing), suction and compression pockets filled
+  let pumpA = 0.6, pumpT = 0, pumpRaf = 0, pumpRun = false;
+  function pumpFrame(t){ pumpRaf = 0; if (!document.getElementById('pumpsvg')) return; if (pumpRun){ pumpA += Math.min(0.1, (t - pumpT)/1000)*(1.4 + 5*flowSpeed); pumpT = t; pumpDraw(); pumpRaf = requestAnimationFrame(pumpFrame); } }
+  function pumpDraw(){ const S = id => document.getElementById(id); if (!S('pumpsvg')) return; const R = 46, e = 13, r = 33, ap = Math.PI/2, Pv = [0, 58], th = pumpA, c = [e*Math.cos(th), e*Math.sin(th)], F = p => `${p[0].toFixed(1)},${(-p[1]).toFixed(1)}`;
+    const inner = f => { const u = [Math.cos(f), Math.sin(f)], b = c[0]*u[0] + c[1]*u[1], t = b + Math.sqrt(Math.max(0, r*r - (c[0]*c[0] + c[1]*c[1]) + b*b)); return [u[0]*t, u[1]*t]; };
+    let tn = th; while (tn <= ap) tn += 2*Math.PI; while (tn > ap + 2*Math.PI) tn -= 2*Math.PI;
+    const pocket = (a, b) => { const n = 28, out = [], inn = []; for (let k = 0; k <= n; k++){ const f = a + (b - a)*k/n; out.push([R*Math.cos(f), R*Math.sin(f)]); inn.push(inner(f)); } return 'M' + out.map(F).join('L') + 'L' + inn.reverse().map(F).join('L') + 'Z'; };
+    const frac = (ap + 2*Math.PI - tn)/(2*Math.PI);
+    S('pm-s').setAttribute('d', pocket(ap, tn)); S('pm-s').setAttribute('fill-opacity', '0.35');
+    S('pm-c').setAttribute('d', pocket(tn, ap + 2*Math.PI)); S('pm-c').setAttribute('fill-opacity', (0.25 + 0.6*(1 - frac)).toFixed(2));
+    const port = (id, a) => { const q = [50*Math.cos(a), 50*Math.sin(a)]; S(id).setAttribute('x', (q[0] - 4.5).toFixed(1)); S(id).setAttribute('y', (-q[1] - 4.5).toFixed(1)); }; port('pm-sp', ap + 0.42); port('pm-dp', ap - 0.40);
+    const d = [Pv[0] - c[0], Pv[1] - c[1]], L = Math.hypot(d[0], d[1]), u = [d[0]/L, d[1]/L], n = [-u[1], u[0]], w = 4.5;
+    const a0 = [c[0] + u[0]*(r - 3), c[1] + u[1]*(r - 3)], a1 = [c[0] + u[0]*(L + 12), c[1] + u[1]*(L + 12)];
+    S('pm-bl').setAttribute('points', [[a0[0] + n[0]*w, a0[1] + n[1]*w], [a1[0] + n[0]*w, a1[1] + n[1]*w], [a1[0] - n[0]*w, a1[1] - n[1]*w], [a0[0] - n[0]*w, a0[1] - n[1]*w]].map(F).join(' '));
+    for (const [id, sg] of [['pm-b1', 1], ['pm-b2', -1]]){ const m0 = [Pv[0] + n[0]*sg*(w + 3), Pv[1] + n[1]*sg*(w + 3)]; S(id).setAttribute('points', [[m0[0] - u[0]*9 + n[0]*3, m0[1] - u[1]*9 + n[1]*3], [m0[0] + u[0]*9 + n[0]*3, m0[1] + u[1]*9 + n[1]*3], [m0[0] + u[0]*9 - n[0]*3, m0[1] + u[1]*9 - n[1]*3], [m0[0] - u[0]*9 - n[0]*3, m0[1] - u[1]*9 - n[1]*3]].map(F).join(' ')); }
+    for (const id of ['pm-pi', 'pm-ec']){ S(id).setAttribute('cx', c[0].toFixed(1)); S(id).setAttribute('cy', (-c[1]).toFixed(1)); }
+    S('pm-cr').setAttribute('x1', '0'); S('pm-cr').setAttribute('y1', '0'); S('pm-cr').setAttribute('x2', c[0].toFixed(1)); S('pm-cr').setAttribute('y2', (-c[1]).toFixed(1)); }
+  function applyModes(){ document.querySelectorAll('#v3modes button').forEach(b => b.setAttribute('aria-pressed', String({phase:showPhase, xray:showX, ph:showPH}[b.dataset.m])));
+    const lg = $('#v3legend'); if (lg){ lg.hidden = !showPhase || !MODE3D; lg.innerHTML = `<b>Refrigerant state</b><span><i style="background:var(--ph-vap)"></i>Vapour</span><span><i style="background:var(--ph-mix)"></i>Liquid + vapour (boiling or condensing)</span><span><i style="background:var(--ph-liq)"></i>Liquid</span><small>Strong colour = high-pressure side, pale = low-pressure side.${D && D.fam === 'multi' ? ' Mini split: saturation estimated from coil temperatures.' : ''} Grey = not flowing.</small>`; }
+    const pb = $('#phbox'); if (pb) pb.hidden = !(MODE3D && showPH);
+    for (const q of meshes) if (q.xIn) q.hidden = !showX;
+    if (D && evalCache && evalCache.length === D.n && cur < D.n) setRow(cur); else { renderCard(); phDraw(); }
+    dirty = labDirty = true; kick(); }
+  // ---- P-h chart of the live cycle ----
+  function phDraw(){ const box = $('#phbox'), cv = $('#phc'); if (!box || box.hidden || !cv) return; const W = cv.clientWidth, Hh = cv.clientHeight; if (!W || !Hh) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1); if (cv.width !== Math.round(W*dpr) || cv.height !== Math.round(Hh*dpr)){ cv.width = Math.round(W*dpr); cv.height = Math.round(Hh*dpr); }
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, Hh);
+    const c = cyc, ref = c ? c.ref : (REF.ref || 'R410A'), R = phRows(ref), CR = PHCRIT[ref] || PHCRIT.R410A, V = cssVar, sans = V('--sans'), mono = V('--mono');
+    const pl = 40, pr = 12, pt = 16, pb = 30, x0 = -5, x1 = Math.max(Math.max(...R.map(r => r[4])) + 45, c && c.ok ? c.h2 + 12 : 0), p0 = 25, p1 = 950;
+    const X = h => pl + (h - x0)/(x1 - x0)*(W - pl - pr), Y = Pa => Hh - pb - (Math.log(Pa) - Math.log(p0))/(Math.log(p1) - Math.log(p0))*(Hh - pt - pb);
+    g.font = `11px ${sans}`; g.lineWidth = 1; g.strokeStyle = V('--line'); g.fillStyle = V('--muted');
+    g.textAlign = 'right'; g.textBaseline = 'middle'; for (const ps of [0, 50, 100, 200, 400, 800]){ const y = Y(ps + PSIA); g.beginPath(); g.moveTo(pl, y); g.lineTo(W - pr, y); g.stroke(); g.fillText(String(ps), pl - 5, y); }
+    g.textAlign = 'center'; g.textBaseline = 'top'; const hs = W < 420 ? 40 : 20; for (let h = 0; h <= x1; h += hs){ const x = X(h); g.beginPath(); g.moveTo(x, pt); g.lineTo(x, Hh - pb); g.stroke(); g.fillText(String(h), x, Hh - pb + 4); }
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText('psig (log scale)', 4, 11); g.textAlign = 'right'; g.fillText('enthalpy, Btu/lb', W - pr, Hh - 3);
+    // saturation dome through the critical point
+    g.beginPath(); R.forEach((r, k) => { const x = X(r[3]), y = Y(r[1] + PSIA); k ? g.lineTo(x, y) : g.moveTo(x, y); }); g.lineTo(X(CR[2]), Y(CR[1] + PSIA)); for (let k = R.length - 1; k >= 0; k--) g.lineTo(X(R[k][4]), Y(R[k][2] + PSIA)); g.closePath();
+    g.save(); g.globalAlpha = 0.13; g.fillStyle = V('--ph-mix'); g.fill(); g.restore(); g.strokeStyle = V('--ink2'); g.lineWidth = 1.5; g.stroke();
+    g.font = `600 11px ${sans}`; g.fillStyle = V('--muted'); g.textAlign = 'center'; const ym = Y(70 + PSIA);
+    g.fillText('liquid', X(R[0][3]) + 18, ym); g.fillText('liquid + vapour', (X(hLiq(-15, ref)) + X(hSatV(-15, ref)))/2, Y(psigAt(-15, ref) + PSIA) - 6); g.textAlign = 'right'; g.fillText('vapour', W - pr - 4, Y(700 + PSIA));
+    phPts = []; const sp = $('#phsub'), rd = $('#phread');
+    if (sp) sp.textContent = `${REFNAME[ref] || ref}${c ? ' · ' + (c.m === 'cool' ? 'cooling' : 'heating') : ''}${D ? ' · ' + fmtTime(D.t[Math.min(cur, D.n - 1)]) : ''}`;
+    if (!c || !c.ok){ g.fillStyle = V('--ink2'); g.font = `600 13px ${sans}`; g.textAlign = 'center'; g.fillText(!D ? 'Open a log to draw the cycle' : c && !c.run ? 'Compressor off: there is no cycle to draw at this moment' : 'This row lacks the readings to draw the cycle', (pl + W - pr)/2, (pt + Hh - pb)/2);
+      if (rd) rd.innerHTML = ''; return; }
+    const Pc = c.Pc + PSIA, Pe = c.Pe + PSIA, Q = {1:[X(c.h1), Y(Pe)], 2:[X(c.h2), Y(Pc)], 3:[X(c.h3), Y(Pc)], 4:[X(c.h4), Y(Pe)]}, hl = phOf(kbOf(sel).kb, c.m);
+    g.setLineDash([3, 3]); g.strokeStyle = V('--muted'); g.lineWidth = 1; for (const Pa of [Pc, Pe]){ const y = Y(Pa); g.beginPath(); g.moveTo(pl, y); g.lineTo(W - pr, y); g.stroke(); } g.setLineDash([]);
+    for (const [id, a, b] of [['12', 1, 2], ['23', 2, 3], ['34', 3, 4], ['41', 4, 1]]){ const on = hl === id; g.beginPath(); g.moveTo(...Q[a]); g.lineTo(...Q[b]); g.strokeStyle = on ? V('--accent') : V('--ink'); g.lineWidth = on ? 4 : 2; g.stroke();
+      const mx = (Q[a][0] + Q[b][0])/2, my = (Q[a][1] + Q[b][1])/2, an = Math.atan2(Q[b][1] - Q[a][1], Q[b][0] - Q[a][0]); g.save(); g.translate(mx, my); g.rotate(an); g.beginPath(); g.moveTo(5, 0); g.lineTo(-4, -4); g.lineTo(-4, 4); g.closePath(); g.fillStyle = g.strokeStyle; g.fill(); g.restore(); }
+    g.font = `600 10.5px ${mono}`; g.fillStyle = V('--ink2'); g.textAlign = 'left'; g.textBaseline = 'bottom';
+    g.textAlign = 'center'; g.textBaseline = 'top'; const lx = Q[3][0] + (Q[2][0] - Q[3][0])*0.42; g.fillText(`Tc ${lf0(c.Tc)}°F · ${lf0(c.Pc)} psig${c.est ? ' est.' : ''}`, lx, Y(Pc) + 4); g.textBaseline = 'bottom'; g.fillText(`Te ${lf0(c.Te)}°F · ${lf0(c.Pe)} psig${c.est ? ' est.' : ''}`, Q[4][0] + (Q[1][0] - Q[4][0])*0.42, Y(Pe) - 4);
+    if (isN(c.sh) && c.sh > 1){ const xa = X(hSatV(c.Te, ref)); g.fillStyle = V('--ink2'); g.textAlign = 'right'; g.textBaseline = 'top'; g.fillText(`SH ${lf0(c.sh)}°F`, Q[1][0] - 10, Y(Pe) + 6); }
+    if (isN(c.sc) && c.sc > 1){ const xa = X(hLiq(c.Tc, ref)); g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillText(`SC ${lf0(c.sc)}°F`, (xa + Q[3][0])/2, Y(Pc) - 16); }
+    const off = {1:[8, 12], 2:[8, -10], 3:[-12, -10], 4:[-12, 12]};
+    for (const n of [1, 2, 3, 4]){ const [x, y] = Q[n], on = hl === String(n); g.beginPath(); g.arc(x, y, on ? 7 : 5, 0, 2*Math.PI); g.fillStyle = on ? V('--accent') : V('--panel'); g.fill(); g.strokeStyle = on ? V('--accent') : V('--ink'); g.lineWidth = 2; g.stroke();
+      g.fillStyle = V('--ink'); g.font = `800 12px ${sans}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(n), x + off[n][0], y + off[n][1]); phPts.push({n, x, y}); }
+    const x4 = (c.h4 - hLiq(c.Te, ref))/(hSatV(c.Te, ref) - hLiq(c.Te, ref)); c.x4 = x4;
+    if (rd) rd.innerHTML = `<span>Heat picked up (h1 − h4) <b>${lf1(c.qe)}</b> Btu/lb</span><span>Compressor work (h2 − h1) <b>${lf1(c.w)}</b></span><span>Heat rejected (h2 − h3) <b>${lf1(c.qc)}</b></span><span>${c.m === 'cool' ? 'Cooling' : 'Heating'} COP ≈ <b>${lf1(c.cop)}</b></span><span>Flash gas after the valve <b>${lf0(x4*100)}%</b></span>`
+      + `<span class="note">Points from the ${esc(c.src.P)}, ${esc(c.src.T1)} (1), ${esc(c.src.T2)} (2) and ${esc(c.src.T3)} (3); 4 has the same enthalpy as 3 because the valve only drops the pressure. Measured discharge temperature includes heat the shell loses, so treat the COP as a rough figure.${c.notes.length ? ' ' + esc(c.notes.join('; ')) + '.' : ''}</span>`; }
+  function phTip(e){ const tip = $('#phtip'), cv = $('#phc'); if (!tip || !cv || !cyc || !cyc.ok) return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, c = cyc;
+    let n = null, bd = 18; for (const p of phPts){ const d = Math.hypot(p.x - x, p.y - y); if (d < bd){ bd = d; n = p; } } if (!n){ tip.hidden = true; return; }
+    const T = {1:[`1 · Compressor inlet`, c.Pe, c.T1, c.h1, isN(c.sh) ? `superheated vapour, ${lf0(c.sh)}°F superheat` : 'vapour'], 2:[`2 · Compressor outlet`, c.Pc, c.T2, c.h2, `hot vapour, ${lf0(c.dsh)}°F above Tc`], 3:[`3 · Condenser outlet`, c.Pc, c.T3, c.h3, isN(c.sc) ? `liquid, ${lf0(c.sc)}°F subcooled` : 'liquid'], 4:[`4 · After the expansion valve`, c.Pe, c.Te, c.h4, `${lf0((c.x4 || 0)*100)}% flashed to vapour`]}[n.n];
+    tip.innerHTML = `<b>${esc(T[0])}</b><br>${lf0(T[1])} psig · ${lf0(T[2])}°F · h ${lf1(T[3])} Btu/lb<br>${esc(T[4])}`; tip.hidden = false; tip.style.left = Math.min(r.width - 220, Math.max(0, n.x + 12)) + 'px'; tip.style.top = Math.max(0, n.y - 60) + 'px'; }
+  function init(){
+    if (inited) return true; wrap = $('#v3wrap'); canvas = $('#v3'); labHost = $('#v3labels'); if (!canvas) return false;
+    try { gl = canvas.getContext('webgl', {antialias:true, alpha:true, premultipliedAlpha:false}) || canvas.getContext('experimental-webgl'); if (!gl) throw new Error('no WebGL'); compile(); }
+    catch (err){ gl = null; $('#v3msg').textContent = '3D needs WebGL, which this browser did not provide (' + err.message + '). The 2D drawing still works.'; return false; }
+    controls(); inited = true;
+    if (!FEAT3.xray){ const b = $('#v3modes [data-m="xray"]'); if (b) b.remove(); }
+    if (!FEAT3.cards){ const h = wrap.querySelector('.v3hint'); if (h) h.textContent = 'Drag to rotate · pinch to zoom · two fingers to move · double tap to reset'; }
+    $('#v3modes').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const k = b.dataset.m;
+      if (k === 'phase'){ showPhase = !showPhase; saveJSON('dchk3.phase', showPhase); } else if (k === 'xray'){ showX = !showX; saveJSON('dchk3.xray', showX); } else if (k === 'ph'){ showPH = !showPH; saveJSON('dchk3.ph', showPH); }
+      logEvent('learn3d', {k, on:{phase:showPhase, xray:showX, ph:showPH}[k]}); applyModes(); });
+    $('#v3card').addEventListener('click', e => { if (e.target.closest('.x')) select(null); else if (e.target.closest('.phlink')){ showPH = true; saveJSON('dchk3.ph', true); applyModes(); setTimeout(() => { const b = $('#phbox'); if (b && b.scrollIntoView) b.scrollIntoView({block:'nearest', behavior:'smooth'}); }, 50); } });
+    { const cv = $('#phc'); cv.addEventListener('pointermove', phTip); cv.addEventListener('pointerdown', phTip); cv.addEventListener('pointerleave', () => { $('#phtip').hidden = true; }); }
+    $('#v3btns').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.v === 'covers'){ showCov = !showCov; saveJSON('dchk3.covers', showCov); b.setAttribute('aria-pressed', showCov); for (const m of meshes) if (m.cover) m.hidden = !showCov; dirty = true; kick(); } else if (b.dataset.v === 'labels'){ showLab = !showLab; saveJSON('dchk3.labels', showLab); b.setAttribute('aria-pressed', showLab); labDirty = dirty = true; kick(); } else view(b.dataset.v); });
+    $('#v3btns [data-v="labels"]').setAttribute('aria-pressed', showLab); $('#v3btns [data-v="covers"]').setAttribute('aria-pressed', showCov);
+    canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); inited = false; }); canvas.addEventListener('webglcontextrestored', () => { inited = false; meshes = []; apply(); });
+    return true;
+  }
+  function apply(){ document.body.classList.toggle('mode3d', MODE3D); const w = $('#v3wrap'); if (!w) return; w.hidden = !MODE3D;
+    document.querySelectorAll('#dimsel button').forEach(b => b.setAttribute('aria-pressed', (b.dataset.dim === '3d') === MODE3D));
+    if (MODE3D && init()){ build(); applyModes(); } else { const pb = $('#phbox'); if (pb) pb.hidden = true; } }
+  return {apply, build:() => { if (MODE3D && init()) build(); }, setRow:i => { if (MODE3D) setRow(i); }, kick, resize:() => { if (MODE3D && inited){ resize(); if (home){ fit(cam); } dirty = labDirty = true; kick(); phDraw(); } }};
+})();
+function setMode3D(on){ MODE3D = !!on; saveJSON('dchk3.mode3d', MODE3D); logEvent('mode3d', {on:MODE3D}); V3.apply(); if (!MODE3D && D) setLayout(); }
+
 /* ---------- load ---------- */
 function load(text, name, model){
   try { D = buildDataset(text, name); D._text = text; D.model = model || null; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
@@ -3126,6 +3852,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 
 /* ---------- wiring ---------- */
 $('#viewsel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
+$('#dimsel').addEventListener('click', e => { const b = e.target.closest('[data-dim]'); if (b) setMode3D(b.dataset.dim === '3d'); });
 setView(VIEW);
 $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
 $('#thermal2').addEventListener('change', e => setThermal(e.target.checked));
@@ -3144,6 +3871,7 @@ $('#tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
   document.querySelectorAll('#tabs [role=tab]').forEach(t => t.setAttribute('aria-selected', t === b));
   document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + b.dataset.tab);
+  if (b.dataset.tab === 'cycle' && V3) V3.resize();
   if (b.dataset.tab === 'trends') drawAllStrips();
   if (b.dataset.tab === 'data'){ highlightRow(); if (D) renderPtNow(cur); }
   if (b.dataset.tab === 'fleet') fleetRefresh();
@@ -3174,7 +3902,7 @@ $('#resetrules').addEventListener('click', () => { rules = DEFAULT_RULES.map(r =
 $('#exportrules').addEventListener('click', () => { $('#ruleio').classList.toggle('open'); $('#rulejson').value = JSON.stringify(rules, null, 1); });
 $('#copyrules').addEventListener('click', () => { const ta = $('#rulejson'); navigator.clipboard.writeText(ta.value).then(() => toast('Rules copied')).catch(() => { ta.focus(); ta.select(); toast('Select the text and copy it'); }); });
 $('#applyrules').addEventListener('click', () => { try { const r = JSON.parse($('#rulejson').value); if (!Array.isArray(r)) throw 0; rules = r.map((x,i) => ({on:false, id:'r'+i, mode:'both', gate:true, settle:0, ...x})); buildRulesTable(); onRulesChanged(); toast('Rules applied'); } catch(e){ toast('That JSON did not parse'); } });
-window.addEventListener('resize', () => { if (D){ drawTicks(); drawAllStrips(); } });
+window.addEventListener('resize', () => { if (D){ drawTicks(); drawAllStrips(); } if (V3) V3.resize(); });
 if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (D){ drawTicks(); drawAllStrips(); } });
 
 // installable app: register the service worker only on a real host (not inside a sandboxed preview)
@@ -3198,6 +3926,7 @@ document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListe
 // boot
 applySettings();
 setLayout();
+V3.apply();
 renderCustomList();
 sbUi(); logEvent('session_start', {layout:LAY === LAYOUTS.land ? 'land' : 'port', standalone:window.matchMedia && window.matchMedia('(display-mode: standalone)').matches}); flushQueue(); if (SB) fleetRefresh();
 
