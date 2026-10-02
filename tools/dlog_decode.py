@@ -5,6 +5,8 @@ same CSV the PC D-Checker app exports. Mirrors the decoder inside the web app (t
 Verified byte-for-byte against PC exports of two recordings:
   * FIT DZ6VS (INV_Unitary_*.txt label file)      — types 105/107/151/152/161/164/211/217/313/203/215/30x/310/311/314/801
   * 3-head mini split (Multi_Split.txt label file) — types 151/152/155/161/162/163/165/200-210
+  * DH9VS R-32 (INV_Unitary_DH9VS.txt)             — adds type 802 (R32), indoor mode 0 = 'Fan Only'; the phone stamps each
+    record 15 s later than the PC export does, and the newer PC app prints one fixed decimal (72.0) and yyyy/mm/dd dates
 Known PC-app quirks that this decoder does NOT copy: a whole-degree Celsius reading prints as e.g. "60"
 instead of "60.8" °F; the PC drops an occasional record; timestamps lose their seconds.
 
@@ -15,6 +17,7 @@ import sys, os, io, csv, struct, tarfile, gzip
 PSI_PER_KGF = 14.223           # the PC app's kgf/cm² → psi factor (verified: 0 of 404 cells differ)
 OPMODE = {0: 'Stop', 1: 'Heating', 2: 'Cooling', 3: 'Fan', 4: 'Dry'}   # 1 confirmed (FIT heating), 2 confirmed (multi cooling)
 OPMODE_FW = {0: 'Cooling', 1: 'Heating'}
+IMODE = {0: 'Fan Only', 1: 'Heating', 2: 'Cooling', 3: 'Fan', 4: 'Dry'}   # indoor unit mode (type 313): 0 confirmed 'Fan Only' on a DH9VS, 1 and 2 confirmed
 
 def f1(v):
     s = f'{v:.1f}'
@@ -49,9 +52,11 @@ def split_records(raw):
         recs.append((ts, groups))
     return recs
 
-def unit_suffix(l):
+def unit_suffix(l, has_data=True):
+    """Temperatures get (F) and pressures (psi). A temperature difference (kind 3: target SC / SH, Delta-D) gets (F) only when
+    the column holds at least one value in this recording — that is what the PC app does (verified on DZ6VS, DH9VS and multi)."""
     k = l['kind']
-    return '(F)' if k == 1 or (k == 3 and (l['plot'] or 'Delta-D' in l['label'])) else '(psi)' if k == 2 else ''
+    return '(F)' if k == 1 or (k == 3 and has_data) else '(psi)' if k == 2 else ''
 
 def decode_value(lbl, gl):
     o, t = lbl['off'], lbl['type']
@@ -75,7 +80,7 @@ def decode_value(lbl, gl):
         return f1(c * 1.8 + 32 if lbl['kind'] == 1 else c)
     if t == 164: return str(g[o] * 5)
     if t == 217: return OPMODE.get(g[o], f'Mode {g[o]}')
-    if t == 313: return OPMODE.get(g[o] >> 4, f'Mode {g[o] >> 4}')
+    if t == 313: return IMODE.get(g[o] >> 4, f'Mode {g[o] >> 4}')
     if t == 203: return 'Normal' if g[o] == 0 else f'Error {g[o]}'
     if t == 215: return f'{g[o]:02X}'
     if 300 <= t <= 307: return 'ON' if (g[o] >> (t - 300)) & 1 else 'OFF'
@@ -83,6 +88,7 @@ def decode_value(lbl, gl):
     if t == 311: return str(g[o] & 0x0F)
     if t == 314: return f'{struct.unpack_from("<H", g, o)[0]:04X}'
     if t == 801: return 'R410A'
+    if t == 802: return 'R32'                             # label file of an R-32 unit (INV_Unitary_DH9VS)
     # ---- multi-split (Multi_Split.txt) types ----
     if t == 155: return f1(struct.unpack_from('<H', g, o)[0] / 10)          # volts ×0.1
     if t == 162:                                                            # half-degree °C, offset 64; 0 = no value
@@ -108,10 +114,12 @@ def decode_value(lbl, gl):
 def to_csv(labels, recs):
     cols = [l for l in labels if l and l['vis'] and l['type'] not in (995, 998)]
     out = io.StringIO(); w = csv.writer(out, lineterminator='\n')
-    w.writerow(['DateTime'] + [f"{l['n']}:{l['label']}{unit_suffix(l)}" for l in cols])
-    for ts, groups in recs:
+    rows = [[decode_value(l, groups.get(l['grp'])) for l in cols] for ts, groups in recs]
+    has = [any(r[j] != '---' for r in rows) for j in range(len(cols))]
+    w.writerow(['DateTime'] + [f"{l['n']}:{l['label']}{unit_suffix(l, has[j])}" for j, l in enumerate(cols)])
+    for (ts, groups), r in zip(recs, rows):
         stamp = f"{int(ts[4:6])}/{int(ts[6:8])}/{ts[:4]} {int(ts[8:10])}:{ts[10:12]}:{ts[12:14]}"
-        w.writerow([stamp] + [decode_value(l, groups.get(l['grp'])) for l in cols])
+        w.writerow([stamp] + r)
     return out.getvalue()
 
 def load_any(path):

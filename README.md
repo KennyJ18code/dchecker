@@ -51,9 +51,13 @@ Logs from 2–5 port MXS/MXL outdoor units (columns `Rm_A gas temp`, `Port A EV`
 
 Each strip in the Trends tab draws the reading's logged target on the same scale as an orange dashed line when the log has one (discharge target, target comp speed, target OU fan, target SH/SC, requested airflow); the picker marks those readings "+target". The Overlay button puts up to five ticked readings on one chart, each on its own scale in its own colour with its target dashed in that colour, and a legend showing the value at the cursor and the range of each line. On phones the reading picker folds to one line so the chart is on screen. Tapping a reading on the Cycle screen pins it to the bottom bar (up to five); with two or more pinned, the bar overlays them on one chart with the same legend (each entry has its own unpin ×), or shows a strip each with the Separate switch.
 
+## Models
+
+Unitary logs are read by column **label**, because models number their columns differently (a DH9VS shifts everything from column 76 on). Verified layouts: DZ6VS (R-410A FIT) and DH9VS (R-32 with vapour injection, two fans, drain pan valve); the DH9's extra readings (injection EV, fan 2, fan driver fin temperatures, indoor target SC, drain pan valve) are in Trends and Data. A reading this model never reports is hidden on the diagram. See `docs/decode-walkthrough.md` §8.
+
 ## Refrigerant and PT chart
 
-The app carries R-410A (dew point) and R-32 saturation tables from CoolProp 8, 5 °F steps from −40 to 160 °F, in `PT410` / `PT32`. The refrigerant in use is auto-detected: on a FIT log the board's logged Te/Tc at the logged LP/HP are compared with both tables and the closer one wins; otherwise the model name decides (DC/DH = R-32, DX/DZ = R-410A); a Multi_Split log names no model so it is assumed R-410A (MXS) unless the Refrigerant selector is set to R-32 (MXL). The selection feeds the Te/Tc PT checks, the discharge-limit rule and the PT chart in the Data tab, which also shows the live saturation temperatures for the current row.
+The app carries R-410A (dew point) and R-32 saturation tables from CoolProp 8, 5 °F steps from −40 to 160 °F, in `PT410` / `PT32`. The refrigerant in use is auto-detected: a unitary log states it in its first column (R410A or R32) and that wins; failing that, the board's logged Te/Tc at the logged LP/HP are compared with both tables and the closer one wins; otherwise the model name decides (DC/DH = R-32, DX/DZ = R-410A); a Multi_Split log names no model so it is assumed R-410A (MXS) unless the Refrigerant selector is set to R-32 (MXL). The selection feeds the Te/Tc PT checks, the discharge-limit rule and the PT chart in the Data tab, which also shows the live saturation temperatures for the current row.
 
 ## Rulebook
 

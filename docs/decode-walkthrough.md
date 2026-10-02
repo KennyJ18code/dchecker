@@ -139,3 +139,25 @@ recording (Hz limits, timers, ODU monitors, humidity, per-head pipe temps, secon
 decode (fan tap). The app exports every visible column; the extra columns are empty or constant here, and the app
 maps channels by column number so they do no harm. Unconnected ports still log EV = 0, so the zone count comes from
 gas/liquid thermistors, a non-zero EV, or an indoor address, not from the EV column alone.
+
+## 8. DH9VS (R-32, vapour injection) — a different column layout (verified 2026-10-02, app v53)
+
+`header.txt` names `INV_Unitary_DH9VS.txt`. Recording `samples/dh9vs-20261002.tgz` (customer file blanked) against the PC export of
+the same recording, `samples/dh9vs-20261002.csv`.
+
+- **Refrigerant.** Label line 1 is type **802**, which prints `R32` (801 prints `R410A`). The app reads the refrigerant from that column first.
+- **Column numbers shift from 76 on.** The DH9 logs a second fan, an injection EV and a drain pan valve, so `Comp (rps)` is 76 (77 on a
+  DZ6VS), `EV (main) (pls)` 78 (79), `4 way valve` 79 (80), targets 106–110, and the indoor block starts at 115 (112). The app therefore
+  finds these readings by their **label** (`lab` pattern on the channel) and never by number; a reading whose label is missing stays blank.
+  Verified: on the DZ6VS header every pattern picks the same column the number did.
+- **Indoor operation mode** (type 313, upper nibble): 0 prints `Fan Only`, 1 `Heating`, 2 `Cooling`.
+- **Unit suffix on temperature differences.** `Out Target SC`, `IDU Target SH`, `IDU Target SC` (kind 3) get `(F)` in the header only when the
+  column holds a value somewhere in the recording. The same rule reproduces the DZ6VS and multi headers.
+- **Outdoor EV** is 480 pulses full open here (327 on the DZ6VS); the app takes the scale from the log.
+- **Standby speed.** With the compressor commanded OFF and zero inverter current the board still reports `Comp (rps)` 10. A run now needs
+  the command to be ON as well.
+- **Time stamps.** The phone stamps each record at :15 / :45; the PC export prints the same records at :00 / :30, and this newer PC app
+  writes `yyyy/mm/dd hh:mm:ss` with one fixed decimal (`72.0`).
+- **Result.** 49 paired rows x 69 columns: every cell equal. The phone log holds 50 records; the PC dropped one (11:00:15).
+- **Gaps.** The raw log itself has only 50 of 83 expected samples: eight stretches of 60–210 s with nothing written. The synopsis now
+  reports that ("Recording has gaps").
