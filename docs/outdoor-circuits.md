@@ -138,5 +138,10 @@ It is the FIT heat pump circuit plus:
 - **Indoor:** as the FIT — EEV with a filter each side, liquid and gas thermistors, pressure sensor on the gas pipe; a filter drier in the
   field liquid line.
 
-Not drawn: the second fan, the second muffler (one symbol stands for both), the compressor accumulator, and the 3D model has none of
-the DH9 additions yet.
+In 3D the DH9VS is the tall two-fan cabinet (1.33 m against 0.99 m, full-height coil, each propeller turning on its own fan's rpm), with the
+injection EEV and its line into the compressor shell, the PCB heatsink on the liquid line by the stop valve, two mufflers on the discharge
+riser, and the drain pan heater: riser with strainer and solenoid behind the valves, a loop round the base pan under the coil, check valve
+and capillary into the coil's liquid outlet. The solenoid coil turns green when open.
+
+Not drawn in 2D: the second fan, the second muffler (one symbol stands for both), the compressor accumulator. Not drawn in 3D: service
+port and fusible plug.

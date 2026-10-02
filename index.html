@@ -3306,7 +3306,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v55';
+const APP_VERSION = 'v56';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -3487,6 +3487,13 @@ const KB = {
   accum:{t:'Suction accumulator', ph:'1', rules:['S1','M3'],
     what:m => 'A trap in the suction line right before the compressor. Vapour is drawn off the top through a J-tube that rises inside the shell, so liquid that comes back falls to the bottom instead of slugging the compressor. A small hole low in the J-tube meters oil (and a little liquid) back so they cannot collect. In heating and at low load it also stores refrigerant the system does not need.',
     live:(i, c) => [KV('Suction temp', 'suct', i), c && isN(c.Te) ? ['Evaporating (Te)', lf0(c.Te) + ' °F' + (c.est ? ' est.' : '')] : null, c && isN(c.sh) ? ['Suction superheat', lf0(c.sh) + ' °F', `Ts − Te. Under about ${RT.sshLo}°F means liquid is reaching the accumulator.`] : null]},
+  injev:{t:'Injection expansion valve', rules:[],
+    what:m => 'On an injection model a second expansion valve takes a little liquid off the liquid line and feeds it into the compressor part-way through compression. That cools the compressor and adds mass flow, which is what keeps capacity up in cold-weather heating. At 0 pulses it is closed and the unit runs as an ordinary heat pump.',
+    live:i => [KV('Injection EV', 'evinj', i), KV('Liquid pipe', 'liq', i), KV('Discharge', 'disch', i)]},
+  pansv:{t:'Drain pan heater', rules:[],
+    what:m => 'A solenoid sends hot discharge gas through a loop of tube in the base pan so defrost water cannot refreeze there, then through a check valve and a capillary tube back into the outdoor coil. The log shows the solenoid as SV (drain pan).',
+    live:i => [['Solenoid', D.str.svdrain && D.str.svdrain[i] ? (D.str.svdrain[i] === 'ON' ? 'open' : 'closed') : '—'], KV('Outdoor air', 'oat', i), KV('Discharge', 'disch', i)]},
+  heatsink:{t:'PCB heatsink', rules:[], what:m => 'The inverter board is cooled by the liquid line, which is clamped to a plate behind the board, instead of by a finned heatsink in the airstream.', live:i => [KV('INV fin temp', 'fin', i), KV('Liquid pipe', 'liq', i)]},
   fourway:{t:'Reversing (4-way) valve', rules:[],
     what:m => 'Decides which coil is the condenser. A small pilot solenoid uses system pressure to slide a cup inside the valve body. In one position hot discharge gas goes to the outdoor coil (cooling); in the other it goes to the indoor coil (heating). The middle port always returns suction gas to the compressor through the accumulator. Defrost is simply a short switch back to the cooling position.',
     live:(i, c) => [['Mode now', c ? (c.m === 'cool' ? 'Cooling: hot gas → outdoor coil' : 'Heating: hot gas → indoor coil') : '—'], D.str.fourway && D.str.fourway[i] ? ['Pilot solenoid', D.str.fourway[i]] : null]},
@@ -3550,7 +3557,7 @@ const KB = {
   zgas:{t:'Head gas line', ph:m => m === 'cool' ? '1' : '2', rules:[], what:m => m === 'cool' ? 'Low-pressure vapour returning from this head.' : 'Hot gas going up to this head.', live:(i, c, k) => [KV('Gas pipe', 'rmgas' + k, i)]},
   zliq:{t:'Head liquid line', ph:m => m === 'cool' ? '4' : '3', rules:[], what:m => m === 'cool' ? 'Low-pressure liquid and flash gas going up to this head after its port valve.' : 'Condensed liquid coming back from this head to its port valve.', live:(i, c, k) => [KV('Liquid pipe', 'rmliq' + k, i)]},
 };
-const PIPE_COMP = {disch:'disch', suct:'suct', 'oc-in':'ocpipe', 'oc-out':'ocliq', liq:'liqline', gas:'gasline', 'ic-in':'icliq', sv:'hgsv', lhdr:'lhdr', ghdr:'ghdr', griser:'ghdr', zh:'lhdr', zl:'zliq', zg:'zgas'};
+const PIPE_COMP = {inj:'injev', pan:'pansv', disch:'disch', suct:'suct', 'oc-in':'ocpipe', 'oc-out':'ocliq', liq:'liqline', gas:'gasline', 'ic-in':'icliq', sv:'hgsv', lhdr:'lhdr', ghdr:'ghdr', griser:'ghdr', zh:'lhdr', zl:'zliq', zg:'zgas'};
 const PH_STEP = {'1':'Point 1: compressor inlet (superheated vapour)', '2':'Point 2: compressor outlet (hot vapour)', '3':'Point 3: condenser outlet (subcooled liquid)', '4':'Point 4: after the expansion valve (liquid + flash gas)',
   '12':'1 → 2: compression', '23':'2 → 3: condensing (heat out)', '34':'3 → 4: expansion (pressure drop)', '41':'4 → 1: evaporating (heat in)'};
 
@@ -3657,7 +3664,7 @@ var V3 = (() => {
     if (!inited || !gl) return; freeAll(); labels = []; labHost.innerHTML = '';
     const C = k => parseCol(cssVar(k)), metal = C('--metal2'), ink2 = C('--ink2'), brass = [0.74, 0.60, 0.32], glass = [...ink2, 0.09], edge = [...ink2, 0.5], slab = [...C('--line'), 1];
     const arrowC = [...C('--ink'), 1];
-    const multi = FAM === 'multi', hp = EQ.out === 'hp', H = 0.99, LZ = 0.165, GZ = 0.08, ox = multi ? 0 : -0.80;
+    const multi = FAM === 'multi', hp = EQ.out === 'hp', dh9 = uniVar() === 'dh9', H = dh9 ? 1.33 : 0.99, LZ = 0.165, GZ = 0.08, ox = multi ? 0 : -0.80;   // DH9VS: tall cabinet, full-height coil, two fans
     const cab = (c, sz, a) => { mk(box(c, sz), {kind:'glass', col:[...ink2, a || 0.09]}); mk(boxEdges(c, sz), {kind:'line', col:edge}); };
     const pipes = [], P = (id, paths, rad, o) => { const g = G(); let s = 0; for (const p of (Array.isArray(paths[0][0]) ? paths : [paths])) s = tube(p, rad*0.9, g, s) + 0.02; const z = id.replace(/\d$/, ''), zk = id === z ? '' : id.slice(-1), m = mk(g, {pipe:Object.assign({id}, o), comp:PIPE_COMP[z] ? PIPE_COMP[z] + (z === 'zh' ? '' : zk) : null, rad}); if (!m) return m; pipes.push(m); m.paths = Array.isArray(paths[0][0]) ? paths : [paths];
       let best = null; for (const p of (Array.isArray(paths[0][0]) ? paths : [paths])) for (let k = 1; k < p.length; k++){ const l = len(sub(p[k], p[k-1])); if (!best || l > best.l) best = {l, a:p[k-1], b:p[k]}; }
@@ -3675,10 +3682,10 @@ var V3 = (() => {
     const coilR = ox + 0.14, coilZ = -0.15, coilTop = H - 0.14, coilBot = 0.10;
     { const g = box([ox - 0.16, H/2, coilZ], [0.60, H - 0.2, 0.035]); box([ox - 0.445, H/2, -0.02], [0.03, H - 0.2, 0.29], g); mk(g, {key:'oc'});
       const f = G(); for (let x = ox - 0.44; x < ox + 0.135; x += 0.03){ const b = f.v.length/7; pushV(f, [x, 0.1, coilZ + 0.02], [0,0,0]); pushV(f, [x, H - 0.1, coilZ + 0.02], [0,0,0]); f.i.push(b, b+1); } mk(f, {kind:'line', col:[...ink2, 0.35]}); }
-    const hub = [ox - 0.16, H*0.5, 0.12];
+    const hubs = dh9 ? [[ox - 0.16, 0.36, 0.12], [ox - 0.16, 0.97, 0.12]] : [[ox - 0.16, H*0.5, 0.12]], hub = hubs[0];
     // batwing propeller (black), after Daikin part 2026774: three broad sickle blades, each with a long outer edge ending in a
     // hooked tip on the leading side and a deep V-notch cut into the trailing edge just inside its outer corner
-    { const g = cyl(hub, 0.05, 0.06, 'z', 20), r0 = 0.045, R = 0.262, NR = 36, NA = 12;
+    hubs.forEach((hub, fk) => { const g = cyl(hub, 0.05, 0.06, 'z', 20), r0 = 0.045, R = 0.262, NR = 36, NA = 12;
       const KT = [[0, 0.40], [0.58, 0.74], [0.71, 0.38], [0.93, 0.96], [1, 0.88]], lin = (K, t) => { for (let k = 1; k < K.length; k++) if (t <= K[k][0]){ const [a, b] = [K[k-1], K[k]]; return a[1] + (b[1] - a[1])*(t - a[0])/(b[0] - a[0]); } return K[K.length-1][1]; };
       const lo = t => -lin(KT, t), up = t => 0.42 + 0.68*Math.pow(t, 1.7), pitch = t => 0.55 - 0.25*t;
       for (let k = 0; k < 3; k++){ const a0 = k*2*Math.PI/3 + 0.3;
@@ -3688,8 +3695,8 @@ var V3 = (() => {
             pushV(g, p, mul(norm(cross(dt, du)), side)); }
           for (let i = 0; i < NR; i++) for (let j = 0; j < NA; j++){ const q = b + i*(NA+1) + j; if (side > 0) g.i.push(q, q+NA+1, q+1, q+1, q+NA+1, q+NA+2); else g.i.push(q, q+1, q+NA+1, q+1, q+NA+2, q+NA+1); } } }
       cyl([hub[0], hub[1], hub[2] + 0.032], 0.022, 0.012, 'z', 16, g);
-      mk(g, {key:'ofan', col:[0.07, 0.07, 0.08], spinC:hub});
-      mk(ring([hub[0], hub[1], 0.178], 0.275), {kind:'line', col:edge}); mk(ring([hub[0], hub[1], 0.178], 0.20), {kind:'line', col:[...ink2, 0.25]}); }
+      mk(g, {key:fk ? 'ofan2' : 'ofan', comp:'ofan', col:[0.07, 0.07, 0.08], spinC:hub});
+      mk(ring([hub[0], hub[1], 0.178], 0.275), {kind:'line', col:edge}); mk(ring([hub[0], hub[1], 0.178], 0.20), {kind:'line', col:[...ink2, 0.25]}); });
     // inverter rotary (swing) compressor: domed shell on three rubber-mounted feet, discharge out the top centre of the dome,
     // terminal cover on the upper shell; the suction accumulator is strapped to the shell side, takes the suction line in its
     // top and feeds the compressor through a J-tube from its bottom into the lower shell
@@ -3730,6 +3737,7 @@ var V3 = (() => {
       XI(box([cx, fy - 0.006, GZ], [0.075, 0.03, 0.034]), {col:[0.24, 0.25, 0.29], comp:'fourway', dyn:i => [(EQ.out !== 'ac' && D.mode[i] !== 'cool') ? -0.025 : 0.025, 0, 0]}); }
     // discharge, coil in/out, suction
     if (hp){ P('disch', [[cx, 0.46, cz], [cx, H - 0.10, cz], [cx, H - 0.10, GZ], pD], 0.012, {hi:true});
+      if (dh9) for (const y of [0.80, 0.93]) mk(cyl([cx, y, cz], 0.024, 0.075, 'y', 14), {col:metal, comp:'disch'});   // DH9VS: two mufflers in series
       P('oc-in', [pC, [cx - 0.05, fy - 0.09, GZ], [ox + 0.19, fy - 0.09, GZ], [ox + 0.19, fy - 0.09, coilZ], [ox + 0.19, coilTop, coilZ], [coilR, coilTop, coilZ]], 0.013, REV);
       P('suct', [[pS, [cx, 0.56, GZ], [ax, 0.56, az], [ax, 0.443, az]], jTube], 0.015, {lo:true});
       // hot-gas bypass (as in the 2D drawing): tee off the discharge line, strainer, solenoid valve, into the suction line ahead of the accumulator
@@ -3738,7 +3746,7 @@ var V3 = (() => {
         for (const q of meshes) if (q.arrowOf === sv) parts.push(q); parts.forEach(q => { if (q){ q.svPart = true; q.comp = 'hgsv'; } });
         labels.push({name:'HOT GAS SV', at:[bx + 0.10, 0.70, bz]}); } }
     else { P('disch', [[cx, 0.46, cz], [cx, coilTop, cz], [ox + 0.19, coilTop, cz], [ox + 0.19, coilTop, coilZ], [coilR, coilTop, coilZ]], 0.012, {hi:true}); }
-    L('rps', [cx + 0.04, 0.37, cz + 0.097], {pri:1}); L('disch', [cx, H - 0.10, 0.0], {pri:1}); L('ochex', [ox - 0.30, H*0.78, coilZ + 0.03], {pri:2}); L('oat', [ox - 0.42, 0.14, 0.2], {pri:3}); L('fan', [hub[0], hub[1] - 0.2, 0.19], {pri:3});
+    L('rps', [cx + 0.04, 0.37, cz + 0.097], {pri:1}); L('disch', [cx, H - 0.10, 0.0], {pri:1}); L('ochex', [ox - 0.30, H*0.78, coilZ + 0.03], {pri:2}); L('oat', [ox - 0.42, 0.14, 0.2], {pri:3}); L('fan', [hub[0], hub[1] - 0.2, 0.19], {pri:3}); if (dh9) L('fan2', [hubs[1][0], hubs[1][1] - 0.2, 0.19], {pri:4});
     labels.push({name:'OUTDOOR UNIT', at:[ox - 0.12, H + 0.09, 0]});
     covComp = 'odu';
     { // outdoor cabinet: top, base pan, solid service side and panel over the compressor, fan grille on the front, wire guards over the coil
@@ -3746,9 +3754,9 @@ var V3 = (() => {
       CV(box([ox, H + e + T/2, 0], [x1 - x0 + 0.02, T, z1 - z0 + 0.02]), PANEL); CV(box([ox, 0.025, 0], [x1 - x0 + 0.01, 0.05, z1 - z0 + 0.01]), DARK);
       CV(box([x1 + T/2, H/2, 0], [T, H, z1 - z0]), PANEL);
       { const g = G(), fz = z1 + T/2; box([(x0 + hx - a)/2, H/2, fz], [hx - a - x0, H, T], g); box([(hx + a + x1)/2, H/2, fz], [x1 - hx - a, H, T], g);
-        box([hx, (0.05 + hy - a)/2, fz], [2*a, hy - a - 0.05, T], g); box([hx, (hy + a + H)/2, fz], [2*a, H - hy - a, T], g); CV(g, PANEL);
+        { const ed = [0.05, ...hubs.flatMap(h => [h[1] - a, h[1] + a]), H]; for (let k = 0; k < ed.length; k += 2) if (ed[k+1] - ed[k] > 0.004) box([hx, (ed[k] + ed[k+1])/2, fz], [2*a, ed[k+1] - ed[k], T], g); } CV(g, PANEL);
         CV(box([ox + 0.31, H - 0.12, z1 + T + 0.002], [0.16, 0.05, 0.004]), DARK); CV(box([ox + 0.40, 0.45, z1 + T + 0.004], [0.02, 0.10, 0.008]), DARK); }
-      { const g = G(), gz = z1 + T + 0.004; for (let r = 0.06; r < 0.285; r += 0.032) ring([hx, hy, gz], r, 48, g);
+      for (const hb of hubs){ const hy = hb[1], g = G(), gz = z1 + T + 0.004; for (let r = 0.06; r < 0.285; r += 0.032) ring([hx, hy, gz], r, 48, g);
         for (let k = 0; k < 4; k++){ const an = k*Math.PI/4, c = Math.cos(an)*0.28, sn = Math.sin(an)*0.28, b = g.v.length/7; pushV(g, [hx - c, hy - sn, gz], [0,0,0]); pushV(g, [hx + c, hy + sn, gz], [0,0,0]); g.i.push(b, b+1); }
         CV(g, [...DARK, 1], 'line'); CV(cyl([hx, hy, gz], 0.035, 0.01, 'z', 16), DARK); }
       CV(box([(xs + x1)/2, H/2, z0 - T/2], [x1 - xs, H, T]), PANEL);
@@ -3776,7 +3784,21 @@ var V3 = (() => {
         P('oc-out', [[coilR, coilBot, coilZ], [ox + 0.19, coilBot, coilZ], [ox + 0.19, coilBot, LZ], [ox + 0.19, 0.20, LZ], [ox + 0.33, 0.20, LZ]], 0.010, REV);
         P('liq', [[ox + 0.33, 0.20, LZ], [lx, 0.20, LZ], ...liqTo], 0.010, {cool:'hi', heat:'hi', rev:true});
         P('gas', [gasIn[0].concat([[cx + 0.13, 0.30, GZ], [cx + 0.13, fy - 0.09, GZ], [cx + 0.05, fy - 0.09, GZ], pE])], 0.016, REVG); tagc(P('gas', hdrs, 0.011, REVG), 'hdr');
-        L('evpct', [ox + 0.33, 0.25, LZ], {pri:3}); }
+        L('evpct', [ox + 0.33, 0.25, LZ], {pri:3});
+        if (dh9){
+          // DH9VS injection: a tee on the liquid line (coil side of the PCB heatsink) → injection EEV → straight into the compressor shell
+          const jx = ox + 0.40;
+          mk(cyl([jx, 0.262, LZ], 0.018, 0.055, 'y', 12), {key:'evinj', col:brass, comp:'injev', xShell:true}); EEVX([jx, 0.262, LZ], 0.055, 0.018, 'injev', 'evinjpct');
+          P('inj', [[jx, 0.20, LZ], [jx, 0.335, LZ], [jx, 0.335, -0.012]], 0.006, {hi:true, gate:i => D.num.evinj[i] > 0});
+          L('evinj', [jx, 0.30, LZ + 0.02], {pri:3});
+          { mk(box([ox + 0.432, 0.20, LZ], [0.03, 0.07, 0.055]), {col:[0.55, 0.57, 0.60], comp:'heatsink'}); const f = G(); for (let k = -2; k <= 2; k++){ const b = f.v.length/7, y = 0.20 + k*0.014; pushV(f, [ox + 0.416, y, LZ + 0.029], [0,0,0]); pushV(f, [ox + 0.448, y, LZ + 0.029], [0,0,0]); f.i.push(b, b+1); } mk(f, {kind:'line', col:[...ink2, 0.7]}); }
+          // drain pan heater: hot gas off the discharge riser → strainer → solenoid → a loop round the base pan under the coil → check valve → capillary → the coil's liquid end
+          const px = ox + 0.40, pz = -0.14, py = 0.045;
+          P('pan', [[cx, 0.52, cz], [cx, 0.52, pz], [px, 0.52, pz], [px, py, pz], [px, py, -0.155], [ox - 0.42, py, -0.155], [ox - 0.42, py, 0.11], [ox + 0.10, py, 0.11], [ox + 0.10, py, -0.06], [ox + 0.19, py, -0.06], [ox + 0.19, coilBot, -0.06]], 0.006, {hi:true, gate:i => D.str.svdrain[i] === 'ON'});
+          mk(cyl([px, 0.475, pz], 0.012, 0.035, 'y', 12), {col:metal, comp:'pansv'}); mk(cyl([px, 0.41, pz], 0.013, 0.045, 'y', 12), {col:brass, comp:'pansv'}); mk(box([px, 0.41, pz + 0.03], [0.030, 0.040, 0.030]), {key:'panc', col:ink2, comp:'pansv'});
+          mk(cyl([ox + 0.145, py, -0.06], 0.011, 0.03, 'x', 10), {col:brass, comp:'pansv'}); mk(cyl([ox + 0.19, 0.072, -0.06], 0.009, 0.03, 'y', 10), {col:[0.72, 0.45, 0.20], comp:'pansv'});
+          labels.push({name:'DRAIN PAN SV', at:[px + 0.03, 0.45, pz + 0.05]});
+        } }
       else { P('oc-out', [[coilR, coilBot, coilZ], [ox + 0.19, coilBot, coilZ], [ox + 0.19, coilBot, LZ], [ox + 0.19, 0.20, LZ], [ox + 0.47, 0.20, LZ]], 0.010, {cool:'hi', heat:'hi'});
         P('liq', [[ox + 0.47, 0.20, LZ], [lx, 0.20, LZ], ...liqTo], 0.010, {cool:'hi', heat:'hi'});
         P('gas', [gasIn[0].concat([[ox + 0.47, 0.30, GZ]])], 0.016, {cool:'lo', heat:'lo'}); tagc(P('gas', hdrs, 0.011, {cool:'lo', heat:'lo'}), 'hdr');
@@ -3787,7 +3809,7 @@ var V3 = (() => {
       L('suct', [ax, 0.56, az], {pri:2}); L('hp', [cx, H - 0.02, cz], {pri:2}); L('lp', [ax, 0.51, az], {pri:3}); L('sh', [cx, 0.62, GZ], {pri:4}); L('sc', [ox + 0.26, 0.12, LZ], {pri:3});
       L('liq', [-0.12, 0.20, LZ], {pri:2}); L('iliq', [ix - 0.05, 0.66, 0.28], {pri:2}); L('ievpct', [qx, 0.71, 0.30], {pri:3}); L('igas', [slabX(sy, -1) - 0.02, sy, HZ], {pri:2}); L('ipress', [sx, sy, 0.36], {pri:4}); L('cfm', [ix, 0.36, 0.22], {pri:3});
       labels.push({name:'AIR HANDLER', at:[ix, 1.45, 0.05]});
-      bbox = [[ox - 0.5, 0, -0.25], [1.25, 1.45, 0.48]];
+      bbox = [[ox - 0.5, 0, -0.25], [1.25, Math.max(1.45, H + 0.12), 0.48]];
       covComp = 'ahu';
       { // air handler: side, back and top panels, supply plenum, blower door and coil door with the line set through the coil door
         const e = 0.006, T = 0.012, x0 = ix - 0.275 - e, x1 = ix + 0.275 + e, z0 = -0.20 - e, z1 = FZ + e, Y = 1.35;
@@ -3849,7 +3871,7 @@ var V3 = (() => {
     const tc = (t, fb) => { const c = THERMAL && running ? thermColor(t) : null; return c ? parseCol(c) : fb; };
     const rmax = D.range && D.range.rps ? D.range.rps.max : 0; flowSpeed = 0.25 + 0.55*(isN(num.rps[i]) && rmax > 0 ? Math.min(1, num.rps[i]/rmax) : 0.5);
     for (const q of meshes){
-      if (q.pipe){ const p = q.pipe, side = p.hi ? 'hi' : p.lo ? 'lo' : p[m], on = p.id === 'sv' ? D.str.svhot[i] === 'ON' : p.zone != null ? zoneOn(p.zone) : running;
+      if (q.pipe){ const p = q.pipe, side = p.hi ? 'hi' : p.lo ? 'lo' : p[m], on = (p.id === 'sv' ? D.str.svhot[i] === 'ON' : p.zone != null ? zoneOn(p.zone) : running) && (!p.gate || (running && p.gate(i)));
         const ph = showPhase && on && running ? phaseOf(p.id, i, EQ.out === 'ac' ? 'cool' : m, cyc) : null;
         q.col = [...(ph ? phc(ph.st, ph.side) : (p.id === 'sv' || (showPhase && running)) && !on ? OFF : tc(segTemp(p.id, i, m), on ? (side === 'hi' ? HI : LO) : OFF)), 1]; q.flow = on && S.flow ? 0.5 : 0; q.dir = (p.rev && m === 'heat') ? -1 : 1; q.on = on; }
       else if (showPhase && running && (q.key === 'oc' || q.key === 'ic')){ const cond = (q.key === 'oc') === ((EQ.out === 'ac' ? 'cool' : m) === 'cool'); q.col = [...phc('mix', cond ? 'hi' : 'lo'), 1]; }
@@ -3861,8 +3883,10 @@ var V3 = (() => {
       else if (q.key === 'svc') q.col = [...(D.str.svhot[i] === 'ON' ? C('--ok') : ink2c), 1];
       else if (q.key === 'comp') q.col = [...(running ? mix(metal, HI, 0.45) : metal), 1];
       else if (q.key === 'ofan') q.spinOn = isN(num.fan[i]) ? num.fan[i] > 0 : running;
+      else if (q.key === 'ofan2') q.spinOn = isN(num.fan2[i]) ? num.fan2[i] > 0 : running;
+      else if (q.key === 'panc') q.col = [...(D.str.svdrain[i] === 'ON' ? C('--ok') : ink2c), 1];
       else if (q.key === 'blower') q.col = [...((isN(num.cfm[i]) ? num.cfm[i] > 0 : running) ? mix(metal, LO, 0.35) : metal), 1];
-      else if (q.key === 'ev' || q.key === 'iev'){ const v = num[q.key][i]; q.col = [...(isN(v) && v === 0 ? OFF : [0.74, 0.60, 0.32]), 1]; }
+      else if (q.key === 'ev' || q.key === 'iev' || q.key === 'evinj'){ const v = num[q.key][i]; q.col = [...(isN(v) && v === 0 ? OFF : [0.74, 0.60, 0.32]), 1]; }
       else if (q.key && /^zc\d$/.test(q.key)){ const k = q.key[2], on = zoneOn(+k); q.col = [...tc(isN(num['ihx'+k][i]) ? num['ihx'+k][i] : avg(num['rmgas'+k][i], num['rmliq'+k][i]), on ? (m === 'heat' ? HI : LO) : OFF), 1]; }
       else if (q.key && /^zf\d$/.test(q.key)){ const k = q.key[2]; q.col = [...((isN(num['ifan'+k][i]) ? num['ifan'+k][i] > 0 : running) ? mix(metal, LO, 0.4) : metal), 1]; }
       else if (q.key && /^pev\d$/.test(q.key)){ const v = num[q.key][i]; q.col = [...(isN(v) && v === 0 ? OFF : [0.74, 0.60, 0.32]), 1]; }
@@ -3885,7 +3909,7 @@ var V3 = (() => {
     gl.useProgram(prog); gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2);
     gl.uniformMatrix4fv(U.uMVP, false, MVP); gl.uniform3fv(U.uL, norm([0.45, 0.8, 0.55]));
     ACC = parseCol(cssVar('--accent'));
-    for (const m of meshes){ if (m.spinC) m.model = spinZ(m.spinC, spin); else if (m.spinY) m.model = spinYm(m.spinY, spinR); else if (m.swing) m.model = swingM(m.swing, spinR); }
+    for (const m of meshes){ if (m.spinC){ if (m.spinOn || !m.model) m.model = spinZ(m.spinC, spin); } else if (m.spinY) m.model = spinYm(m.spinY, spinR); else if (m.swing) m.model = swingM(m.swing, spinR); }
     gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.disable(gl.BLEND);
     for (const m of meshes) if ((m.kind === 'solid' || m.kind === 'flat') && !m.hidden && !(showX && m.xShell)) drawMesh(m);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
