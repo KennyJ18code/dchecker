@@ -115,3 +115,28 @@ discharge 47, port gas 48–52, port liquid 55–59, fin 62, current 64, volts 6
 The app draws this as one row (phone) or column (desktop) per port with the head and its port EV, and a shared
 outdoor unit. Diagnostics are temperature based: port gas − liquid (coil ΔT / superheat proxy), return air − coil,
 discharge vs target discharge, comp vs target and vs the rps cap, and the four max-Hz limiters as chips.
+
+## 6. DH9VS (R-32, vapour injection) — verified against the service piping diagram, 2026-10-02
+
+The app draws this variant when the log carries an injection EV or a drain pan valve column (`uniVar() === 'dh9'`).
+It is the FIT heat pump circuit plus:
+
+- **Injection.** A tee on the liquid line, after the PCB heatsink, feeds an injection EEV whose outlet goes straight into the
+  compressor's injection port. Logged as `EV (injection)(pls)`; 0 pulses = closed (it stayed closed for the whole 68 °F cooling
+  recording we have). Pipe id `inj`, coloured by the liquid pipe temperature while the valve is open.
+- **Drain pan heater.** Discharge gas is taken off above the compressor, through a strainer and the drain pan solenoid
+  (`SV (drain pan)`), through a loop in the base pan, then a check valve and a capillary tube into the coil's liquid end (between the
+  coil and the liquid-side strainer). Pipe id `pan`, live only while the compressor runs and the solenoid is ON.
+- **PCB heatsink** on the liquid line between the liquid stop valve and the injection tee; the liquid pipe thermistor sits on the stop
+  valve side of it.
+- **Discharge:** discharge thermistor, HPS, two mufflers, HP sensor, hot-gas bypass tee (strainer + solenoid to the suction), check
+  valve, reversing valve. The gas line itself has no muffler.
+- **Suction:** reversing valve → service port (7/16" flare) and fusible plug → suction thermistor → accumulator → LP sensor →
+  compressor accumulator → compressor.
+- **Outdoor EEV** has a check valve in parallel (bypassed in cooling), with a strainer on the coil side. Two outdoor fans. One coil
+  thermistor (defrost) and no mid-coil thermistor.
+- **Indoor:** as the FIT — EEV with a filter each side, liquid and gas thermistors, pressure sensor on the gas pipe; a filter drier in the
+  field liquid line.
+
+Not drawn: the second fan, the second muffler (one symbol stands for both), the compressor accumulator, and the 3D model has none of
+the DH9 additions yet.

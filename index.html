@@ -265,6 +265,9 @@ body.no-narr .nowline{display:none}
 .pipe{fill:none;stroke-width:7;stroke-linejoin:round;stroke-linecap:round;transition:stroke .3s}
 .pipe.hi{stroke:var(--hi)}.pipe.lo{stroke:var(--lo)}.pipe.off{stroke:var(--metal2)}
 .pipe-o.bar{stroke-width:17}.pipe.bar{stroke-width:12}
+.pipe-o.thin{stroke-width:8}.pipe.thin{stroke-width:4.5}
+.partz{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.part.pan{fill:var(--panel2);fill-opacity:.7;stroke-dasharray:4 3}
 .hdrblk{fill:var(--metal2);fill-opacity:.22;stroke:var(--ink2);stroke-opacity:.55;stroke-width:1.5}
 .jct{fill:var(--panel);stroke:var(--ink);stroke-width:2}
 .flow{fill:none;stroke:#fff;stroke-opacity:.85;stroke-width:2.2;stroke-dasharray:5 13;stroke-linecap:round;animation:flow 1.1s steps(6) infinite}
@@ -2071,6 +2074,7 @@ function buildPipes(){
   const land = isLandLay();
   const base = FAM === 'multi' ? multiPipes(land) : land ? (EQ.out === 'ac' ? PIPES_AC_L : PIPES_HP_L) : (EQ.out === 'ac' ? PIPES_AC : PIPES_HP);
   PIPES = base.map(p => ({...p}));
+  if (uniVar() === 'dh9') PIPES.push(...VAR_PIPES[land ? 'land' : 'port'].map(p => ({...p})));
   const g = $('#pipes'); g.innerHTML = '';
   for (const p of PIPES) el('path', {class:'pipe-o' + (p.cls ? ' ' + p.cls : ''), d:p.d}, g);
   for (const p of PIPES) el('path', {class:'pipe off' + (p.cls ? ' ' + p.cls : ''), d:p.d, id:'p-'+p.id}, g);
@@ -2146,7 +2150,7 @@ function setLayout(){
   $('#dsvg').setAttribute('viewBox', `0 0 ${LAY.W} ${LAY.H}`);
   $('#diag').style.aspectRatio = (multi && !land) ? `${LAY.W}/${LAY.H}` : '';
   $('#scene').innerHTML = multi ? multiScene(land) : (land ? SCENE_LAND : SCENE_PORT);
-  TAGS = [...(multi ? multiTags(land) : (land ? TAGS_LAND : TAGS_PORT)), ...customTagDefs()];
+  TAGS = [...(multi ? multiTags(land) : variantTags(land ? TAGS_LAND : TAGS_PORT, land)), ...customTagDefs()];
   $('#diag').classList.toggle('land', land); document.body.classList.toggle('landpage', land); $('#diag').classList.toggle('multi', multi);
   $('#diag').style.setProperty('--k', land ? S.kLand * (multi ? mzl().kf : 1) : S.kPort * (multi ? mzGeo().k : 1));
   const pl = document.getElementById('physlbl'); if (pl) pl.style.display = S.physics ? '' : 'none';
@@ -2176,6 +2180,9 @@ function partSym(g, it){
     const dx = it.side === 'left' ? -1 : it.side === 'right' ? 1 : 0, dy = it.side === 'up' ? -1 : it.side === 'down' ? 1 : 0;
     el('line', {class:'partln', 'stroke-width':2.5, x1:x, y1:y, x2:x + dx*12, y2:y + dy*12}, grp);
     const px = x + dx*12, py = y + dy*12; el('path', {class:'part solid', d:dx ? `M${px} ${py-5} L${px+dx*9} ${py} L${px} ${py+5} Z` : `M${px-5} ${py} L${px} ${py+dy*9} L${px+5} ${py} Z`}, grp); }
+  else if (t === 'heatsink'){ R(v ? 26 : 36, v ? 36 : 26, 'part', 3); for (const k of [-10, -3.3, 3.3, 10]) el('line', v ? {class:'partln', x1:x-13, y1:y+k, x2:x+13, y2:y+k} : {class:'partln', x1:x+k, y1:y-13, x2:x+k, y2:y+13}, grp); }
+  else if (t === 'cap') el('path', {class:'partz', d:v ? `M${x} ${y-14} l-6 4 l12 4 l-12 4 l12 4 l-12 4 l12 4 l-6 4` : `M${x-14} ${y} l4 -6 l4 12 l4 -12 l4 12 l4 -12 l4 12 l4 -6`}, grp);
+  else if (t === 'pan'){ R(v ? 24 : 76, v ? 76 : 24, 'part pan', 6); el('path', {class:'partz', d:v ? `M${x} ${y-30} q-13 7.5 0 15 t0 15 t0 15 t0 15` : `M${x-30} ${y} q7.5 -13 15 0 t15 0 t15 0 t15 0`}, grp); }
   if (it.label){ const tx = el('text', {class:'partlbl', x:it.lx != null ? it.lx : x, y:it.ly != null ? it.ly : y + 18, 'text-anchor':it.anchor || 'middle'}, grp); tx.textContent = it.label; }
   if (it.bypass) el('path', {class:'bypass', d:it.bypass}, g);
   const title = el('title', {}, grp); title.textContent = it.title || it.label || t;
@@ -2204,7 +2211,73 @@ const PARTS = {
     {t:'check', x:1100, y:735, dir:'left', title:'Check valve (bypasses the EEV in cooling)', bypass:'M1130 700 V735 H1070 V700', hp:true},
   ],
 };
-function buildParts(){ const g = $('#parts'); g.innerHTML = ''; for (const it of (isLandLay() ? PARTS.land : PARTS.port)) if (!(it.hp && EQ.out === 'ac')) partSym(g, it); }
+// ===== unitary drawing variants =====
+// 'dh9' = DH9VS (R-32 with vapour injection), per its service piping diagram. On top of the FIT heat pump circuit it has:
+//   · an injection EEV taking liquid from the liquid line (after the PCB heatsink) into the compressor's injection port;
+//   · a drain pan heater: hot gas from the discharge → strainer → solenoid → pan loop → check valve → capillary → the coil's liquid end;
+//   · a refrigerant-cooled PCB heatsink on the liquid line; mufflers on the discharge; service port and fusible plug on the suction.
+// The variant is chosen from the log itself: it carries an injection EV or a drain pan valve column.
+function uniVar(){ return FAM !== 'multi' && EQ.out === 'hp' && D && (chById.evinj.present || (STAT.find(x => x.id === 'svdrain') || {}).present) ? 'dh9' : 'std'; }
+const VAR_PIPES = {
+  port: [{id:'inj', d:'M190 572 H420 V783', hi:true, cls:'thin', gate:i => D.num.evinj[i] > 0},
+         {id:'pan', d:'M460 915 H250 V824 H220', hi:true, cls:'thin', gate:i => D.str.svdrain[i] === 'ON'}],
+  land: [{id:'inj', d:`M930 700 ${hopUp(930, 600)} V545 H991`, hi:true, cls:'thin', gate:i => D.num.evinj[i] > 0},
+         {id:'pan', d:'M1040 230 H1322 V672 H1380', hi:true, cls:'thin', gate:i => D.str.svdrain[i] === 'ON'}],
+};
+const PARTS_DH9 = {
+  port: [
+    {t:'drier', x:190, y:400, o:'v', title:'Filter drier'}, {t:'strainer', x:190, y:352, o:'v', title:'Filter'}, {t:'strainer', x:190, y:250, o:'v', title:'Filter'},
+    // discharge: compressor → (drain pan branch) → check valve → mufflers → Td → HPS → HP sensor → hot-gas branch → 4-way
+    {t:'check', x:460, y:948, dir:'down', title:'Check valve (discharge)'}, {t:'muffler', x:460, y:988, o:'v', title:'Mufflers (two in series)'}, {t:'hps', x:425, y:1050, to:[460,1050], title:'High pressure switch'},
+    {t:'strainer', x:484, y:1116, o:'h', title:'Strainer (hot-gas bypass)'},
+    // liquid side: stop valve → heatsink → injection tee … strainer → EEV (check-valve bypass) → strainer → coil
+    {t:'heatsink', x:190, y:655, o:'v', title:'PCB heatsink, cooled by the liquid line'},
+    {t:'strainer', x:190, y:782, o:'v', title:'Strainer'}, {t:'strainer', x:190, y:706, o:'v', title:'Strainer'},
+    {t:'check', x:160, y:745, dir:'up', title:'Check valve (bypasses the EEV in cooling)', bypass:'M190 772 H160 V718 H190'},
+    // drain pan heater: strainer → solenoid → pan loop → check valve → capillary → coil liquid end
+    {t:'strainer', x:438, y:915, o:'h', title:'Strainer (drain pan heater)'}, {t:'pan', x:318, y:915, o:'h', label:'DRAIN PAN', ly:897, title:'Drain pan heater loop'},
+    {t:'check', x:250, y:884, dir:'up', title:'Check valve (drain pan heater)'}, {t:'cap', x:250, y:850, o:'v', title:'Capillary tube'},
+    // suction: service port and fusible plug between the 4-way and the accumulator
+    {t:'port', x:580, y:1310, side:'down', label:'SERVICE PORT', lx:580, ly:1346}, {t:'plug', x:640, y:1310, side:'down', title:'Fusible plug'},
+  ],
+  land: [
+    {t:'drier', x:570, y:700, o:'h', label:'DRIER', ly:722}, {t:'strainer', x:430, y:700, o:'h', title:'Filter'}, {t:'strainer', x:230, y:700, o:'h', title:'Filter'},
+    {t:'check', x:1040, y:447, dir:'up', title:'Check valve (discharge)'}, {t:'muffler', x:1040, y:382, o:'v', title:'Mufflers (two in series)'}, {t:'hps', x:990, y:205, to:[990,230], title:'High pressure switch'},
+    {t:'strainer', x:1000, y:420, o:'h', title:'Strainer (hot-gas bypass)'},
+    {t:'heatsink', x:830, y:700, o:'h', title:'PCB heatsink, cooled by the liquid line'},
+    {t:'strainer', x:1250, y:700, o:'h', title:'Strainer'}, {t:'strainer', x:1010, y:700, o:'h', title:'Strainer'},
+    {t:'check', x:1100, y:735, dir:'left', title:'Check valve (bypasses the EEV in cooling)', bypass:'M1130 700 V735 H1070 V700'},
+    {t:'strainer', x:1100, y:230, o:'h', title:'Strainer (drain pan heater)'}, {t:'pan', x:1322, y:590, o:'v', label:'DRAIN PAN', lx:1304, ly:594, anchor:'end', title:'Drain pan heater loop'},
+    {t:'check', x:1322, y:520, dir:'down', title:'Check valve (drain pan heater)'}, {t:'cap', x:1322, y:648, o:'v', title:'Capillary tube'},
+    {t:'port', x:850, y:128, side:'left', label:'SERVICE PORT', lx:826, ly:132, anchor:'end'}, {t:'plug', x:850, y:252, side:'left', title:'Fusible plug'},
+  ],
+};
+// the two valves the variant adds, drawn into #parts so they follow the layout
+function buildVariant(g){
+  if (uniVar() !== 'dh9') return;
+  const land = isLandLay(), [ix, iy] = land ? [930, 655] : [420, 700], [sx, sy] = land ? [1180, 230] : [400, 915];
+  const v = el('g', {class:'valve', id:'inj-sym'}, g); const vt = el('title', {}, v); vt.textContent = 'Injection EEV: liquid into the compressor injection port';
+  el('path', {d:`M${ix-14} ${iy-12} L${ix} ${iy} L${ix-14} ${iy+12} Z M${ix+14} ${iy-12} L${ix} ${iy} L${ix+14} ${iy+12} Z`}, v); el('rect', {class:'motor', x:ix-10, y:iy-28, width:20, height:14, rx:2}, v); el('path', {d:`M${ix} ${iy-14} V${iy}`, fill:'none'}, v);
+  const s = el('g', {class:'valve', id:'pan-sym'}, g); const st = el('title', {}, s); st.textContent = 'Drain pan solenoid: sends hot gas through the base pan heater';
+  el('rect', {class:'sv', x:sx-15, y:sy-12, width:30, height:24, rx:4}, s); el('rect', {class:'motor', x:sx-8, y:land ? sy-26 : sy+14, width:16, height:12, rx:2}, s);
+  const t1 = el('text', {class:'sublbl', x:sx, y:land ? sy-34 : sy-19, 'text-anchor':'middle'}, g); t1.textContent = land ? 'DRAIN PAN SV' : 'PAN SV';
+  el('text', {class:'state', id:'panstate', x:land ? sx+24 : sx-12, y:land ? sy-8 : sy+40, 'text-anchor':'start'}, g).textContent = '—';
+}
+function renderVariant(i){
+  const inj = document.getElementById('inj-sym'); if (inj) inj.classList.toggle('closed', !(D.num.evinj[i] > 0));
+  const ps = document.getElementById('pan-sym'); if (!ps) return;
+  const on = D.str.svdrain[i] === 'ON'; ps.querySelector('.sv').classList.toggle('on', on);
+  const st = document.getElementById('panstate'); if (st){ st.textContent = D.str.svdrain[i] ? (on ? 'OPEN' : 'closed') : '—'; st.classList.toggle('on', on); }
+}
+// tag positions that differ on the variant: an Injection EV tag, and room made for the new lines
+function variantTags(base, land){
+  if (uniVar() !== 'dh9') return base;
+  const T = base.map(t => ({...t})), set = (ch, o) => { const t = T.find(x => x.ch === ch); if (t) Object.assign(t, o); };
+  if (land){ set('sc', {x:700}); set('fin', {x:1180}); set('liq', {from:[720,700]}); T.push({ch:'evinj', x:842, y:760, from:[930,668]}); }
+  else { set('ochex', {y:958, from:[220,958]}); T.push({ch:'evinj', x:438, y:640, from:[420,690]}); }
+  return T;
+}
+function buildParts(){ const g = $('#parts'); g.innerHTML = ''; const P = uniVar() === 'dh9' ? PARTS_DH9 : PARTS; for (const it of (isLandLay() ? P.land : P.port)) if (!(it.hp && EQ.out === 'ac')) partSym(g, it); buildVariant(g); }
 function buildDiagram(){
   if (FAM === 'multi'){ $('#g-line').innerHTML = ''; $('#parts').innerHTML = ''; buildPipes(); buildMulti(); return; }
   buildPipes(); buildCoils(); buildLineSet(); buildParts();
@@ -2362,6 +2435,8 @@ function segTemp(seg, i, m){
     case 'ic-in': return v('iliq');
     case 'ic': return avg(v('igas'), v('iliq'));
     case 'sv': return v('disch');
+    case 'inj': return v('evinj') > 0 ? v('liq') : null;                 // injection line carries liquid-line refrigerant while its EEV is open
+    case 'pan': return D.str.svdrain[i] === 'ON' ? v('disch') : null;    // drain pan heater carries discharge gas while its solenoid is open
     case 'ghdr': case 'griser': { const open = D.zones.filter(k => isN(v('pev'+k)) && v('pev'+k) > 0); const vals = (open.length ? open : D.zones).map(k => v('rmgas'+k)).filter(isN); return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null; }   // mixed gas from the open ports
   }
   let z; if ((z = /^zl(\d)$/.exec(seg))) return v('rmliq'+z[1]); if ((z = /^zg(\d)$/.exec(seg))) return v('rmgas'+z[1]); if (/^zh\d$/.test(seg)) return v('ochex');
@@ -2374,7 +2449,7 @@ function renderCycle(i){
   // a head whose port EEV sits at 0 pulses gets no refrigerant: its line set and coil go idle (no flow, idle colour) while the compressor serves the others
   const zoneOn = k => running && !(isN(D.num['pev'+k][i]) && D.num['pev'+k][i] === 0);
   for (const p of PIPES){
-    const side = p.hi ? 'hi' : p.lo ? 'lo' : p[m], on = p.zone != null ? zoneOn(p.zone) : running;
+    const side = p.hi ? 'hi' : p.lo ? 'lo' : p[m], on = (p.zone != null ? zoneOn(p.zone) : running) && (!p.gate || p.gate(i));
     const pe = document.getElementById('p-' + p.id); pe.classList.remove('hi','lo','off'); pe.classList.add(on ? side : 'off');
     const fe = document.getElementById('f-' + p.id); fe.classList.toggle('rev', !!p.rev && m === 'heat'); fe.classList.toggle('idle', !on);
   }
@@ -2420,6 +2495,7 @@ function renderCycle(i){
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
   if (!$('#panel-data').hidden) renderPtNow(i);
   if (V3) V3.setRow(i);
+  if (FAM !== 'multi') renderVariant(i);
   if (FAM === 'multi') renderMulti(i, m, running);
   else {
   $('#iduhdr').textContent = [im, ia != null ? 'addr ' + ia : null, ie != null ? 'err ' + ie : null].filter(Boolean).join(' · ');
@@ -2568,6 +2644,7 @@ function narrateRow(i){
       const rps = num.rps[i], trps = num.trps[i];
       if (isN(rps)) parts.push(`comp <b>${f0(rps)} rps</b>` + (isN(trps) ? (Math.abs(rps - trps) <= 2 ? ' on target' : rps < trps ? ` <span class="w">${f0(trps - rps)} under target</span>` : ` ${f0(rps - trps)} over target`) : ''));
       const drops = ['dropDisch','dropInv','dropHp','dropLp','dropFin'].filter(id => s[id][i] === 'ON'); if (drops.length) parts.push(`<span class="w">held back by ${drops.map(id => STAT.find(x => x.id === id).label.toLowerCase()).join(', ')}</span>`);
+      if (num.evinj[i] > 0) parts.push(`injection EV ${f0(num.evinj[i])} pls`); if (s.svdrain[i] === 'ON') parts.push('drain pan heater on');
       { const cooling = m === 'cool' && isN(num.ievpct[i]), ev = cooling ? num.ievpct[i] : num.evpct[i]; if (isN(ev)) parts.push(`${cooling ? 'indoor EV' : 'outdoor EV'} ${f0(ev)}%` + (ev >= 95 ? ' <span class="w">(pinned open)</span>' : ev <= 8 ? ' <span class="w">(nearly closed)</span>' : '')); }
       if (rs >= SIG.settle && isN(num.scerr[i])){ const e = num.scerr[i]; parts.push(`SC ${f1s(num.sc[i])}°F` + (Math.abs(e) < 3 ? ' <span class="g">on target</span>' : e < 0 ? ` <span class="w">${f1s(-e)} under target</span>` : ` <span class="w">${f1s(e)} over target</span>`)); }
       if (isN(num.sh[i]) && rs >= 3 && (num.sh[i] < 3 || num.sh[i] > 25)) parts.push(`suction SH ${f1s(num.sh[i])}°F <span class="w">${num.sh[i] < 3 ? '(flood risk)' : '(starved coil)'}</span>`);
@@ -3229,7 +3306,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v54';
+const APP_VERSION = 'v55';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
