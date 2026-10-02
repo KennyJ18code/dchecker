@@ -465,7 +465,9 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .panel[hidden]{display:none}
 .settings{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow:auto}
 .settings[hidden]{display:none}
-.spanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(560px,100%);padding:12px 16px 20px}
+.spanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(980px,100%);padding:12px 20px 22px}
+.sbody{display:grid;grid-template-columns:1fr;gap:0 36px}
+@media (min-width:700px){.sbody{grid-template-columns:1fr 1fr}.sgroup.wide{grid-column:1 / -1}}
 .shead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;position:sticky;top:-12px;background:var(--panel);padding:8px 0;z-index:1}
 .shead b{font-size:17px}.shead .note{flex:1;font-size:12px}
 .sgroup{margin:12px 0 0}.sgroup h3{margin:0;padding:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
@@ -476,7 +478,7 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .sw{appearance:none;-webkit-appearance:none;flex:0 0 44px;width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;margin:0;cursor:pointer;transition:background .15s}
 .sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
 .sw:checked{background:var(--accent)}.sw:checked::after{left:21px}
-.sgroup.adv{border-top:1px solid var(--line);padding-top:4px}.sgroup.adv summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;padding:10px 0}.sgroup.adv summary::-webkit-details-marker{display:none}.sgroup.adv summary h3{padding:0}.sgroup.adv summary small{color:var(--muted);font-size:12px}.sgroup.adv summary::after{content:'▸';margin-left:auto;color:var(--muted)}.sgroup.adv[open] summary::after{content:'▾'}
+.sgroup.wide{border-top:1px solid var(--line);margin-top:16px}
 @media (max-width:600px){.settings{padding:0;align-items:stretch}.spanel{width:100%;min-height:100%;border-radius:0;border:0;padding:8px 14px calc(24px + env(safe-area-inset-bottom,0px))}.shead{top:-8px}}
 .cmode{display:flex;gap:4px;margin:8px 0 6px}
 .cmode .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -699,16 +701,12 @@ body.no-cabinet #indoor-var .cab{display:none}
 <div class="settings" id="settings" hidden>
   <div class="spanel">
     <div class="shead"><b>Settings</b><span class="note">Saved on this device</span><button class="btn small" id="settingsreset" type="button">Defaults</button><button class="btn small primary" id="settingsclose" type="button">Done</button></div>
+    <div class="sbody">
     <section class="sgroup"><h3>Diagram</h3>
       <label class="srow"><span class="t"><b>Thermal pipes</b><small>Colour the tubing by its logged temperature</small></span><input type="checkbox" class="sw" id="thermal2"></label>
       <label class="srow"><span class="t"><b>Motion</b><small>Flow dashes, air streams and fans</small></span><select data-s="anim"><option value="play">While playing</option><option value="always">Always</option><option value="off">Off</option></select></label>
-      <label class="srow"><span class="t"><b>Refrigerant flow dashes</b></span><input type="checkbox" class="sw" data-s="flow"></label>
-      <label class="srow"><span class="t"><b>Air streams through the coils</b></span><input type="checkbox" class="sw" data-s="air"></label>
       <label class="srow"><span class="t"><b>Sensor markers and leader lines</b></span><input type="checkbox" class="sw" data-s="leaders"></label>
       <label class="srow"><span class="t"><b>Change arrows</b><small>▲▼ against the previous row on each reading</small></span><input type="checkbox" class="sw" data-s="arrows"></label>
-      <label class="srow"><span class="t"><b>Circuit components</b><small>Strainers, drier, check valves, mufflers, HPS, service ports</small></span><input type="checkbox" class="sw" data-s="parts"></label>
-      <label class="srow"><span class="t"><b>Hot-gas bypass valve</b></span><input type="checkbox" class="sw" data-s="sv"></label>
-      <label class="srow"><span class="t"><b>Indoor blower cabinet</b></span><input type="checkbox" class="sw" data-s="cabinet"></label>
       <label class="srow"><span class="t"><b>Physics checks</b><small>Isentropic discharge, lift, capacity and efficiency indexes</small></span><input type="checkbox" class="sw" data-s="physics"></label>
       <label class="srow"><span class="t"><b>Legend and hints</b></span><input type="checkbox" class="sw" data-s="legend"></label>
     </section>
@@ -727,8 +725,8 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow slider"><span class="t"><b>Reading size · phone</b></span><span class="num" id="kportv"></span><input type="range" data-s="kPort" min="0.7" max="1.2" step="0.02"></label>
       <label class="srow slider"><span class="t"><b>Reading size · desktop</b></span><span class="num" id="klandv"></span><input type="range" data-s="kLand" min="0.3" max="0.7" step="0.02"></label>
     </section>
-    <details class="sgroup adv"><summary><h3>Custom tags</h3><small>Build your own reading from the ones on screen</small></summary>
-        <div class="note">A custom tag appears as an orange tag you can drag anywhere on the diagram; tap it to pin its trend.</div>
+    <section class="sgroup wide"><h3>Custom tags</h3>
+        <div class="note">Build your own reading from the ones on screen. It appears as an orange tag you can drag anywhere on the diagram; tap it to pin its trend.</div>
         <div class="cmode"><button type="button" class="btn small" id="cm-build" aria-pressed="true">Pick from lists</button><button type="button" class="btn small" id="cm-free" aria-pressed="false">Type a formula</button></div>
         <div id="cbuild" class="cbuild"></div>
         <div id="cfree" class="cfree" hidden>
@@ -743,7 +741,8 @@ body.no-cabinet #indoor-var .cab{display:none}
           <button class="btn small primary" id="customadd" type="button">Add tag</button>
         </div>
         <div id="customlist"></div>
-    </details>
+    </section>
+    </div>
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
@@ -1191,6 +1190,7 @@ if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
 function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); if (V3) V3.kick(); }
 function applySettings(){
+  for (const k of ['flow', 'air', 'parts', 'sv', 'cabinet']) S[k] = true;   // always drawn; their switches left Settings
   saveJSON('dchk.settings', S); syncAnim();
   const b = document.body;
   for (const k of ['leaders','arrows','air','flow','sv','legend','chips','dock','cabinet','parts','narr']) b.classList.toggle('no-' + k, !S[k]);
@@ -3226,7 +3226,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v60';
+const APP_VERSION = 'v61';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
