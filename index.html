@@ -546,13 +546,6 @@ body.no-cabinet #indoor-var .cab{display:none}
     <div class="card">
       <div class="viewbar">
         <div class="viewsel" role="group" id="dimsel"><button type="button" data-dim="3d" aria-pressed="false" title="Rotatable 3D model">3D</button><button type="button" data-dim="2d" aria-pressed="true" title="Flat schematic with every reading">2D</button></div>
-        <span class="viewlbl">View</span>
-        <div class="viewsel" role="group" id="viewsel">
-          <button type="button" data-view="num" aria-pressed="true" title="Numbers with change arrows">123</button>
-          <button type="button" data-view="bar" aria-pressed="false" title="Bars: where each reading sits in this log's range, with its target">Bars</button>
-          <button type="button" data-view="spark" aria-pressed="false" title="Trails: the last 10 minutes of each reading">Trails</button>
-          <button type="button" data-view="dev" aria-pressed="false" title="Deviation: tinted by how far each reading is from this log's steady-state norm">Deviation</button>
-        </div>
         <label class="thermtog"><input type="checkbox" id="thermal"> Thermal pipes</label>
         <button class="btn small" id="settingsbtn" type="button">⚙ Settings</button>
         <label class="eqtog">Equipment <select id="eqsel">
@@ -1345,7 +1338,7 @@ function renderMulti(i, m, running){
   }
   const oh = document.getElementById('oduhdr'); if (oh) oh.textContent = [s.opmode[i], s.fwmode[i] ? '4-way ' + s.fwmode[i] : null, s.etype[i] != null ? 'err ' + s.etype[i] : null].filter(Boolean).join(' · ');
 }
-let VIEW = loadJSON('dchk.view', 'num');
+let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
 const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:true, syncEv:true, land:'auto', kPort:1, kLand:0.44, leaders:true, ghosts:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true};
@@ -1573,7 +1566,7 @@ function buildZoneBar(){
 let THERMAL = !!loadJSON('dchk.thermal', false);
 function setThermal(on){ if (THERMAL !== !!on) logEvent('thermal', {on:!!on}); THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; if ($('#thermal2')) $('#thermal2').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
 const VIEWNOTE = {num:'', bar:'fill = where the reading sits in this log\'s range · grey tick = steady-state norm · black tick = target', spark:'trail behind each number = its last 10 minutes · dashed = steady-state norm', dev:'tint = distance from this log\'s steady-state norm (σ) · red high, blue low'};
-function setView(v){ if (VIEW !== v) logEvent('view', {view:v}); VIEW = v; saveJSON('dchk.view', v); const dg = $('#diag'); dg.classList.remove('view-num','view-bar','view-spark','view-dev'); dg.classList.add('view-' + v); document.querySelectorAll('#viewsel button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v)); $('#viewnote').textContent = VIEWNOTE[v] || ''; if (D) renderCycle(cur); }
+function setView(v){ if (VIEW !== v) logEvent('view', {view:v}); VIEW = v; saveJSON('dchk.view', v); const dg = $('#diag'); dg.classList.remove('view-num','view-bar','view-spark','view-dev'); dg.classList.add('view-' + v); $('#viewnote').textContent = ''; if (D) renderCycle(cur); }
 function loadJSON(k, d){ try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(e){ return d; } }
 function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 function loadRules(){ const r = loadJSON('dchk.rules.v2', null); return (Array.isArray(r) && r.length) ? r : DEFAULT_RULES.map(x => ({...x})); }
@@ -3411,7 +3404,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v57';
+const APP_VERSION = 'v58';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -4220,7 +4213,7 @@ function load(text, name, model){
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2800); }
 
 /* ---------- wiring ---------- */
-$('#viewsel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
+if ($('#viewsel')) $('#viewsel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
 $('#dimsel').addEventListener('click', e => { const b = e.target.closest('[data-dim]'); if (b) setMode3D(b.dataset.dim === '3d'); });
 setView(VIEW);
 $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
