@@ -22,6 +22,7 @@ f.onload = async () => {
   await w.dchkOpen([new File([b], (q.get('file') || 'log.tgz').split('/').pop())]); }
   await new Promise(r => setTimeout(r, 1500));
   if (q.get('eqsel')){ const es = d.querySelector('#eqsel'); es.value = q.get('eqsel'); es.dispatchEvent(new w.Event('change')); await new Promise(r => setTimeout(r, 400)); }
+  if (q.get('settings')){ d.querySelector('#settingsbtn').click(); await new Promise(r => setTimeout(r, 300)); if (q.get('settings') === 'custom'){ const dt = d.querySelector('.sgroup.adv'); if (dt) dt.open = true; } }
   const zs = q.get('zones');
   if (zs){ for (const btn of d.querySelectorAll('#zonebar button')){ const t = btn.textContent.trim(); if (/^Zone /.test(t) && !zs.includes(t.slice(5))) btn.click(); } await new Promise(r => setTimeout(r, 400)); }
   const s = d.querySelector('input[type=range]'); s.value = Math.round(s.max * (q.get('at') ? +q.get('at') : 0.6)); s.dispatchEvent(new Event('input'));
