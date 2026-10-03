@@ -55,6 +55,18 @@ Each strip in the Trends tab draws the reading's logged target on the same scale
 
 Unitary logs are read by column **label**, because models number their columns differently (a DH9VS shifts everything from column 76 on). Verified layouts: DZ6VS (R-410A FIT) and DH9VS (R-32 with vapour injection, two fans, drain pan valve); the DH9's extra readings (injection EV, fan 2, fan driver fin temperatures, indoor target SC, drain pan valve) are in Trends and Data. A reading this model never reports is hidden on the diagram. See `docs/decode-walkthrough.md` §8. The DH9VS is drawn as its own variant of the 2D diagram (injection EEV into the compressor, drain pan heater circuit with its solenoid, PCB heatsink, mufflers on the discharge, service port on the suction), per its service piping diagram; see `docs/outdoor-circuits.md` §6. The 3D model follows: the DH9VS is the tall two-fan cabinet with a full-height coil, each fan turning on its own rpm, plus the injection valve and line, the heatsink, both mufflers and the drain pan heater loop.
 
+## Capacity (BTU/h) and COP
+
+A FIT log has no air temperatures, but it has everything for the refrigerant side. The app works out delivered capacity and COP on every running row and shows them as readings (trend them, pin them, use them in custom tags and rules), as a card in the Data tab, and as a synopsis card.
+
+- **Mass flow** comes from the compressor's own power draw (line volts, set in Settings, × INV current × 0.97, less 7 % for shell and drive losses) divided by its enthalpy rise (discharge minus suction enthalpy, CoolProp 8 tables for R-410A and R-32). In a hermetic compressor nearly all of the input ends up in the refrigerant.
+- That is weak when the lift is small: a 10 °F discharge-thermistor error then moves the answer 20–30 %. Each row is graded **good / fair / poor** on exactly that sensitivity, and the Data tab says which applies at the cursor.
+- The good rows teach the app the compressor's **effective displacement** (cc/rev, with a volumetric-efficiency model by pressure ratio). Once it has 12 of them it switches to flow = displacement × rps × suction density, which holds up at any lift. Pick the unit size in the header bar and that number is kept per model and size for the next log.
+- **Capacity** = flow × enthalpy change across the indoor coil (cooling: indoor gas out − liquid in; heating: discharge − indoor liquid out). **COP** = capacity ÷ outdoor unit input (compressor + outdoor fan; indoor blower not included). Expect ±10–15 % on good rows, ±25 % on poor ones.
+- **Nameplate**: picking the size shows the AHRI figures from the spec sheets (DZ6VS, DH9VS; 12,000 per ton for other families). Those are full-speed figures at rating conditions, so compare only near 95 °F cooling / 47 °F heating at full speed.
+- **Air-side check**: type return and supply dry bulb (and wet bulb) from the grilles; airflow is pre-filled from the blower's logged CFM at that row. Sensible = 1.08 × CFM × ΔT, total = 4.5 × CFM × Δh, latent = total − sensible, with the refrigerant-side figure beside it. When they disagree by more than 15 %, suspect the CFM first.
+- Mini-split logs have no pressure transducers or compressor current, so the card says so and the readings stay blank.
+
 ## Error codes
 
 An error byte in the log is decoded to the code the unit shows (U4, F3, A5 …) and shown with its meaning as a header chip, in the narration line, and as a synopsis card with how long it was present, the raw byte, the readings that bear on it and the first checks. The Data tab has the full searchable table. The byte-to-code reading follows Daikin's bus convention and is still to be confirmed on a real fault recording; see `docs/decode-walkthrough.md` §9.

@@ -474,6 +474,9 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .srow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
 .srow .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.srow .t b{font-weight:600;color:var(--ink)}.srow .t small{font-size:12px;color:var(--muted);line-height:1.3}
 .srow select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px}
+.srow input.snum{width:84px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:13px;font-family:var(--mono)}
+.airgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:6px 0 8px}.airgrid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}.airgrid input{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:14px;font-family:var(--mono);min-width:0}
+#capcard h4{margin:12px 0 4px;font-size:13px}
 .srow.slider{flex-wrap:wrap}.srow.slider .t{flex:1 1 auto}.srow.slider .num{min-width:4ch;text-align:right;color:var(--ink2);font-size:12px;font-family:var(--mono)}.srow.slider input[type=range]{flex:1 1 100%;accent-color:var(--accent);margin:2px 0 0}
 .sw{appearance:none;-webkit-appearance:none;flex:0 0 44px;width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;margin:0;cursor:pointer;transition:background .15s}
 .sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
@@ -554,6 +557,7 @@ body.no-cabinet #indoor-var .cab{display:none}
           <option value="ac-multi">Mini split · AC (2–5 zones)</option>
         </select></label>
         <label class="eqtog">Refrigerant <select id="refsel"><option value="auto">Auto</option><option value="R410A">R-410A</option><option value="R32">R-32</option></select></label>
+        <label class="eqtog" hidden>Unit <select id="sizesel" title="Unit size: for the nameplate comparison and to keep what the app learns about this compressor"></select></label>
         <span class="viewnote" id="viewnote"></span>
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
       </div>
@@ -673,6 +677,7 @@ body.no-cabinet #indoor-var .cab{display:none}
 
   <!-- DATA -->
   <section class="panel card" id="panel-data" hidden>
+    <details class="ptbox"><summary>Capacity · BTU/h and COP from the log, with an air-side check</summary><div id="capcard"></div></details>
     <details class="ptbox"><summary>Error codes · what they mean and what to check first</summary><div id="errref"></div></details>
     <details class="ptbox"><summary>PT chart · R-410A and R-32</summary><div id="ptchart"></div></details>
     <h2>Rows · click a row to jump to it</h2>
@@ -707,7 +712,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Motion</b><small>Flow dashes, air streams and fans</small></span><select data-s="anim"><option value="play">While playing</option><option value="always">Always</option><option value="off">Off</option></select></label>
       <label class="srow"><span class="t"><b>Sensor markers and leader lines</b></span><input type="checkbox" class="sw" data-s="leaders"></label>
       <label class="srow"><span class="t"><b>Change arrows</b><small>▲▼ against the previous row on each reading</small></span><input type="checkbox" class="sw" data-s="arrows"></label>
-      <label class="srow"><span class="t"><b>Physics checks</b><small>Isentropic discharge, lift, capacity and efficiency indexes</small></span><input type="checkbox" class="sw" data-s="physics"></label>
+      <label class="srow"><span class="t"><b>Physics checks</b><small>Isentropic discharge, lift, delivered BTU/h and COP on the diagram</small></span><input type="checkbox" class="sw" data-s="physics"></label>
       <label class="srow"><span class="t"><b>Legend and hints</b></span><input type="checkbox" class="sw" data-s="legend"></label>
     </section>
     <section class="sgroup"><h3>Chips and notes</h3>
@@ -724,6 +729,9 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Desktop layout</b><small>Side-by-side drawing on a wide screen</small></span><select data-s="land"><option value="auto">Auto by screen</option><option value="on">Always</option><option value="off">Never</option></select></label>
       <label class="srow slider"><span class="t"><b>Reading size · phone</b></span><span class="num" id="kportv"></span><input type="range" data-s="kPort" min="0.7" max="1.2" step="0.02"></label>
       <label class="srow slider"><span class="t"><b>Reading size · desktop</b></span><span class="num" id="klandv"></span><input type="range" data-s="kLand" min="0.3" max="0.7" step="0.02"></label>
+    </section>
+    <section class="sgroup"><h3>Capacity</h3>
+      <label class="srow"><span class="t"><b>Line voltage</b><small>Multiplied by the logged current to get the compressor's power; a FIT log has no voltage column. Read it at the disconnect if you can.</small></span><input type="number" class="snum" data-s="volts" min="150" max="300" step="1" inputmode="numeric"></label>
     </section>
     <section class="sgroup wide"><h3>Custom tags</h3>
         <div class="note">Build your own reading from the ones on screen. It appears as an orange tag you can drag anywhere on the diagram; tap it to pin its trend.</div>
@@ -858,8 +866,9 @@ const DERIVED = [
   {id:'lift',  label:'Lift (Tc − Te)', short:'Lift', unit:'°F', calc:r => sub(r.cond, r.evap), note:'condensing − evaporating sat temp'},
   {id:'isod',  label:'Discharge vs isentropic', short:'Disch − isen', unit:'°F', calc:r => { const t = isoDisch(r.lp, r.hp, r.suct); return isN(t) ? r.disch - t : null; }, note:'actual discharge − ideal compression estimate (k=1.2); high = compressor heat/wear, negative = wet suction or 4-way bypass'},
   {id:'mflow', label:'Mass flow index', short:'Flow idx', unit:'', dec:0, calc:r => { const d = rhoSuction(r.lp, r.suct); return (isN(d) && isN(r.rps)) ? r.rps * d : null; }, note:'rps × suction gas density (relative)'},
-  {id:'capidx',label:'Capacity index', short:'Cap idx', unit:'', dec:2, calc:(r,m) => { const d = rhoSuction(r.lp, r.suct); if (!isN(d) || !isN(r.rps) || !isN(r.evap) || !isN(r.suct) || !isN(r.liq)) return null; const dh = hVapor(r.evap, r.suct - r.evap) - hLiquid(r.liq); return dh > 0 ? r.rps * d * dh / 10000 : null; }, note:'flow index × refrigerant Δh across the evaporator (relative, not BTU/h)'},
-  {id:'copidx',label:'Efficiency index', short:'COP idx', unit:'', dec:2, calc:r => null, post:r => (isN(r.capidx) && isN(r.inv1) && r.inv1 > 0.5) ? r.capidx / r.inv1 : null, note:'capacity index ÷ INV current (relative)'},
+  {id:'pwr',  label:'Outdoor unit input power', short:'Input kW', unit:'kW', dec:2, calc:() => null, note:'line volts × system current × 0.97 (compressor + outdoor fan); set the volts in Settings'},
+  {id:'cap',  label:'Delivered capacity (refrigerant side)', short:'Capacity', unit:'BTU/h', dec:0, calc:() => null, note:'mass flow × enthalpy change across the indoor coil — method and confidence in the Data tab'},
+  {id:'cop',  label:'COP (outdoor unit)', short:'COP', unit:'', dec:1, calc:() => null, note:'capacity ÷ outdoor unit input power (indoor blower not included)'},
   {id:'dslope', label:'Discharge slope (5 min)', short:'Disch slope', unit:'°F/min', dec:1, calc:() => null, slope:{src:'disch', win:300}},
   {id:'lpslope',label:'Low pressure slope (5 min)', short:'LP slope', unit:'psi/min', dec:1, calc:() => null, slope:{src:'lp', win:300}},
   {id:'evslope',label:'Outdoor EV slope (5 min)', short:'EV slope', unit:'pls/min', dec:1, calc:() => null, slope:{src:'ev', win:300}},
@@ -934,6 +943,7 @@ const DEFAULT_RULES = [
 
 /* ---------- state ---------- */
 let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
+window.dchkDbg = () => ({D, cur, REF, S});   // read-only hook for tools/shot.html
 let pins = loadJSON('dchk.pins', []);
 const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
           <g id="g-in">
@@ -1183,7 +1193,7 @@ function renderMulti(i, m, running){
 let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:false, syncEv:false, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:false, syncEv:false, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
@@ -1257,6 +1267,7 @@ function applyRefrigerant(){
   REF = saved === 'auto' ? {ref:det.ref, auto:true, why:det.why} : {ref:saved, auto:false, why:'set by hand'};
   $('#refsel').value = saved; $('#refsel').options[0].textContent = D ? `Auto: ${REFNAME[det.ref]}` : 'Auto'; $('#refsel').title = REF.why;
   buildPtChart();
+  buildSizeSel(); if (D) computeCapacity(); buildCapCard();
 }
 /* ---------- Daikin error codes ----------
    The log stores an error as one byte (two hex digits on a FIT, a decimal on a multi). Daikin packs the code letter in the high
@@ -1482,6 +1493,167 @@ function buildDataset(text, name){
   for (let i = 0; i < n; i++){ const on = (isN(num.rps[i]) ? num.rps[i] > 0 : (str.compcmd[i] === 'ON')) && str.compcmd[i] !== 'OFF'; if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
   const zones = fam === 'multi' ? [...Array(MZ.ports).keys()].filter(k => num['rmgas'+k].some(isN) || num['rmliq'+k].some(isN) || num['pev'+k].some(v => isN(v) && v > 0) || str['zaddr'+k].some(v => v != null)) : [];
   return {name, n, t, num, str, mode, runSec, interval, head, fam, zones};
+}
+
+/* ---------- capacity: BTU/h and COP from the compressor's own power draw ---------- */
+// Refrigerant properties from CoolProp 8 (IIR reference). TS: saturation temperatures °F (R-410A dew point); hf / hg: saturated liquid / vapour
+// kJ/kg; dh[t][s]: vapour enthalpy above hg at SHS[s] °F of superheat; rho[t][s]: vapour density kg/m³; psig: saturation gauge pressure.
+const PROP = {"TS":[-40,-30,-20,-10,0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160],"SHS":[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160],"R410A":{"hf":[142.2,150.0,157.8,165.7,173.7,181.8,190.0,198.3,206.8,215.4,224.3,233.3,242.7,252.3,262.2,272.6,283.6,295.4,308.5,324.3,358.3],"hg":[405.1,407.7,410.3,412.7,415.1,417.2,419.2,421.0,422.7,424.0,425.2,426.0,426.4,426.4,425.8,424.6,422.5,419.1,413.7,404.5,377.0],"dh":[[0.0,4.7,9.4,13.9,18.5,23.0,27.5,32.0,36.6,41.1,45.7,50.3,54.9,59.6,64.3,69.1,73.8],[0.0,4.9,9.7,14.4,19.0,23.6,28.2,32.9,37.5,42.1,46.8,51.5,56.2,60.9,65.7,70.5,75.4],[0.0,5.1,10.0,14.8,19.6,24.3,29.0,33.7,38.5,43.2,47.9,52.7,57.5,62.3,67.2,72.1,77.0],[0.0,5.2,10.3,15.3,20.1,25.0,29.8,34.7,39.5,44.3,49.1,54.0,58.9,63.8,68.7,73.7,78.7],[0.0,5.4,10.6,15.7,20.8,25.8,30.7,35.6,40.6,45.5,50.4,55.4,60.3,65.3,70.3,75.4,80.5],[0.1,5.6,11.0,16.3,21.4,26.6,31.6,36.7,41.7,46.7,51.8,56.8,61.9,67.0,72.1,77.2,82.3],[0.1,5.8,11.4,16.8,22.2,27.4,32.6,37.8,42.9,48.1,53.2,58.4,63.5,68.7,73.9,79.1,84.3],[0.1,6.1,11.8,17.5,22.9,28.4,33.7,39.0,44.3,49.5,54.8,60.0,65.3,70.6,75.8,81.1,86.5],[0.1,6.3,12.3,18.1,23.8,29.4,34.9,40.3,45.7,51.1,56.5,61.8,67.2,72.5,77.9,83.3,88.7],[0.1,6.6,12.9,18.9,24.7,30.5,36.1,41.7,47.3,52.8,58.3,63.7,69.2,74.7,80.2,85.7,91.2],[0.1,6.9,13.5,19.7,25.8,31.7,37.5,43.3,49.0,54.6,60.2,65.8,71.4,77.0,82.6,88.2,93.8],[0.1,7.3,14.2,20.7,27.0,33.1,39.1,45.0,50.9,56.7,62.4,68.2,73.9,79.6,85.3,91.0,96.7],[0.1,7.8,15.0,21.8,28.4,34.7,40.9,47.0,53.0,59.0,64.9,70.7,76.6,82.4,88.2,94.0,99.9],[0.1,8.4,16.0,23.2,30.0,36.6,43.0,49.3,55.5,61.6,67.6,73.7,79.6,85.6,91.5,97.5,103.4],[0.1,9.1,17.2,24.8,31.9,38.8,45.4,51.9,58.3,64.6,70.8,77.0,83.1,89.2,95.3,101.3,107.4],[0.1,10.0,18.8,26.8,34.3,41.4,48.3,55.1,61.7,68.2,74.5,80.9,87.1,93.4,99.6,105.8,111.9],[0.1,11.3,20.8,29.3,37.2,44.8,52.0,58.9,65.8,72.4,79.0,85.5,92.0,98.3,104.7,111.0,117.3],[0.1,13.2,23.7,32.8,41.2,49.1,56.6,63.9,70.9,77.8,84.6,91.3,97.9,104.4,110.9,117.4,123.8],[0.2,16.3,27.9,37.8,46.8,55.1,63.0,70.6,77.9,85.0,92.0,98.9,105.7,112.4,119.0,125.6,132.2],[0.4,22.2,35.4,46.3,55.8,64.6,72.9,80.8,88.4,95.8,103.1,110.1,117.1,124.0,130.8,137.6,144.3],[4.7,45.1,60.5,72.4,82.7,92.0,100.8,109.0,117.0,124.6,132.1,139.4,146.6,153.7,160.7,167.6,174.5]],"rho":[[6.99,6.78,6.58,6.41,6.24,6.08,5.94,5.8,5.67,5.54,5.43,5.31,5.21,5.11,5.01,4.91,4.82],[8.82,8.55,8.3,8.08,7.87,7.67,7.48,7.31,7.14,6.99,6.84,6.7,6.56,6.43,6.31,6.19,6.08],[11.02,10.67,10.36,10.07,9.8,9.56,9.32,9.11,8.9,8.7,8.52,8.34,8.17,8.01,7.86,7.71,7.57],[13.62,13.19,12.79,12.43,12.1,11.79,11.5,11.23,10.97,10.73,10.5,10.28,10.07,9.87,9.69,9.5,9.33],[16.7,16.16,15.66,15.2,14.79,14.4,14.04,13.71,13.39,13.09,12.81,12.54,12.29,12.05,11.82,11.6,11.38],[20.32,19.63,19.01,18.44,17.93,17.45,17.01,16.6,16.21,15.84,15.5,15.17,14.86,14.57,14.29,14.02,13.76],[24.55,23.68,22.91,22.21,21.57,20.98,20.44,19.93,19.46,19.02,18.6,18.2,17.83,17.47,17.13,16.81,16.5],[29.48,28.39,27.42,26.56,25.77,25.05,24.39,23.77,23.2,22.66,22.15,21.67,21.22,20.79,20.38,19.99,19.62],[35.22,33.85,32.64,31.57,30.6,29.72,28.91,28.16,27.47,26.82,26.21,25.63,25.09,24.57,24.09,23.62,23.18],[41.89,40.16,38.65,37.32,36.14,35.06,34.07,33.17,32.33,31.54,30.81,30.12,29.47,28.86,28.28,27.73,27.2],[49.65,47.45,45.57,43.92,42.46,41.14,39.95,38.85,37.84,36.9,36.02,35.2,34.43,33.7,33.01,32.36,31.73],[58.69,55.89,53.51,51.47,49.67,48.07,46.61,45.29,44.07,42.94,41.9,40.92,40.0,39.14,38.32,37.55,36.82],[69.26,65.65,62.65,60.1,57.89,55.92,54.16,52.56,51.1,49.75,48.5,47.34,46.25,45.23,44.27,43.36,42.5],[81.7,76.98,73.16,69.98,67.24,64.83,62.69,60.76,59.0,57.39,55.91,54.53,53.24,52.04,50.91,49.84,48.83],[96.46,90.19,85.28,81.28,77.88,74.93,72.32,69.99,67.88,65.96,64.19,62.56,61.04,59.63,58.3,57.05,55.87],[114.22,105.68,99.31,94.23,89.99,86.37,83.19,80.38,77.85,75.55,73.46,71.52,69.73,68.07,66.52,65.06,63.68],[136.02,124.02,115.6,109.1,103.81,99.33,95.46,92.06,89.02,86.28,83.79,81.51,79.4,77.45,75.63,73.93,72.33],[163.62,145.97,134.64,126.26,119.58,114.04,109.32,105.2,101.55,98.28,95.33,92.63,90.15,87.86,85.74,83.76,81.9],[200.55,172.63,157.05,146.11,137.66,130.78,124.98,119.99,115.6,111.71,108.2,105.02,102.11,99.43,96.95,94.64,92.49],[255.97,205.58,183.65,169.22,158.45,149.87,142.75,136.69,131.42,126.76,122.6,118.85,115.43,112.29,109.4,106.72,104.22],[387.01,247.23,215.64,196.42,182.6,171.85,163.08,155.7,149.35,143.78,138.84,134.4,130.38,126.71,123.34,120.22,117.32]],"psig":[10.7,17.7,26.2,36.3,48.2,62.2,78.4,97.0,118.4,142.6,170.1,201.1,235.7,274.5,317.6,365.4,418.3,476.8,541.5,613.0,692.6]},"R32":{"hf":[133.2,142.2,151.3,160.4,169.6,179.0,188.5,198.1,207.8,217.7,227.9,238.2,248.8,259.7,271.0,282.7,295.0,307.9,321.9,337.4,355.7],"hg":[502.0,504.4,506.7,508.8,510.7,512.4,513.9,515.1,516.0,516.7,516.9,516.8,516.3,515.2,513.6,511.2,507.9,503.5,497.4,489.1,476.5],"dh":[[0.0,5.1,10.1,15.0,19.8,24.6,29.3,34.1,38.8,43.6,48.3,53.1,57.9,62.7,67.6,72.5,77.4],[0.0,5.3,10.4,15.4,20.4,25.3,30.2,35.0,39.8,44.7,49.5,54.4,59.3,64.2,69.1,74.1,79.1],[0.1,5.5,10.8,15.9,21.0,26.0,31.0,36.0,40.9,45.9,50.8,55.8,60.8,65.8,70.8,75.8,80.9],[0.1,5.7,11.2,16.5,21.7,26.9,32.0,37.1,42.1,47.2,52.2,57.3,62.3,67.4,72.5,77.7,82.8],[0.1,5.9,11.6,17.1,22.4,27.7,33.0,38.2,43.4,48.5,53.7,58.9,64.0,69.2,74.4,79.6,84.9],[0.1,6.1,12.0,17.7,23.2,28.7,34.1,39.4,44.7,50.0,55.3,60.5,65.8,71.1,76.4,81.7,87.1],[0.1,6.4,12.5,18.3,24.1,29.7,35.2,40.7,46.1,51.6,57.0,62.3,67.7,73.1,78.5,84.0,89.4],[0.1,6.7,13.0,19.1,25.0,30.8,36.5,42.1,47.7,53.2,58.8,64.3,69.8,75.3,80.8,86.3,91.9],[0.1,7.0,13.5,19.9,26.0,32.0,37.8,43.6,49.4,55.1,60.7,66.4,72.0,77.6,83.3,88.9,94.5],[0.1,7.3,14.2,20.7,27.1,33.3,39.3,45.3,51.2,57.1,62.9,68.6,74.4,80.2,85.9,91.7,97.4],[0.1,7.7,14.9,21.7,28.3,34.7,41.0,47.2,53.2,59.2,65.2,71.1,77.0,82.9,88.8,94.7,100.5],[0.1,8.1,15.7,22.8,29.7,36.4,42.8,49.2,55.5,61.6,67.8,73.8,79.9,85.9,91.9,97.9,103.9],[0.1,8.6,16.6,24.1,31.3,38.2,44.9,51.5,57.9,64.3,70.6,76.8,83.0,89.2,95.4,101.5,107.6],[0.1,9.3,17.7,25.6,33.1,40.3,47.3,54.1,60.7,67.3,73.8,80.2,86.6,92.9,99.2,105.5,111.7],[0.1,10.0,19.0,27.3,35.2,42.7,50.0,57.0,63.9,70.7,77.4,84.0,90.5,97.0,103.5,109.9,116.3],[0.1,10.9,20.6,29.4,37.7,45.6,53.1,60.5,67.6,74.6,81.5,88.3,95.0,101.7,108.3,114.9,121.5],[0.1,12.1,22.6,32.0,40.7,49.0,56.9,64.6,72.0,79.2,86.4,93.4,100.3,107.1,113.9,120.7,127.4],[0.1,13.7,25.1,35.3,44.6,53.3,61.6,69.5,77.3,84.8,92.1,99.3,106.5,113.5,120.5,127.4,134.3],[0.2,16.0,28.7,39.6,49.5,58.7,67.5,75.8,83.8,91.6,99.2,106.7,114.0,121.3,128.4,135.5,142.6],[0.2,19.6,33.8,45.8,56.4,66.2,75.4,84.1,92.5,100.6,108.5,116.2,123.8,131.2,138.6,145.9,153.1],[0.4,26.1,42.4,55.5,67.0,77.4,87.1,96.3,105.0,113.5,121.6,129.6,137.5,145.1,152.7,160.2,167.6]],"rho":[[5.06,4.91,4.78,4.65,4.53,4.42,4.31,4.21,4.12,4.03,3.94,3.86,3.78,3.71,3.64,3.57,3.5],[6.39,6.2,6.02,5.86,5.71,5.57,5.43,5.31,5.19,5.08,4.97,4.87,4.77,4.68,4.59,4.5,4.42],[7.98,7.73,7.51,7.31,7.11,6.94,6.77,6.61,6.46,6.32,6.19,6.06,5.94,5.82,5.71,5.61,5.51],[9.86,9.56,9.27,9.02,8.78,8.56,8.35,8.15,7.97,7.79,7.63,7.47,7.32,7.18,7.04,6.91,6.79],[12.09,11.7,11.35,11.03,10.73,10.46,10.2,9.96,9.73,9.52,9.31,9.12,8.94,8.76,8.59,8.43,8.28],[14.7,14.22,13.78,13.38,13.01,12.67,12.35,12.06,11.78,11.52,11.27,11.04,10.81,10.6,10.4,10.2,10.02],[17.75,17.15,16.6,16.11,15.65,15.24,14.85,14.49,14.15,13.83,13.53,13.25,12.97,12.72,12.47,12.24,12.01],[21.31,20.55,19.87,19.26,18.71,18.2,17.72,17.28,16.87,16.49,16.12,15.78,15.45,15.14,14.85,14.57,14.3],[25.43,24.49,23.65,22.89,22.21,21.59,21.02,20.48,19.99,19.52,19.08,18.67,18.28,17.91,17.56,17.22,16.9],[30.22,29.03,27.99,27.07,26.23,25.47,24.78,24.13,23.53,22.97,22.45,21.95,21.49,21.05,20.63,20.23,19.85],[35.77,34.28,32.98,31.84,30.82,29.9,29.05,28.27,27.55,26.88,26.26,25.67,25.11,24.59,24.09,23.62,23.17],[42.2,40.32,38.71,37.3,36.05,34.93,33.9,32.97,32.1,31.3,30.55,29.85,29.2,28.58,27.99,27.43,26.9],[49.68,47.29,45.28,43.53,42.0,40.63,39.4,38.27,37.23,36.28,35.39,34.56,33.78,33.05,32.35,31.7,31.08],[58.4,55.34,52.81,50.65,48.76,47.1,45.6,44.25,43.01,41.87,40.81,39.83,38.91,38.04,37.23,36.46,35.74],[68.63,64.67,61.45,58.76,56.45,54.41,52.6,50.97,49.49,48.13,46.88,45.71,44.63,43.62,42.66,41.77,40.92],[80.73,75.51,71.4,68.03,65.17,62.69,60.5,58.54,56.76,55.14,53.66,52.28,51.01,49.82,48.7,47.65,46.67],[95.22,88.19,82.89,78.64,75.09,72.05,69.39,67.03,64.91,62.98,61.22,59.6,58.1,56.71,55.41,54.18,53.03],[112.89,103.16,96.2,90.8,86.38,82.64,79.41,76.57,74.03,71.74,69.66,67.75,65.99,64.35,62.83,61.41,60.08],[135.04,121.0,111.72,104.79,99.25,94.65,90.71,87.28,84.24,81.52,79.05,76.81,74.74,72.83,71.06,69.41,67.86],[164.16,142.58,129.94,120.96,113.98,108.28,103.47,99.33,95.69,92.45,89.53,86.89,84.47,82.24,80.17,78.26,76.46],[206.17,169.16,151.53,139.75,130.89,123.82,117.94,112.92,108.56,104.7,101.25,98.14,95.3,92.69,90.29,88.07,85.99]],"psig":[11.0,18.2,26.8,37.1,49.2,63.5,80.0,99.1,120.9,145.8,174.0,205.8,241.5,281.3,325.7,374.9,429.3,489.5,555.8,628.8,709.4]}};
+function propBilin(tbl, tsat, sh){
+  const TS = PROP.TS, SHS = PROP.SHS;
+  tsat = Math.max(TS[0], Math.min(TS[TS.length-1], tsat)); sh = Math.max(0, Math.min(SHS[SHS.length-1], sh));
+  let i = 0; while (i < TS.length-2 && tsat > TS[i+1]) i++;
+  let j = 0; while (j < SHS.length-2 && sh > SHS[j+1]) j++;
+  const u = (tsat - TS[i])/(TS[i+1]-TS[i]), v = (sh - SHS[j])/(SHS[j+1]-SHS[j]);
+  return tbl[i][j]*(1-u)*(1-v) + tbl[i+1][j]*u*(1-v) + tbl[i][j+1]*(1-u)*v + tbl[i+1][j+1]*u*v;
+}
+const pTab = ref => PROP[ref || REF.ref] || PROP.R410A;
+function pHLiq(tF, ref){ return interp(PROP.TS, pTab(ref).hf, tF); }      // subcooled liquid ≈ saturated liquid at its own temperature
+function pHVap(tsatF, shF, ref){ return interp(PROP.TS, pTab(ref).hg, tsatF) + propBilin(pTab(ref).dh, tsatF, shF); }
+function pRho(tsatF, shF, ref){ return propBilin(pTab(ref).rho, tsatF, shF); }
+
+// AHRI nameplate capacities, BTU/h, from the Daikin spec sheets SS-DZ6VS (09/24) and SS-DH9VS-R32 (10/25): cooling at 95°F, heating at 47°F (DH9: and 5°F)
+const RATED = {
+  DZ6VS: {'18':{t:1.5, cool:16600, heat:17400}, '24':{t:2, cool:22200, heat:23200}, '30':{t:2.5, cool:27800, heat:28800}, '36':{t:3, cool:33600, heat:34600}, '42':{t:3.5, cool:39500, heat:40000}, '48':{t:4, cool:45000, heat:45500}, '60':{t:5, cool:53000, heat:54500},
+          '24E':{t:2, cool:23000, heat:23000, e:true}, '36E':{t:3, cool:34200, heat:34200, e:true}, '42E':{t:3.5, cool:40000, heat:40000, e:true}, '48E':{t:4, cool:44000, heat:44000, e:true}},
+  DH9VS: {'24':{t:2, cool:24000, heat:24000, heat5:24000}, '36':{t:3, cool:34200, heat:34200, heat5:34200}, '48':{t:4, cool:46000, heat:48000, heat5:44000}, '60':{t:5, cool:54000, heat:54000, heat5:47000}},
+};
+const GENERIC_SIZES = ['18', '24', '30', '36', '42', '48', '60'];   // 12,000 BTU/h per nominal ton when the family is not in the table
+function modelFamily(){
+  const m = ((D && D.model) || '').replace(/^INV_Unitary_/i, '').toUpperCase();
+  if (m) return Object.keys(RATED).find(f => m.startsWith(f)) || (m.match(/^[A-Z0-9]{3,6}/) || [''])[0];
+  if (!D || D.fam === 'multi') return '';
+  // a plain CSV names no model: read the family off the log (a PC export has no header.txt)
+  if (uniVar() === 'dh9') return 'DH9VS'; if (REF.ref === 'R410A' && EQ.out === 'hp') return 'DZ6VS'; return '';
+}
+const famGuessed = () => !((D && D.model) || '') && !!modelFamily();
+let SIZE = '';   // '' = not set; else a key of RATED[family], or a nominal size code for an unlisted family
+function sizeInfo(){
+  if (!SIZE) return null; const fam = modelFamily(); const r = RATED[fam] && RATED[fam][SIZE];
+  if (r) return Object.assign({fam, key:SIZE}, r);
+  const t = parseInt(SIZE, 10) / 12; return isN(t) && t > 0 ? {fam, key:SIZE, t, cool:t * 12000, heat:t * 12000, generic:true} : null;
+}
+function buildSizeSel(){
+  const sel = $('#sizesel'); if (!sel) return;
+  const fam = modelFamily(), tbl = RATED[fam];
+  let h = '<option value="">Size: not set</option>';
+  if (tbl) for (const [k, r] of Object.entries(tbl)) h += `<option value="${k}">${fam} ${r.t} ton${r.e ? ' · enhanced' : ''} · ${r.cool.toLocaleString()} / ${r.heat.toLocaleString()}</option>`;
+  else for (const k of GENERIC_SIZES) h += `<option value="${k}">${+k / 12} ton · nominal</option>`;
+  sel.innerHTML = h; sel.parentElement.hidden = !D || D.fam === 'multi';
+  SIZE = D ? loadJSON('dchk.size.' + D.name, '') : ''; if (![...sel.options].some(o => o.value === SIZE)) SIZE = ''; sel.value = SIZE;
+}
+
+// Mass flow comes from the compressor's electrical input: in a hermetic compressor nearly all of it ends up in the refrigerant, so
+// flow = power ÷ (discharge enthalpy − suction enthalpy). That is weak when the lift is small (a 10 °F discharge-thermistor error then moves the
+// answer 20–30 %), so each sample is graded, and the good ones teach the app the compressor's effective displacement (cc/rev) for this model
+// and size; once it has enough, flow = displacement × rps × suction density × volumetric efficiency, which holds up at any lift.
+const CAP = {PF:0.97, LOSS:0.07};   // inverter power factor; shell + drive heat that does not reach the refrigerant
+const fmtBtu = v => isN(v) ? Math.round(v / 100) * 100 : null;
+function capVolts(){ const v = +S.volts; return isN(v) && v >= 150 && v <= 300 ? v : 240; }
+function rangeBaseFor(ch){
+  const a = D.num[ch.id], n = D.n; if (!a) return;
+  delete D.range[ch.id]; delete D.base[ch.id]; if (D._has) delete D._has[ch.id];
+  const vals = []; for (let i = 0; i < n; i++) if (isN(a[i]) && !D.dropout[i]) vals.push(a[i]);
+  if (!vals.length) return;
+  D.range[ch.id] = {min:Math.min(...vals), max:Math.max(...vals)};
+  let bv = []; for (let i = 0; i < n; i++) if (D.steady[i] && isN(a[i])) bv.push(a[i]);
+  if (bv.length < 6){ bv = []; for (let i = 0; i < n; i++) if (D.runSec[i] >= 300 && isN(a[i]) && !D.dropout[i]) bv.push(a[i]); }
+  if (bv.length >= 3){ const srt = bv.slice().sort((x, y) => x - y); const med = srt[Math.floor(srt.length / 2)]; const mad = srt.map(x => Math.abs(x - med)).sort((x, y) => x - y)[Math.floor(srt.length / 2)]; D.base[ch.id] = {med, spread:Math.max(mad * 1.4826, Math.abs(med) * 0.01, 0.5)}; }
+}
+function computeCapacity(){
+  if (!D) return;
+  const n = D.n, num = D.num, ref = REF.ref, V = capVolts();
+  const cap = new Array(n).fill(null), cop = new Array(n).fill(null), pwr = new Array(n).fill(null), q = new Array(n).fill(null);
+  const info = {method:'none', n:0, good:0, V}; D.capq = q; D.capinfo = info;
+  const fin = () => { for (const id of ['cap', 'cop', 'pwr']){ num[id] = {cap, cop, pwr}[id]; rangeBaseFor(chById[id]); } };
+  if (D.fam === 'multi'){ info.why = 'a mini-split log has no pressure transducers and no compressor current, so capacity cannot be worked out from it'; return fin(); }
+  if (!chById.hp.present || !chById.lp.present || !chById.inv1.present){ info.why = 'this log has no pressure or inverter-current columns'; return fin(); }
+  const si = sizeInfo(), key = si && !si.generic ? `${si.fam}/${si.key}` : null;
+  const store = loadJSON('dchk.disp', {}), saved = key ? store[key] : null;
+  const rows = [], implied = [];
+  for (let i = 0; i < n; i++){
+    const I = num.inv1[i], rps = num.rps[i], hp = num.hp[i], lp = num.lp[i], td = num.disch[i], ts = num.suct[i], m = D.mode[i];
+    const Isys = isN(num.syscur[i]) && num.syscur[i] > 0 ? num.syscur[i] : I;
+    if (isN(Isys) && Isys > 0.3 && isN(rps) && rps > 0) pwr[i] = V * Isys * CAP.PF / 1000;
+    if (!isN(I) || I < 0.8 || !isN(rps) || rps <= 0 || !isN(hp) || !isN(lp) || !isN(td) || !isN(ts) || lp < 20 || hp <= lp + 20 || D.dropout[i] || (m !== 'cool' && m !== 'heat')) continue;
+    if (D.str.defrost && /^(on|yes|1)$/i.test((D.str.defrost[i] || '').trim())) continue;
+    const tcs = satF(hp, ref), tes = satF(lp, ref), dsh = td - tcs, ssh = ts - tes;
+    const h1 = pHVap(tes, ssh, ref), h2 = pHVap(tcs, dsh, ref), dhc = h2 - h1;
+    if (dhc < 6) continue;
+    const Pel = V * I * CAP.PF, mEB = Pel * (1 - CAP.LOSS) / 1000 / dhc;     // W; kg/s
+    const rho = pRho(tes, ssh, ref), pr = (hp + 14.7) / (lp + 14.7), etaV = Math.max(0.72, Math.min(0.97, 0.97 - 0.035 * (pr - 2)));
+    const sens = (pHVap(tcs, dsh + 10, ref) - h2) / dhc;                    // a 10 °F discharge-thermistor error moves the flow this much
+    const grade = sens <= 0.12 ? 'good' : sens <= 0.2 ? 'fair' : 'poor';
+    q[i] = grade;
+    if (grade === 'good' && D.steady[i] && D.runSec[i] >= 300) implied.push(mEB / (rps * rho * etaV) * 1e6);
+    rows.push({i, mEB, rho, rps, etaV, h2, tes, m});
+  }
+  let disp = null, src = '';
+  if (implied.length >= 12){
+    const s = implied.slice().sort((a, b) => a - b); disp = s[Math.floor(s.length / 2)]; src = 'this log'; info.logDisp = disp; info.logN = implied.length;
+    if (key){ const prev = saved && saved.n ? saved : {cc:0, n:0}; const tot = prev.n + implied.length; const cc = (prev.cc * prev.n + disp * implied.length) / tot;
+      store[key] = {cc, n:Math.min(400, tot), at:new Date().toISOString().slice(0, 10)}; saveJSON('dchk.disp', store); disp = cc; if (prev.n) src = `${store[key].n} good samples over several logs of this model and size`; }
+  } else if (saved && saved.n >= 12){ disp = saved.cc; src = `${saved.n} good samples from earlier logs of this model and size`; }
+  Object.assign(info, {disp, dispSrc:src, method:disp ? 'disp' : (rows.length ? 'eb' : 'none'), n:rows.length, good:implied.length, size:si});
+  if (!rows.length) info.why = 'no rows with the compressor running in heating or cooling';
+  for (const r of rows){
+    const i = r.i, m = disp ? disp * 1e-6 * r.rps * r.rho * r.etaV : r.mEB; let kW = null;
+    if (r.m === 'cool'){ const liq = num.liq[i]; if (!isN(liq)) continue; const ig = num.igas[i]; kW = m * (pHVap(r.tes, (isN(ig) ? ig : num.suct[i]) - r.tes, ref) - pHLiq(liq, ref)); }
+    else { const il = isN(num.iliq[i]) ? num.iliq[i] : num.liq[i]; if (!isN(il)) continue; kW = m * (r.h2 - pHLiq(il, ref)); }
+    if (!isN(kW) || kW <= 0) continue;
+    cap[i] = kW * 3412.14; if (isN(pwr[i]) && pwr[i] > 0.2) cop[i] = kW / pwr[i];
+    if (disp) q[i] = 'disp';
+  }
+  fin();
+}
+// ---- Data tab card: method, confidence, nameplate, and an air-side check from grille readings ----
+function pws(tF){ const T = tF + 459.67; return Math.exp(-1.0440397e4 / T - 1.129465e1 - 2.7022355e-2 * T + 1.289036e-5 * T * T - 2.4780681e-9 * T * T * T + 6.5459673 * Math.log(T)); }   // psia over water (ASHRAE)
+function humRatio(db, wb, p = 14.696){ const pw = pws(wb), ws = 0.621945 * pw / (p - pw); return Math.max(0, ((1093 - 0.556 * wb) * ws - 0.240 * (db - wb)) / (1093 + 0.444 * db - wb)); }
+function hAir(db, W){ return 0.240 * db + W * (1061 + 0.444 * db); }   // BTU per lb of dry air
+let AIRIN = loadJSON('dchk.airside', {});
+function buildCapCard(){
+  const host = $('#capcard'); if (!host) return;
+  const inf = (D && D.capinfo) || {method:'none', why:'no log loaded'};
+  const si = inf.size, V = inf.V || capVolts();
+  let method = '';
+  if (inf.method === 'none') method = `<p class="note">Not available: ${inf.why}.</p>`;
+  else {
+    method = `<p class="note">Mass flow ${inf.method === 'disp' ? `from the compressor's effective displacement, <b>${inf.disp.toFixed(1)} cc/rev</b> learned from ${inf.dispSrc} (${inf.good} good samples in this log) — holds at any lift` :
+      `from the compressor's power draw (${V} V × INV current × ${CAP.PF}, ${Math.round(CAP.LOSS * 100)}% not reaching the refrigerant) ÷ its enthalpy rise. ${inf.good ? `${inf.good} good samples so far; 12 are needed to learn the displacement${si && !si.generic ? '' : ' (pick the unit size above so it is kept for the next log)'}` : 'No good samples yet: the lift was too small for a confident answer'}`}.
+      Capacity = flow × enthalpy change across the indoor coil; COP = capacity ÷ outdoor unit input (indoor blower not included). Expect ±10–15 % on good rows, ±25 % on poor ones.</p>`;
+  }
+  const plate = si ? `<p class="note">Nameplate (AHRI): <b>${si.fam} ${si.t} ton</b> · ${si.cool.toLocaleString()} BTU/h cooling at 95 °F · ${si.heat.toLocaleString()} heating at 47 °F${si.heat5 ? ` · ${si.heat5.toLocaleString()} at 5 °F` : ''}${si.generic ? ' (nominal 12,000 per ton; family not in the table)' : ''}${famGuessed() ? ' — family read off the log, since a plain CSV names no model' : ''}. Those are full-speed figures at rating conditions; at part speed or other temperatures the unit is meant to deliver less.</p>` :
+    (D && D.fam !== 'multi' ? '<p class="note">Pick the unit size in the header bar to compare against its nameplate and to keep what the app learns about its compressor.</p>' : '');
+  const a = AIRIN;
+  const inp = (k, ph) => `<input type="number" step="0.1" data-air="${k}" placeholder="${ph}" value="${isN(a[k]) ? a[k] : ''}" inputmode="decimal">`;
+  host.innerHTML = method + plate + `<div id="capnow" class="ptnow"></div>
+    <h4>Air-side check</h4><p class="note">Type what you measured at the grilles. Airflow is pre-filled from the blower's logged CFM at this row (its own estimate — it drifts high as static climbs); overwrite it if you measured. Sensible = 1.08 × CFM × ΔT, total = 4.5 × CFM × Δh with wet bulbs, latent = total − sensible. Heating with electric strips on is not comparable.</p>
+    <div class="airgrid"><label>Return DB ${inp('radb', '°F')}</label><label>Return WB ${inp('rawb', '°F')}</label><label>Supply DB ${inp('sadb', '°F')}</label><label>Supply WB ${inp('sawb', '°F')}</label><label>CFM ${inp('cfm', 'cfm')}</label></div>
+    <div id="airout" class="ptnow"></div>`;
+  host.querySelectorAll('[data-air]').forEach(el => el.addEventListener('input', () => { const k = el.dataset.air; const v = parseFloat(el.value); if (isN(v)) a[k] = v; else delete a[k]; if (k === 'cfm') a.cfmTouched = isN(v); saveJSON('dchk.airside', a); renderAirSide(); }));
+  renderCapNow(cur);
+}
+function renderCapNow(i){
+  const e = $('#capnow'); if (!e || !D) return;
+  const c = D.num.cap ? D.num.cap[i] : null, cop = D.num.cop ? D.num.cop[i] : null, p = D.num.pwr ? D.num.pwr[i] : null, g = D.capq ? D.capq[i] : null;
+  const gl = {good:'good — large lift', fair:'fair — moderate lift', poor:'poor — small lift, trust ±25 %', disp:'from displacement'}[g] || '';
+  e.innerHTML = `<b>${fmtTime(D.t[i])}</b> · ${D.mode[i] === 'heat' ? 'heating' : D.mode[i] === 'cool' ? 'cooling' : D.mode[i]} · ` + (isN(c) ? `<b>${fmtBtu(c).toLocaleString()} BTU/h</b> (${(c / 12000).toFixed(1)} ton)${isN(cop) ? ` · COP ${cop.toFixed(1)}` : ''}${isN(p) ? ` · ${p.toFixed(2)} kW in` : ''} · ${fmt(D.num.rps[i])} rps${gl ? ` · confidence: ${gl}` : ''}` : (isN(p) ? `${p.toFixed(2)} kW in · no capacity on this row` : 'compressor off'));
+  const cfmEl = $('#capcard [data-air=cfm]');
+  if (cfmEl && !AIRIN.cfmTouched){ const v = D.num.cfm ? D.num.cfm[i] : null; cfmEl.value = isN(v) ? Math.round(v) : ''; }
+  renderAirSide();
+}
+function renderAirSide(){
+  const out = $('#airout'); if (!out || !D) return;
+  const a = AIRIN, cfm = AIRIN.cfmTouched ? a.cfm : parseFloat(($('#capcard [data-air=cfm]') || {}).value);
+  if (!isN(a.radb) || !isN(a.sadb) || !isN(cfm) || cfm <= 0){ out.textContent = ''; return; }
+  const heating = a.sadb > a.radb, dT = Math.abs(a.radb - a.sadb), sens = 1.08 * cfm * dT;
+  let tot = null; if (isN(a.rawb) && isN(a.sawb) && a.rawb <= a.radb + 0.5 && a.sawb <= a.sadb + 0.5) tot = Math.abs(4.5 * cfm * (hAir(a.radb, humRatio(a.radb, a.rawb)) - hAir(a.sadb, humRatio(a.sadb, a.sawb))));
+  const lat = tot != null ? Math.max(0, tot - sens) : null;
+  const rs = D.num.cap ? D.num.cap[cur] : null;
+  let h = `${heating ? 'Heating' : 'Cooling'} · ΔT ${dT.toFixed(1)} °F · sensible <b>${fmtBtu(sens).toLocaleString()}</b> BTU/h` + (tot != null ? ` · latent ${fmtBtu(lat).toLocaleString()} · total <b>${fmtBtu(tot).toLocaleString()}</b>` : ' · add wet bulbs for latent and total');
+  const air = tot != null ? tot : (heating ? sens : null);
+  if (isN(rs) && isN(air)) h += ` · refrigerant side ${fmtBtu(rs).toLocaleString()} → air side is ${Math.round(air / rs * 100)} % of it${Math.abs(air / rs - 1) <= 0.15 ? ' (agree)' : ' (one of the two measurements is off: check CFM first)'}`;
+  out.innerHTML = h;
 }
 
 /* ---------- rule evaluation ---------- */
@@ -1763,6 +1935,12 @@ function rulebookFindings(){
   { const lockMin = D.locked.filter(Boolean).length * dt, runMin = D.runSec.filter(x => x >= 0).length * dt;
     F.push({rid:'L1', sev:'law', st:lockMin >= 10 ? 'ok' : 'info', title:lockMin >= 10 ? `${f0(lockMin)} min at a locked speed` : 'Speed never locked long enough to judge charge', why:lockMin >= 10 ? `Refrigerant rules were judged only on those rows (${pct(lockMin, runMin)}% of run time).` : 'Every refrigerant number moves with compressor speed; readings taken while ramping are invalid.', fix:lockMin >= 10 ? ['Record the speed next to every reading you log.'] : ['Hold the compressor at a fixed speed (FIT charge/test mode, mini-split forced cooling) for 10–15 min and record again.']}); }
   // S10: defrost frequency
+  if (D.capinfo && D.capinfo.method !== 'none'){ const med = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+    for (const md of ['cool', 'heat']){ const v = [], cp = [], sp = []; for (let i = 0; i < n; i++) if (D.mode[i] === md && isN(num.cap[i]) && (D.steady[i] || D.runSec[i] >= 600)){ v.push(num.cap[i]); sp.push(num.rps[i]); if (isN(num.cop[i])) cp.push(num.cop[i]); }
+      if (v.length < 6) continue; const c = med(v), k = cp.length ? med(cp) : null, si = D.capinfo.size, rated = si ? (md === 'cool' ? si.cool : si.heat) : null;
+      F.push({rid:'L6', sev:'law', st:'info', title:`Delivered ${md === 'cool' ? 'cooling' : 'heating'} about ${fmtBtu(c).toLocaleString()} BTU/h (${(c / 12000).toFixed(1)} ton)${k ? `, COP ${k.toFixed(1)}` : ''}`,
+        why:`Median of ${v.length} settled rows at ${fmt(med(sp))} rps, worked out on the refrigerant side from the compressor's ${D.capinfo.method === 'disp' ? 'displacement' : 'power draw'} (Data tab has the method and confidence).${rated ? ` Nameplate ${rated.toLocaleString()} BTU/h at rating conditions and full speed.` : ''}`,
+        fix:['Compare with an air-side check from grille readings (Data tab); if the two disagree by more than 15 %, suspect the airflow figure first.']}); } }
   if (D.mode.includes('heat')){ const d = D.runs.reduce((a, r) => a + (r.defrost || 0), 0), hrs = n * dt / 60; if (d && d / hrs > RT.defrostPerHr) F.push({rid:'S10', sev:'major', st:'warn', title:`${d} defrosts in ${f1s(hrs)} h`, why:'Intelligent Defrost should start on frost, not a clock. Defrosting a clean coil is a sensor or logic problem.', fix:['Check coil thermistor mounting and clip; clear base pan drainage; raise the unit above the snow line; review fault history.']}); }
   // S15: recurring codes
   { const ep = episodes(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()), 1); if (ep.length >= 3) F.push({rid:'S15', sev:'minor', st:'warn', title:`Error code repeated ${ep.length} times`, why:'A code that clears itself and repeats is a pattern, not a fluke.', fix:['Log codes, counts and outdoor temp at the time of each fault.']}); }
@@ -2243,8 +2421,8 @@ const TAGS_PORT = [
   // physics checks column
   {ch:'isod',  x:86, y:1160, anchor:'ctr', adv:true},
   {ch:'lift',  x:86, y:1222, anchor:'ctr', adv:true},
-  {ch:'capidx',x:86, y:1284, anchor:'ctr', adv:true},
-  {ch:'copidx',x:86, y:1346, anchor:'ctr', adv:true},
+  {ch:'cap',   x:86, y:1284, anchor:'ctr', adv:true},
+  {ch:'cop',   x:86, y:1346, anchor:'ctr', adv:true},
   // outdoor: liquid side & coil
   {ch:'liq',   x:212, y:606, from:[190,606], mk:'temp'},
   {ch:'sc',    label:'Subcooling', x:212, y:676, target:'tsc', states:['sc','scerr']},
@@ -2294,8 +2472,8 @@ const TAGS_LAND = [
   {ch:'appr',  x:1430, y:440},
   {ch:'isod',  x:1000, y:110, adv:true},
   {ch:'lift',  x:1150, y:110, adv:true},
-  {ch:'capidx',x:1300, y:110, adv:true},
-  {ch:'copidx',x:1440, y:110, adv:true},
+  {ch:'cap',   x:1300, y:110, adv:true},
+  {ch:'cop',   x:1440, y:110, adv:true},
 ];
 let CUSTOM = loadJSON('dchk.custom', []);
 CUSTOM.forEach(c => { try { registerCustom(c); } catch(e){} });
@@ -2430,7 +2608,7 @@ function renderCycle(i){
   if ($('#air-oc')) $('#air-oc').classList.toggle('off', !ofOn); if ($('#air-ic')) $('#air-ic').classList.toggle('off', !ifOn);
   const hold = (D.sig[i] || []).find(x => x.code === 'held'); $('#cmphold').textContent = hold ? 'HELD · ' + hold.hold.toUpperCase() : '';
   const ia = D.str.iaddr[i], ie = D.str.ierr[i], im = D.str.imode[i];
-  if (!$('#panel-data').hidden) renderPtNow(i);
+  if (!$('#panel-data').hidden){ renderPtNow(i); renderCapNow(i); }
   if (V3) V3.setRow(i);
   if (FAM !== 'multi') renderVariant(i);
   if (FAM === 'multi') renderMulti(i, m, running);
@@ -3226,7 +3404,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v61';
+const APP_VERSION = 'v62';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -4043,6 +4221,7 @@ $('#thermal2').addEventListener('change', e => setThermal(e.target.checked));
 
 if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: landscape)').addEventListener('change', () => { if (LAND === null) setLayout(); });
 $('#refsel').addEventListener('change', e => { if (D) saveJSON('dchk.ref.' + D.name, e.target.value); logEvent('refrigerant', {value:e.target.value}); applyRefrigerant(); if (D){ evalAll(); buildDataTable(); buildSynopsis(); renderCycle(cur); } });
+$('#sizesel').addEventListener('change', e => { SIZE = e.target.value; if (D){ saveJSON('dchk.size.' + D.name, SIZE); computeCapacity(); buildCapCard(); buildDataTable(); buildSynopsis(); drawAllStrips(); } logEvent('size', {value:SIZE}); });
 $('#eqsel').addEventListener('change', e => { if (D) saveJSON('dchk.eq.' + D.name, e.target.value); logEvent('equipment', {value:e.target.value}); applyEquipment(); if (D) renderCycle(cur); });
 setThermal(THERMAL);
 $('#loadbtn').addEventListener('click', () => $('#csvfile').click());
@@ -4057,7 +4236,7 @@ $('#tabs').addEventListener('click', e => {
   document.querySelectorAll('.panel').forEach(p => p.hidden = p.id !== 'panel-' + b.dataset.tab);
   if (b.dataset.tab === 'cycle' && V3) V3.resize();
   if (b.dataset.tab === 'trends') drawAllStrips();
-  if (b.dataset.tab === 'data'){ highlightRow(); if (D) renderPtNow(cur); }
+  if (b.dataset.tab === 'data'){ highlightRow(); if (D){ renderPtNow(cur); renderCapNow(cur); } }
   if (b.dataset.tab === 'fleet') fleetRefresh();
   if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
   syncAnim();
@@ -4105,6 +4284,7 @@ $('#settingsreset').addEventListener('click', () => { S = Object.assign({}, S_DE
 document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListener('input', () => {
   const k = inp.dataset.s; S[k] = inp.type === 'checkbox' ? inp.checked : (inp.type === 'range' ? +inp.value : inp.value);
   applySettings(); sbUi();
+  if (k === 'volts' && D){ computeCapacity(); buildCapCard(); buildDataTable(); drawAllStrips(); }
   if (k === 'land') setLayout(); else if (D && !/^sb|^sync/.test(k)) renderCycle(cur);
 }));
 // boot

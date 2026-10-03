@@ -170,3 +170,27 @@ code. The app reads the code letter from the high nibble (0 A, 1 C, 2 E, 3 F, 4 
 low nibble (0–9, then A C E F H J): 0x84 = U4, 0x33 = F3, 0x80 = U0, 0x05 = A5. This follows Daikin's bus convention and **has not yet
 been confirmed against a recording of a real fault** (every recording so far is clean), so the raw byte is always shown with the code.
 The code table (`ERRCODES`) is the general Daikin inverter list with first checks; the model's service manual has the last word.
+
+## 10. Capacity and COP (app v62)
+
+Mass flow is found from the compressor's electrical input: `ṁ = V·I·PF·(1−loss) / (h_discharge − h_suction)` with V from Settings (240 V default; a FIT log has no
+voltage column), I = `66:INV prim cur(A)` (the compressor drive alone; `71:Sys. Op. Current` = INV + fan on every row checked), PF 0.97, loss 7 %.
+Enthalpies come from CoolProp 8 tables (IIR reference; R-410A dew point) embedded as `PROP`: sat. liquid / vapour by temperature and a superheat ×
+saturation grid for vapour enthalpy and density. Saturation temperatures are taken from the transducers via the PT tables, not the board's Tc / Te.
+
+Sensitivity: the flow error from a 10 °F discharge-thermistor error is `(h(Tc, DSH+10) − h2) / (h2 − h1)`; ≤ 0.12 good, ≤ 0.20 fair, else poor. On the
+DZ6VS shop log (heating, 67 °F outdoor, lift 40 → 97 °F) every row is fair; on the DH9VS log (cooling, 68 °F outdoor, 32 rps) every row is poor, which is
+honest: both logs were made in mild weather. The apparent isentropic efficiency on the DZ6 rows is 0.72, which is where a swing compressor sits, so the
+discharge thermistor is not obviously lying.
+
+Good + steady rows (≥ 5 min into the run) give an implied displacement `ṁ / (rps · ρ_suction · η_v)` with `η_v = 0.97 − 0.035·(PR − 2)` clipped to
+0.72–0.97. With 12 or more, the median is used for every row of the log and, when the unit size is set, merged into `dchk.disp[family/size]` (count-weighted,
+capped at 400 samples) so the next log of that model starts calibrated. Daikin does not publish the FIT compressors' displacement and the parts sites only
+list model numbers (2YC63BXD etc.), hence the learning instead of a table.
+
+Capacity: cooling `ṁ · (h_vap(Te, igas − Te) − h_liq(liquid pipe))` (indoor gas thermistor is the coil outlet; suction temp if the log lacks it); heating
+`ṁ · (h2 − h_liq(indoor liquid))`. Line-set heat gain / loss is ignored, and on a DH9 in heating the injection flow is part of ṁ, which is right for the condenser.
+COP = capacity ÷ (V · system current · PF). AHRI nameplate figures in `RATED` are from SS-DZ6VS (09/24) and SS-DH9VS-R32 (10/25).
+
+Air-side check (Data tab): ASHRAE psychrometrics at 14.696 psia, `h = 0.240·T + W·(1061 + 0.444·T)`, W from wet bulb via the saturation-pressure
+polynomial; sensible 1.08 · CFM · ΔT, total 4.5 · CFM · Δh. Inputs persist on the device (`dchk.airside`); CFM follows the logged present CFM until typed over.
