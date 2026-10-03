@@ -1007,6 +1007,7 @@ const DERIVED = [
   {id:'pwr',  label:'Outdoor unit input power', short:'Input kW', unit:'kW', dec:2, calc:() => null, note:'line volts × system current × 0.97 (compressor + outdoor fan); set the volts in Settings'},
   {id:'cap',  label:'Delivered capacity (refrigerant side)', short:'Capacity', unit:'BTU/h', dec:0, big:true, calc:() => null, note:'mass flow × enthalpy change across the indoor coil — method and confidence in the Data tab'},
   {id:'cop',  label:'COP (outdoor unit)', short:'COP', unit:'', dec:1, calc:() => null, note:'capacity ÷ outdoor unit input power (indoor blower not included)'},
+  {id:'dtp',  label:'Expected supply air ΔT', short:'Supply ΔT', unit:'°F', dec:0, calc:() => null, note:'what a probe at a supply grille should read against return: capacity ÷ (1.08 × logged CFM) in heating; in cooling via the coil bypass model at the typed or assumed return condition (+ rise, − drop)'},
   {id:'dslope', label:'Discharge slope (5 min)', short:'Disch slope', unit:'°F/min', dec:1, calc:() => null, slope:{src:'disch', win:300}},
   {id:'lpslope',label:'Low pressure slope (5 min)', short:'LP slope', unit:'psi/min', dec:1, calc:() => null, slope:{src:'lp', win:300}},
   {id:'evslope',label:'Outdoor EV slope (5 min)', short:'EV slope', unit:'pls/min', dec:1, calc:() => null, slope:{src:'ev', win:300}},
@@ -1701,9 +1702,9 @@ function rangeBaseFor(ch){
 function computeCapacity(){
   if (!D) return;
   const n = D.n, num = D.num, ref = REF.ref, V = capVolts();
-  const cap = new Array(n).fill(null), cop = new Array(n).fill(null), pwr = new Array(n).fill(null), q = new Array(n).fill(null);
-  const info = {method:'none', n:0, good:0, V}; D.capq = q; D.capinfo = info;
-  const fin = () => { for (const id of ['cap', 'cop', 'pwr']){ num[id] = {cap, cop, pwr}[id]; rangeBaseFor(chById[id]); } };
+  const cap = new Array(n).fill(null), cop = new Array(n).fill(null), pwr = new Array(n).fill(null), q = new Array(n).fill(null), dtp = new Array(n).fill(null), dtpDry = new Array(n).fill(null), dtpWet = new Array(n).fill(null);
+  const info = {method:'none', n:0, good:0, V}; D.capq = q; D.capinfo = info; D.dtpDry = dtpDry; D.dtpWet = dtpWet;
+  const fin = () => { for (const id of ['cap', 'cop', 'pwr', 'dtp']){ num[id] = {cap, cop, pwr, dtp}[id]; rangeBaseFor(chById[id]); } };
   if (D.fam === 'multi'){ info.why = 'a mini-split log has no pressure transducers and no compressor current, so capacity cannot be worked out from it'; return fin(); }
   if (!chById.hp.present || !chById.lp.present || !chById.inv1.present){ info.why = 'this log has no pressure or inverter-current columns'; return fin(); }
   const si = sizeInfo(), key = si && !si.generic ? `${si.fam}/${si.key}` : null;
@@ -1741,6 +1742,8 @@ function computeCapacity(){
     if (!isN(kW) || kW <= 0) continue;
     cap[i] = kW * 3412.14; if (isN(pwr[i]) && pwr[i] > 0.2) cop[i] = kW / pwr[i];
     if (disp) q[i] = 'disp';
+    // what the grille should read: the same energy carried by the logged airflow
+    const cfm = num.cfm[i]; if (isN(cfm) && cfm >= 100){ const dT = cap[i] / (1.08 * cfm); if (r.m === 'heat'){ dtp[i] = dT; dtpDry[i] = dT; } else { dtpDry[i] = -dT; const wet = coolSupplyDrop(cap[i], cfm, r.tes); dtpWet[i] = isN(wet) ? wet : null; dtp[i] = isN(wet) ? (wet - dT) / 2 : -0.8 * dT; } }   // cooling: midpoint of the wet-coil … dry-coil bracket
   }
   fin();
 }
@@ -1749,6 +1752,13 @@ function pws(tF){ const T = tF + 459.67; return Math.exp(-1.0440397e4 / T - 1.12
 function humRatio(db, wb, p = 14.696){ const pw = pws(wb), ws = 0.621945 * pw / (p - pw); return Math.max(0, ((1093 - 0.556 * wb) * ws - 0.240 * (db - wb)) / (1093 + 0.444 * db - wb)); }
 function hAir(db, W){ return 0.240 * db + W * (1061 + 0.444 * db); }   // BTU per lb of dry air
 let AIRIN = loadJSON('dchk.airside', {});
+function returnCond(){ const a = AIRIN; return (isN(a.radb) && isN(a.rawb) && a.rawb <= a.radb + 0.5) ? {db:a.radb, wb:a.rawb, typed:true} : {db:75, wb:62.5, typed:false}; }
+function coolSupplyDrop(btu, cfm, teF){
+  const rc = returnCond(), Wr = humRatio(rc.db, rc.wb), hr = hAir(rc.db, Wr), hs = hr - btu / (4.5 * cfm);
+  const adp = teF + 2, hadp = hAir(adp, humRatio(adp, adp));               // coil surface a couple of degrees over Te, air leaving it saturated
+  if (hr - hadp < 0.5) return null; const b = Math.max(0, Math.min(1, (hs - hadp) / (hr - hadp)));
+  return (adp + b * (rc.db - adp)) - rc.db;
+}
 function buildCapCard(){
   const host = $('#capcard'); if (!host) return;
   const inf = (D && D.capinfo) || {method:'none', why:'no log loaded'};
@@ -1764,11 +1774,11 @@ function buildCapCard(){
     (D && D.fam !== 'multi' ? '<p class="note">Pick the unit size in the header bar to compare against its nameplate and to keep what the app learns about its compressor.</p>' : '');
   const a = AIRIN;
   const inp = (k, ph) => `<input type="number" step="0.1" data-air="${k}" placeholder="${ph}" value="${isN(a[k]) ? a[k] : ''}" inputmode="decimal">`;
-  host.innerHTML = method + plate + `<div id="capnow" class="ptnow"></div>
+  host.innerHTML = method + plate + `<div id="capnow" class="ptnow"></div><p class="note" id="capexp"></p>
     <h4>Air-side check</h4><p class="note">Type what you measured at the grilles. Airflow is pre-filled from the blower's logged CFM at this row (its own estimate — it drifts high as static climbs); overwrite it if you measured. Sensible = 1.08 × CFM × ΔT, total = 4.5 × CFM × Δh with wet bulbs, latent = total − sensible. Heating with electric strips on is not comparable.</p>
     <div class="airgrid"><label>Return DB ${inp('radb', '°F')}</label><label>Return WB ${inp('rawb', '°F')}</label><label>Supply DB ${inp('sadb', '°F')}</label><label>Supply WB ${inp('sawb', '°F')}</label><label>CFM ${inp('cfm', 'cfm')}</label></div>
     <div id="airout" class="ptnow"></div>`;
-  host.querySelectorAll('[data-air]').forEach(el => el.addEventListener('input', () => { const k = el.dataset.air; const v = parseFloat(el.value); if (isN(v)) a[k] = v; else delete a[k]; if (k === 'cfm') a.cfmTouched = isN(v); saveJSON('dchk.airside', a); renderAirSide(); }));
+  host.querySelectorAll('[data-air]').forEach(el => el.addEventListener('input', () => { const k = el.dataset.air; const v = parseFloat(el.value); if (isN(v)) a[k] = v; else delete a[k]; if (k === 'cfm') a.cfmTouched = isN(v); saveJSON('dchk.airside', a); if (k === 'radb' || k === 'rawb'){ computeCapacity(); renderCycle(cur); } renderCapNow(cur); }));
   renderCapNow(cur);
 }
 function renderCapNow(i){
@@ -1776,6 +1786,12 @@ function renderCapNow(i){
   const c = D.num.cap ? D.num.cap[i] : null, cop = D.num.cop ? D.num.cop[i] : null, p = D.num.pwr ? D.num.pwr[i] : null, g = D.capq ? D.capq[i] : null;
   const gl = {good:'good — large lift', fair:'fair — moderate lift', poor:'poor — small lift, trust ±25 %', disp:'from displacement'}[g] || '';
   e.innerHTML = `<b>${fmtTime(D.t[i])}</b> · ${D.mode[i] === 'heat' ? 'heating' : D.mode[i] === 'cool' ? 'cooling' : D.mode[i]} · ` + (isN(c) ? `<b>${fmtBtu(c).toLocaleString()} BTU/h</b> (${(c / 12000).toFixed(1)} ton)${isN(cop) ? ` · COP ${cop.toFixed(1)}` : ''}${isN(p) ? ` · ${p.toFixed(2)} kW in` : ''} · ${fmt(D.num.rps[i])} rps${gl ? ` · confidence: ${gl}` : ''}` : (isN(p) ? `${p.toFixed(2)} kW in · no capacity on this row` : 'compressor off'));
+  const g2 = $('#capexp'); if (g2){ const d = D.num.dtp ? D.num.dtp[i] : null, dd = D.dtpDry ? D.dtpDry[i] : null, cfm = D.num.cfm ? D.num.cfm[i] : null, a = AIRIN, rc = returnCond();
+    if (!isN(d) || !isN(cfm)) g2.textContent = isN(c) ? 'No logged airflow on this row, so no expected grille reading.' : '';
+    else if (D.mode[i] === 'heat') g2.innerHTML = `Expected at a supply grille: <b>${d.toFixed(0)} °F above return</b> at the logged ${Math.round(cfm)} cfm (heating is all sensible, so this is exact for that airflow).` + (isN(a.radb) && isN(a.sadb) ? ` You typed ${(a.sadb - a.radb).toFixed(0)} °F → ${Math.abs(a.sadb - a.radb - d) <= 3 ? 'matches' : a.sadb - a.radb < d ? 'less than expected: airflow above the blower\'s figure, or capacity below the estimate' : 'more than expected: airflow below the blower\'s figure (static), or strips on'}.` : '');
+    else { const wet = D.dtpWet ? D.dtpWet[i] : null, lo = isN(wet) ? Math.abs(wet) : Math.abs(dd) * 0.6, hi = Math.abs(dd), m = isN(a.radb) && isN(a.sadb) ? a.radb - a.sadb : null;
+      let verdict = ''; if (m != null){ if (m > hi + 1.5) verdict = 'more than even a dry coil could give at that airflow: the real CFM is below the figure the blower claims (static), or the capacity estimate is low'; else if (m < lo - 1.5) verdict = rc.typed ? 'less than the wettest case: the real CFM is above the figure the blower claims, or the capacity estimate is high' : 'less than expected: a wetter return than the assumed 50 % RH (type the return readings), airflow above the figure the blower claims, or capacity below the estimate'; else { const sh = Math.min(1, m / hi); verdict = `inside the bracket: about ${Math.round(sh * 100)} % sensible, so the coil is ${sh >= 0.9 ? 'running nearly dry' : sh >= 0.7 ? 'doing modest dehumidification' : 'wet and doing a lot of latent work'}`; } }
+      g2.innerHTML = `Expected at a supply grille: <b>${lo.toFixed(0)}–${hi.toFixed(0)} °F below return</b> at the logged ${Math.round(cfm)} cfm — ${lo.toFixed(0)} with the coil wet at a ${rc.db} °F / ${rc.wb} °F WB return (${rc.typed ? 'as typed' : 'assumed 50 % RH; type the return readings to refine'}), ${hi.toFixed(0)} if it runs dry. Where the measured drop lands says how much of the capacity is latent.` + (m != null ? ` You typed ${m.toFixed(0)} °F → ${verdict}.` : ''); } }
   const cfmEl = $('#capcard [data-air=cfm]');
   if (cfmEl && !AIRIN.cfmTouched){ const v = D.num.cfm ? D.num.cfm[i] : null; cfmEl.value = isN(v) ? Math.round(v) : ''; }
   renderAirSide();
@@ -2549,7 +2565,7 @@ const TAGS_PORT = [
   {ch:'igas',  x:735, y:200, anchor:'right', from:[750,200], mk:'temp'},
   {ch:'ipress',x:735, y:300, anchor:'right', from:[750,300], mk:'press'},
   {ch:'cfm',   x:735, y:398, anchor:'right', target:'reqcfm', targetLabel:'req'},
-  {ch:'cap',   label:'Capacity', x:175, y:398, anchor:'right', sub:'cop', subLabel:'COP'},
+  {ch:'cap',   label:'Capacity', x:175, y:398, anchor:'right', sub:'cop', subLabel:'COP', sub2:'dtp', sub2Label:'ΔT'},
   // outdoor: compressor / inverter column
   {ch:'rpserr', x:84, y:660, anchor:'ctr', sub:'trps', subLabel:'target'},
   {ch:'inv1',  x:84, y:732, anchor:'ctr'},
@@ -2587,7 +2603,7 @@ const TAGS_LAND = [
   {ch:{heat:'scid', cool:'coildt'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:40, y:760, sub:{heat:'linedt'}, subLabel:'line loss', target:{cool:'tsh'}},
   {ch:'ievpct', x:300, y:760, anchor:'ctr', bar:true, sub:'iev', subLabel:'', subUnit:true},
   {ch:'cfm',   x:590, y:640, anchor:'right', target:'reqcfm', targetLabel:'req'},
-  {ch:'cap',   label:'Capacity', x:590, y:778, anchor:'right', sub:'cop', subLabel:'COP'},
+  {ch:'cap',   label:'Capacity', x:590, y:778, anchor:'right', sub:'cop', subLabel:'COP', sub2:'dtp', sub2Label:'ΔT'},
   {ch:'suct',  x:794, y:300, anchor:'right', from:[850,300], mk:'temp'},
   {ch:'lp',    x:794, y:356, anchor:'right', from:[850,356], mk:'press'},
   {ch:'evap',  x:794, y:412, anchor:'right'},
@@ -2770,8 +2786,10 @@ function renderCycle(i){
         const cls = Math.abs(d) < 0.05 ? 'off' : d > 0 ? 'up' : 'dn';
         const txt = cls === 'off' ? '✓' : (d > 0 ? '▲+' : '▼−') + Math.abs(d).toFixed(dec);
         se.innerHTML = `${tg.targetLabel || 'target'} ${fmt(t, chById[tgtId])} <span class="dv ${cls}">${txt}</span>`; se.hidden = false;
-      } else if (subId && isN(D.num[subId][i])) { const sc = chById[subId]; se.textContent = ((tg.subLabel != null ? tg.subLabel : sc.short) + ' ' + fmt(D.num[subId][i], sc) + (tg.subUnit && sc.unit ? ' ' + sc.unit : '')).trim(); se.hidden = false; }
-      else se.hidden = true;
+      } else { const parts = [];
+        if (subId && isN(D.num[subId][i])){ const sc = chById[subId]; parts.push(((tg.subLabel != null ? tg.subLabel : sc.short) + ' ' + fmt(D.num[subId][i], sc) + (tg.subUnit && sc.unit ? ' ' + sc.unit : '')).trim()); }
+        if (tg.sub2 && isN(D.num[tg.sub2][i])){ const v2 = D.num[tg.sub2][i]; parts.push(`${tg.sub2Label}${D.mode[i] === 'cool' ? '~' : ''}${v2 > 0 ? '+' : '−'}${Math.abs(v2).toFixed(0)}`); }
+        if (parts.length){ se.textContent = parts.join(parts.length > 1 && tg.sub2 ? '·' : ' · '); se.hidden = false; } else se.hidden = true; }
     }
     if (tg.bar){ const b = e.querySelector('.bar i'); b.style.width = (isN(v) && ch.max ? Math.min(100, v/ch.max*100) : 0) + '%'; }
     // view-specific pieces
@@ -3540,7 +3558,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v63';
+const APP_VERSION = 'v64';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -4041,7 +4059,7 @@ var V3 = (() => {
         P('ic-in', [[qx, qy, 0.28], [qx, 0.66, 0.28], [ix, 0.66, 0.28], [ix, 0.70, 0.28]], 0.010, o);
         tagc(P('ic-in', [-1, 1].flatMap(sg => [0.73, 0.84].map(y => [[ix, 0.70, 0.28], [ix + sg*0.05, y - 0.01, 0.275], [slabX(y, sg) - sg*0.03, y + 0.01, 0.235]])), 0.0045, o), 'dist'); }
       L('suct', [ax, 0.56, az], {pri:2}); L('hp', [cx, H - 0.02, cz], {pri:2}); L('lp', [ax, 0.51, az], {pri:3}); L('sh', [cx, 0.62, GZ], {pri:4}); L('sc', [ox + 0.26, 0.12, LZ], {pri:3});
-      L('liq', [-0.12, 0.20, LZ], {pri:2}); L('iliq', [ix - 0.05, 0.66, 0.28], {pri:2}); L('ievpct', [qx, 0.71, 0.30], {pri:3}); L('igas', [slabX(sy, -1) - 0.02, sy, HZ], {pri:2}); L('ipress', [sx, sy, 0.36], {pri:4}); L('cfm', [ix, 0.36, 0.22], {pri:3}); L('cap', [ix, 0.95, 0.30], {pri:1});
+      L('liq', [-0.12, 0.20, LZ], {pri:2}); L('iliq', [ix - 0.05, 0.66, 0.28], {pri:2}); L('ievpct', [qx, 0.71, 0.30], {pri:3}); L('igas', [slabX(sy, -1) - 0.02, sy, HZ], {pri:2}); L('ipress', [sx, sy, 0.36], {pri:4}); L('cfm', [ix, 0.36, 0.22], {pri:3}); L('cap', [ix, 0.95, 0.30], {pri:1}); L('dtp', [ix, 0.30, 0.22], {pri:4});
       labels.push({name:'AIR HANDLER', at:[ix, 1.45, 0.05]});
       bbox = [[ox - 0.5, 0, -0.25], [1.25, Math.max(1.45, H + 0.12), 0.48]];
       covComp = 'ahu';

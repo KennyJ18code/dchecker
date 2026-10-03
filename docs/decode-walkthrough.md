@@ -194,3 +194,8 @@ COP = capacity ÷ (V · system current · PF). AHRI nameplate figures in `RATED`
 
 Air-side check (Data tab): ASHRAE psychrometrics at 14.696 psia, `h = 0.240·T + W·(1061 + 0.444·T)`, W from wet bulb via the saturation-pressure
 polynomial; sensible 1.08 · CFM · ΔT, total 4.5 · CFM · Δh. Inputs persist on the device (`dchk.airside`); CFM follows the logged present CFM until typed over.
+
+Expected supply ΔT (`dtp`, app v64): heating `cap / (1.08 · cfm)`; cooling via a coil bypass model — return state from the air-side card (else 75 °F / 62.5 °F WB),
+apparatus dew point Te + 2 °F with saturated air leaving the coil, `b = (h_s − h_adp) / (h_r − h_adp)`, `T_s = adp + b · (T_r − adp)`; the dry-coil drop is
+`cap / (1.08 · cfm)`. The tag shows the midpoint of wet/dry; the card shows the bracket and places a typed supply reading in it. On the DH9 log at 1,370 cfm
+for 2.6 ton the measured 18 °F drop sits at 87 % sensible — the coil runs nearly dry at 530 cfm/ton, which the full-contact model alone would have missed.
