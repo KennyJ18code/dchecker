@@ -869,6 +869,7 @@ const DERIVED = [
   {id:'pwr',  label:'Outdoor unit input power', short:'Input kW', unit:'kW', dec:2, calc:() => null, note:'line volts × system current × 0.97 (compressor + outdoor fan); set the volts in Settings'},
   {id:'cap',  label:'Delivered capacity (refrigerant side)', short:'Capacity', unit:'BTU/h', dec:0, big:true, calc:() => null, note:'mass flow × enthalpy change across the indoor coil — method and confidence in the Data tab'},
   {id:'cop',  label:'COP (outdoor unit)', short:'COP', unit:'', dec:1, calc:() => null, note:'capacity ÷ outdoor unit input power (indoor blower not included)'},
+  {id:'dtpdry', label:'Expected supply ΔT if the coil runs dry', short:'Dry-coil ΔT', unit:'°F', dec:0, calc:() => null, note:'cooling only: the drop with no latent work, capacity ÷ (1.08 × logged CFM)'},
   {id:'dtp',  label:'Expected supply air ΔT', short:'Supply ΔT', unit:'°F', dec:0, calc:() => null, note:'what a probe at a supply grille should read against return: capacity ÷ (1.08 × logged CFM) in heating; in cooling via the coil bypass model at the typed or assumed return condition (+ rise, − drop)'},
   {id:'dslope', label:'Discharge slope (5 min)', short:'Disch slope', unit:'°F/min', dec:1, calc:() => null, slope:{src:'disch', win:300}},
   {id:'lpslope',label:'Low pressure slope (5 min)', short:'LP slope', unit:'psi/min', dec:1, calc:() => null, slope:{src:'lp', win:300}},
@@ -1566,7 +1567,7 @@ function computeCapacity(){
   const n = D.n, num = D.num, ref = REF.ref, V = capVolts();
   const cap = new Array(n).fill(null), cop = new Array(n).fill(null), pwr = new Array(n).fill(null), q = new Array(n).fill(null), dtp = new Array(n).fill(null), dtpDry = new Array(n).fill(null), dtpWet = new Array(n).fill(null);
   const info = {method:'none', n:0, good:0, V}; D.capq = q; D.capinfo = info; D.dtpDry = dtpDry; D.dtpWet = dtpWet;
-  const fin = () => { for (const id of ['cap', 'cop', 'pwr', 'dtp']){ num[id] = {cap, cop, pwr, dtp}[id]; rangeBaseFor(chById[id]); } };
+  const fin = () => { for (const id of ['cap', 'cop', 'pwr', 'dtp']){ num[id] = {cap, cop, pwr, dtp}[id]; rangeBaseFor(chById[id]); } num.dtpdry = dtpDry.map((v, i) => D.mode[i] === 'cool' ? v : null); rangeBaseFor(chById.dtpdry); };
   if (D.fam === 'multi'){ info.why = 'a mini-split log has no pressure transducers and no compressor current, so capacity cannot be worked out from it'; return fin(); }
   if (!chById.hp.present || !chById.lp.present || !chById.inv1.present){ info.why = 'this log has no pressure or inverter-current columns'; return fin(); }
   const si = sizeInfo(), key = si && !si.generic ? `${si.fam}/${si.key}` : null;
@@ -2427,7 +2428,8 @@ const TAGS_PORT = [
   {ch:'igas',  x:735, y:200, anchor:'right', from:[750,200], mk:'temp'},
   {ch:'ipress',x:735, y:300, anchor:'right', from:[750,300], mk:'press'},
   {ch:'cfm',   x:735, y:398, anchor:'right', target:'reqcfm', targetLabel:'req'},
-  {ch:'cap',   label:'Capacity', x:175, y:398, anchor:'right', sub:'cop', subLabel:'COP', sub2:'dtp', sub2Label:'ΔT'},
+  {ch:'cap',   label:'Capacity', x:175, y:398, anchor:'right', sub:'cop', subLabel:'COP'},
+  {ch:'dtp',   label:{heat:'Supply rise', cool:'Supply drop'}, x:735, y:488, anchor:'right', sub:{cool:'dtpdry'}, subLabel:'dry coil'},
   // outdoor: compressor / inverter column
   {ch:'rpserr', x:84, y:660, anchor:'ctr', sub:'trps', subLabel:'target'},
   {ch:'inv1',  x:84, y:732, anchor:'ctr'},
@@ -2465,7 +2467,8 @@ const TAGS_LAND = [
   {ch:{heat:'scid', cool:'coildt'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:40, y:760, sub:{heat:'linedt'}, subLabel:'line loss', target:{cool:'tsh'}},
   {ch:'ievpct', x:300, y:760, anchor:'ctr', bar:true, sub:'iev', subLabel:'', subUnit:true},
   {ch:'cfm',   x:590, y:640, anchor:'right', target:'reqcfm', targetLabel:'req'},
-  {ch:'cap',   label:'Capacity', x:590, y:778, anchor:'right', sub:'cop', subLabel:'COP', sub2:'dtp', sub2Label:'ΔT'},
+  {ch:'cap',   label:'Capacity', x:590, y:778, anchor:'right', sub:'cop', subLabel:'COP'},
+  {ch:'dtp',   label:{heat:'Supply rise', cool:'Supply drop'}, x:594, y:330, anchor:'right', sub:{cool:'dtpdry'}, subLabel:'dry coil'},
   {ch:'suct',  x:794, y:300, anchor:'right', from:[850,300], mk:'temp'},
   {ch:'lp',    x:794, y:356, anchor:'right', from:[850,356], mk:'press'},
   {ch:'evap',  x:794, y:412, anchor:'right'},
@@ -3420,7 +3423,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v64';
+const APP_VERSION = 'v65';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
