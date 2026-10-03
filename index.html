@@ -712,7 +712,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Motion</b><small>Flow dashes, air streams and fans</small></span><select data-s="anim"><option value="play">While playing</option><option value="always">Always</option><option value="off">Off</option></select></label>
       <label class="srow"><span class="t"><b>Sensor markers and leader lines</b></span><input type="checkbox" class="sw" data-s="leaders"></label>
       <label class="srow"><span class="t"><b>Change arrows</b><small>▲▼ against the previous row on each reading</small></span><input type="checkbox" class="sw" data-s="arrows"></label>
-      <label class="srow"><span class="t"><b>Physics checks</b><small>Isentropic discharge, lift, delivered BTU/h and COP on the diagram</small></span><input type="checkbox" class="sw" data-s="physics"></label>
+      <label class="srow"><span class="t"><b>Physics checks</b><small>Isentropic discharge and lift on the diagram</small></span><input type="checkbox" class="sw" data-s="physics"></label>
       <label class="srow"><span class="t"><b>Legend and hints</b></span><input type="checkbox" class="sw" data-s="legend"></label>
     </section>
     <section class="sgroup"><h3>Chips and notes</h3>
@@ -1005,7 +1005,7 @@ const DERIVED = [
   {id:'isod',  label:'Discharge vs isentropic', short:'Disch − isen', unit:'°F', calc:r => { const t = isoDisch(r.lp, r.hp, r.suct); return isN(t) ? r.disch - t : null; }, note:'actual discharge − ideal compression estimate (k=1.2); high = compressor heat/wear, negative = wet suction or 4-way bypass'},
   {id:'mflow', label:'Mass flow index', short:'Flow idx', unit:'', dec:0, calc:r => { const d = rhoSuction(r.lp, r.suct); return (isN(d) && isN(r.rps)) ? r.rps * d : null; }, note:'rps × suction gas density (relative)'},
   {id:'pwr',  label:'Outdoor unit input power', short:'Input kW', unit:'kW', dec:2, calc:() => null, note:'line volts × system current × 0.97 (compressor + outdoor fan); set the volts in Settings'},
-  {id:'cap',  label:'Delivered capacity (refrigerant side)', short:'Capacity', unit:'BTU/h', dec:0, calc:() => null, note:'mass flow × enthalpy change across the indoor coil — method and confidence in the Data tab'},
+  {id:'cap',  label:'Delivered capacity (refrigerant side)', short:'Capacity', unit:'BTU/h', dec:0, big:true, calc:() => null, note:'mass flow × enthalpy change across the indoor coil — method and confidence in the Data tab'},
   {id:'cop',  label:'COP (outdoor unit)', short:'COP', unit:'', dec:1, calc:() => null, note:'capacity ÷ outdoor unit input power (indoor blower not included)'},
   {id:'dslope', label:'Discharge slope (5 min)', short:'Disch slope', unit:'°F/min', dec:1, calc:() => null, slope:{src:'disch', win:300}},
   {id:'lpslope',label:'Low pressure slope (5 min)', short:'LP slope', unit:'psi/min', dec:1, calc:() => null, slope:{src:'lp', win:300}},
@@ -2280,7 +2280,7 @@ function analyze(){
 }
 
 /* ---------- formatting ---------- */
-function fmt(v, ch){ if (!isN(v)) return '—'; const dec = ch && ch.dec != null ? ch.dec : (Math.abs(v) >= 100 ? 0 : 1); return v.toFixed(dec); }
+function fmt(v, ch){ if (!isN(v)) return '—'; if (ch && ch.big) return (Math.round(v / 100) * 100).toLocaleString(); const dec = ch && ch.dec != null ? ch.dec : (Math.abs(v) >= 100 ? 0 : 1); return v.toFixed(dec); }
 const pad = n => String(n).padStart(2,'0');
 function fmtTime(d, full){ if (!d) return '—'; const hm = pad(d.getHours())+':'+pad(d.getMinutes())+(d.getSeconds()?':'+pad(d.getSeconds()):''); return full ? `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()} ${hm}` : hm; }
 
@@ -2549,6 +2549,7 @@ const TAGS_PORT = [
   {ch:'igas',  x:735, y:200, anchor:'right', from:[750,200], mk:'temp'},
   {ch:'ipress',x:735, y:300, anchor:'right', from:[750,300], mk:'press'},
   {ch:'cfm',   x:735, y:398, anchor:'right', target:'reqcfm', targetLabel:'req'},
+  {ch:'cap',   label:'Capacity', x:175, y:398, anchor:'right', sub:'cop', subLabel:'COP'},
   // outdoor: compressor / inverter column
   {ch:'rpserr', x:84, y:660, anchor:'ctr', sub:'trps', subLabel:'target'},
   {ch:'inv1',  x:84, y:732, anchor:'ctr'},
@@ -2559,8 +2560,6 @@ const TAGS_PORT = [
   // physics checks column
   {ch:'isod',  x:86, y:1160, anchor:'ctr', adv:true},
   {ch:'lift',  x:86, y:1222, anchor:'ctr', adv:true},
-  {ch:'cap',   x:86, y:1284, anchor:'ctr', adv:true},
-  {ch:'cop',   x:86, y:1346, anchor:'ctr', adv:true},
   // outdoor: liquid side & coil
   {ch:'liq',   x:212, y:606, from:[190,606], mk:'temp'},
   {ch:'sc',    label:'Subcooling', x:212, y:676, target:'tsc', states:['sc','scerr']},
@@ -2588,6 +2587,7 @@ const TAGS_LAND = [
   {ch:{heat:'scid', cool:'coildt'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:40, y:760, sub:{heat:'linedt'}, subLabel:'line loss', target:{cool:'tsh'}},
   {ch:'ievpct', x:300, y:760, anchor:'ctr', bar:true, sub:'iev', subLabel:'', subUnit:true},
   {ch:'cfm',   x:590, y:640, anchor:'right', target:'reqcfm', targetLabel:'req'},
+  {ch:'cap',   label:'Capacity', x:590, y:778, anchor:'right', sub:'cop', subLabel:'COP'},
   {ch:'suct',  x:794, y:300, anchor:'right', from:[850,300], mk:'temp'},
   {ch:'lp',    x:794, y:356, anchor:'right', from:[850,356], mk:'press'},
   {ch:'evap',  x:794, y:412, anchor:'right'},
@@ -2610,8 +2610,6 @@ const TAGS_LAND = [
   {ch:'appr',  x:1430, y:440},
   {ch:'isod',  x:1000, y:110, adv:true},
   {ch:'lift',  x:1150, y:110, adv:true},
-  {ch:'cap',   x:1300, y:110, adv:true},
-  {ch:'cop',   x:1440, y:110, adv:true},
 ];
 let CUSTOM = loadJSON('dchk.custom', []);
 CUSTOM.forEach(c => { try { registerCustom(c); } catch(e){} });
@@ -3542,7 +3540,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v62';
+const APP_VERSION = 'v63';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -4043,7 +4041,7 @@ var V3 = (() => {
         P('ic-in', [[qx, qy, 0.28], [qx, 0.66, 0.28], [ix, 0.66, 0.28], [ix, 0.70, 0.28]], 0.010, o);
         tagc(P('ic-in', [-1, 1].flatMap(sg => [0.73, 0.84].map(y => [[ix, 0.70, 0.28], [ix + sg*0.05, y - 0.01, 0.275], [slabX(y, sg) - sg*0.03, y + 0.01, 0.235]])), 0.0045, o), 'dist'); }
       L('suct', [ax, 0.56, az], {pri:2}); L('hp', [cx, H - 0.02, cz], {pri:2}); L('lp', [ax, 0.51, az], {pri:3}); L('sh', [cx, 0.62, GZ], {pri:4}); L('sc', [ox + 0.26, 0.12, LZ], {pri:3});
-      L('liq', [-0.12, 0.20, LZ], {pri:2}); L('iliq', [ix - 0.05, 0.66, 0.28], {pri:2}); L('ievpct', [qx, 0.71, 0.30], {pri:3}); L('igas', [slabX(sy, -1) - 0.02, sy, HZ], {pri:2}); L('ipress', [sx, sy, 0.36], {pri:4}); L('cfm', [ix, 0.36, 0.22], {pri:3});
+      L('liq', [-0.12, 0.20, LZ], {pri:2}); L('iliq', [ix - 0.05, 0.66, 0.28], {pri:2}); L('ievpct', [qx, 0.71, 0.30], {pri:3}); L('igas', [slabX(sy, -1) - 0.02, sy, HZ], {pri:2}); L('ipress', [sx, sy, 0.36], {pri:4}); L('cfm', [ix, 0.36, 0.22], {pri:3}); L('cap', [ix, 0.95, 0.30], {pri:1});
       labels.push({name:'AIR HANDLER', at:[ix, 1.45, 0.05]});
       bbox = [[ox - 0.5, 0, -0.25], [1.25, Math.max(1.45, H + 0.12), 0.48]];
       covComp = 'ahu';
