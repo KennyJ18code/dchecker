@@ -705,7 +705,7 @@ body.no-cabinet #indoor-var .cab{display:none}
 </div></div>
 <div class="settings" id="settings" hidden>
   <div class="spanel">
-    <div class="shead"><b>Settings</b><span class="note">Saved on this device</span><button class="btn small" id="settingsreset" type="button">Defaults</button><button class="btn small primary" id="settingsclose" type="button">Done</button></div>
+    <div class="shead"><b>Settings</b><span class="note">Saved on this device · <span id="appver"></span></span><button class="btn small" id="settingsreset" type="button">Defaults</button><button class="btn small primary" id="settingsclose" type="button">Done</button></div>
     <div class="sbody">
     <section class="sgroup"><h3>Diagram</h3>
       <label class="srow"><span class="t"><b>Thermal pipes</b><small>Colour the tubing by its logged temperature</small></span><input type="checkbox" class="sw" id="thermal2"></label>
@@ -1202,6 +1202,7 @@ if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.
 S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
 function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); if (V3) V3.kick(); }
 function applySettings(){
+  { const e = document.getElementById('appver'); if (e) e.textContent = APP_VERSION; }
   for (const k of ['flow', 'air', 'parts', 'sv', 'cabinet']) S[k] = true;   // always drawn; their switches left Settings
   saveJSON('dchk.settings', S); syncAnim();
   const b = document.body;
@@ -3423,7 +3424,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v65';
+const APP_VERSION = 'v66';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
