@@ -183,3 +183,10 @@ These need nothing from the tech. The Data-tab card lists which of them were pos
 - **Learned volumetric-efficiency slope.** The good rows record effective displacement (swept volume × η_v) against pressure ratio. When one log spans more than one unit of pressure ratio, the slope is fitted from the data; otherwise the generic rotary curve is used. The learned value is stored per model and size as `e0 + e1 × (PR − 2.5)` and merged across logs.
 
 What this buys: poor-lift rows move from about ±25 % to roughly ±12 %, good rows from ±9 % to about ±7 %. The three assumed constants (voltage, power factor, shell loss) remain, and only a calibration against a real system removes them; see the plan in the README.
+
+### Calculated input power (kW) and energy (kWh) — v69
+Input power = line volts (Settings) × `Sys. Op. Current` × 0.97, the outdoor unit's draw (compressor drive + fan). Energy is that power
+summed over each row's elapsed time, run by run, as a running total; a recording gap is capped at two sample intervals so the unit's
+unknown draw during it is not invented. The Data-tab card and synopsis card L7 give total kWh, hours running, average and peak kW, and the
+cost at the electric rate in Settings ($/kWh, default 0.15). The indoor blower is not in the log, so this is the outdoor unit's bill only;
+the voltage assumption carries straight through (a 230 V unit entered as 240 reads 4 % high).

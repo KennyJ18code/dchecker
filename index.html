@@ -732,6 +732,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     </section>
     <section class="sgroup"><h3>Capacity</h3>
       <label class="srow"><span class="t"><b>Line voltage</b><small>Multiplied by the logged current to get the compressor's power; a FIT log has no voltage column. Read it at the disconnect if you can.</small></span><input type="number" class="snum" data-s="volts" min="150" max="300" step="1" inputmode="numeric"></label>
+      <label class="srow"><span class="t"><b>Electric rate</b><small>$ per kWh, for the running cost of the outdoor unit over a recording</small></span><input type="number" class="snum" data-s="rate" min="0" max="2" step="0.01" inputmode="decimal"></label>
     </section>
     <section class="sgroup wide"><h3>Custom tags</h3>
         <div class="note">Build your own reading from the ones on screen. It appears as an orange tag you can drag anywhere on the diagram; tap it to pin its trend.</div>
@@ -1004,7 +1005,8 @@ const DERIVED = [
   {id:'lift',  label:'Lift (Tc − Te)', short:'Lift', unit:'°F', calc:r => sub(r.cond, r.evap), note:'condensing − evaporating sat temp'},
   {id:'isod',  label:'Discharge vs isentropic', short:'Disch − isen', unit:'°F', calc:r => { const t = isoDisch(r.lp, r.hp, r.suct); return isN(t) ? r.disch - t : null; }, note:'actual discharge − ideal compression estimate (k=1.2); high = compressor heat/wear, negative = wet suction or 4-way bypass'},
   {id:'mflow', label:'Mass flow index', short:'Flow idx', unit:'', dec:0, calc:r => { const d = rhoSuction(r.lp, r.suct); return (isN(d) && isN(r.rps)) ? r.rps * d : null; }, note:'rps × suction gas density (relative)'},
-  {id:'pwr',  label:'Outdoor unit input power', short:'Input kW', unit:'kW', dec:2, calc:() => null, note:'line volts × system current × 0.97 (compressor + outdoor fan); set the volts in Settings'},
+  {id:'kwh',  label:'Calculated energy used (outdoor unit, running total)', short:'Calc kWh', unit:'kWh', dec:2, calc:() => null, note:'input kW summed over the recording; the indoor blower is not in the log'},
+  {id:'pwr',  label:'Calculated input power (outdoor unit)', short:'Calc kW', unit:'kW', dec:2, calc:() => null, note:'line volts × system current × 0.97 (compressor + outdoor fan); set the volts in Settings'},
   {id:'cap',  label:'Calculated capacity (refrigerant side)', short:'Calc capacity', unit:'BTU/h', dec:0, big:true, calc:() => null, note:'mass flow × enthalpy change across the indoor coil — method and confidence in the Data tab'},
   {id:'cop',  label:'COP (outdoor unit)', short:'COP', unit:'', dec:1, calc:() => null, note:'capacity ÷ outdoor unit input power (indoor blower not included)'},
   {id:'dtpdry', label:'Calculated supply ΔT if the coil runs dry', short:'Dry-coil ΔT', unit:'°F', dec:0, calc:() => null, note:'cooling only: the drop with no latent work, capacity ÷ (1.08 × logged CFM)'},
@@ -1333,7 +1335,7 @@ function renderMulti(i, m, running){
 let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:false, syncEv:false, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240};
+const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:false, syncEv:false, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
@@ -1726,9 +1728,16 @@ function computeCapacity(){
   const n = D.n, num = D.num, ref = REF.ref, V = capVolts();
   const cap = new Array(n).fill(null), cop = new Array(n).fill(null), pwr = new Array(n).fill(null), q = new Array(n).fill(null), dtp = new Array(n).fill(null), dtpDry = new Array(n).fill(null), dtpWet = new Array(n).fill(null);
   const info = {method:'none', n:0, good:0, V}; D.capq = q; D.capinfo = info; D.dtpDry = dtpDry; D.dtpWet = dtpWet;
-  const fin = () => { for (const id of ['cap', 'cop', 'pwr', 'dtp']){ num[id] = {cap, cop, pwr, dtp}[id]; rangeBaseFor(chById[id]); } num.dtpdry = dtpDry.map((v, i) => D.mode[i] === 'cool' ? v : null); rangeBaseFor(chById.dtpdry); };
+  const kwh = new Array(n).fill(null);
+  const fin = () => {
+    // energy: kW × elapsed time, run by run; a recording gap is not counted (the unit's draw during it is unknown)
+    let tot = 0, runS = 0, peak = 0; for (let i = 0; i < n; i++){ const dtS = i ? Math.min((D.t[i] - D.t[i-1]) / 1000, 2 * D.interval) : 0; if (isN(pwr[i]) && pwr[i] > 0){ tot += pwr[i] * dtS / 3600; runS += dtS; peak = Math.max(peak, pwr[i]); } kwh[i] = tot; }
+    info.energy = {kwh:tot, runH:runS / 3600, avgKw:runS ? tot / (runS / 3600) : null, peak, spanH:(D.t[n-1] - D.t[0]) / 3.6e6};
+    for (const id of ['cap', 'cop', 'pwr', 'dtp', 'kwh']){ num[id] = {cap, cop, pwr, dtp, kwh}[id]; rangeBaseFor(chById[id]); } num.dtpdry = dtpDry.map((v, i) => D.mode[i] === 'cool' ? v : null); rangeBaseFor(chById.dtpdry); };
   if (D.fam === 'multi'){ info.why = 'a mini-split log has no pressure transducers and no compressor current, so capacity cannot be worked out from it'; return fin(); }
-  if (!chById.hp.present || !chById.lp.present || !chById.inv1.present){ info.why = 'this log has no pressure or inverter-current columns'; return fin(); }
+  if (!chById.hp.present || !chById.lp.present || !chById.inv1.present){ info.why = 'this log has no pressure or inverter-current columns';
+    for (let i = 0; i < n; i++){ const I = isN(num.syscur[i]) && num.syscur[i] > 0 ? num.syscur[i] : num.inv1[i]; if (isN(I) && I > 0.3 && isN(num.rps[i]) && num.rps[i] > 0) pwr[i] = V * I * CAP.PF / 1000; }
+    return fin(); }
   const cal = restCalibration(); info.cal = cal; const co = id => cal.off[id] || 0;
   const si = sizeInfo(), key = si && !si.generic ? `${si.fam}/${si.key}` : null;
   const store = loadJSON('dchk.disp', {}), saved = key ? store[key] : null;
@@ -1833,7 +1842,9 @@ function buildCapCard(){
     (D && D.fam !== 'multi' ? '<p class="note">Pick the unit size in the header bar to compare against its nameplate and to keep what the app learns about its compressor.</p>' : '');
   const a = AIRIN;
   const inp = (k, ph) => `<input type="number" step="0.1" data-air="${k}" placeholder="${ph}" value="${isN(a[k]) ? a[k] : ''}" inputmode="decimal">`;
-  host.innerHTML = method + plate + `<div id="capnow" class="ptnow"></div><p class="note" id="capexp"></p>
+  const en = inf.energy, rate = +S.rate || 0;
+  const energy = en && en.kwh > 0 ? `<p class="note">Calculated energy, outdoor unit: <b>${en.kwh.toFixed(2)} kWh</b> over ${en.runH.toFixed(1)} h running in a ${en.spanH.toFixed(1)} h recording (average ${en.avgKw.toFixed(2)} kW, peak ${en.peak.toFixed(2)} kW)${rate ? ` ≈ <b>$${(en.kwh * rate).toFixed(2)}</b> at $${rate.toFixed(2)}/kWh` : ''}. From ${inf.V} V × logged current; the indoor blower is not in the log.</p>` : '';
+  host.innerHTML = method + plate + energy + `<div id="capnow" class="ptnow"></div><p class="note" id="capexp"></p>
     <h4>Air-side check</h4><p class="note">Type what you measured at the grilles. Airflow is pre-filled from the blower's logged CFM at this row (its own estimate — it drifts high as static climbs); overwrite it if you measured. Sensible = 1.08 × CFM × ΔT, total = 4.5 × CFM × Δh with wet bulbs, latent = total − sensible. Heating with electric strips on is not comparable.</p>
     <div class="airgrid"><label>Return DB ${inp('radb', '°F')}</label><label>Return WB ${inp('rawb', '°F')}</label><label>Supply DB ${inp('sadb', '°F')}</label><label>Supply WB ${inp('sawb', '°F')}</label><label>CFM ${inp('cfm', 'cfm')}</label></div>
     <div id="airout" class="ptnow"></div>`;
@@ -2148,6 +2159,8 @@ function rulebookFindings(){
   { const lockMin = D.locked.filter(Boolean).length * dt, runMin = D.runSec.filter(x => x >= 0).length * dt;
     F.push({rid:'L1', sev:'law', st:lockMin >= 10 ? 'ok' : 'info', title:lockMin >= 10 ? `${f0(lockMin)} min at a locked speed` : 'Speed never locked long enough to judge charge', why:lockMin >= 10 ? `Refrigerant rules were judged only on those rows (${pct(lockMin, runMin)}% of run time).` : 'Every refrigerant number moves with compressor speed; readings taken while ramping are invalid.', fix:lockMin >= 10 ? ['Record the speed next to every reading you log.'] : ['Hold the compressor at a fixed speed (FIT charge/test mode, mini-split forced cooling) for 10–15 min and record again.']}); }
   // S10: defrost frequency
+  if (D.capinfo && D.capinfo.energy && D.capinfo.energy.kwh > 0.05){ const en = D.capinfo.energy, rate = +S.rate || 0;
+    F.push({rid:'L7', sev:'law', st:'info', title:`Calculated energy ${en.kwh.toFixed(1)} kWh over ${en.runH.toFixed(1)} h running${rate ? ` (about $${(en.kwh * rate).toFixed(2)})` : ''}`, why:`Outdoor unit only (compressor + fan), from ${D.capinfo.V} V × the logged current, averaging ${en.avgKw.toFixed(2)} kW while running with a peak of ${en.peak.toFixed(2)} kW. The indoor blower is not in the log, and recording gaps are not counted.`, fix:[rate ? 'Change the electric rate in Settings to match the customer\'s bill.' : 'Set an electric rate in Settings to see this as dollars.']}); }
   if (D.capinfo && D.capinfo.method !== 'none'){ const med = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
     for (const md of ['cool', 'heat']){ const v = [], cp = [], sp = []; for (let i = 0; i < n; i++) if (D.mode[i] === md && isN(num.cap[i]) && (D.steady[i] || D.runSec[i] >= 600)){ v.push(num.cap[i]); sp.push(num.rps[i]); if (isN(num.cop[i])) cp.push(num.cop[i]); }
       if (v.length < 6) continue; const c = med(v), k = cp.length ? med(cp) : null, si = D.capinfo.size, rated = si ? (md === 'cool' ? si.cool : si.heat) : null;
@@ -2631,6 +2644,7 @@ const TAGS_PORT = [
   {ch:'inv1',  x:84, y:732, anchor:'ctr'},
   {ch:'fin',   x:84, y:794, anchor:'ctr'},
   {ch:'cr',    x:84, y:856, anchor:'ctr'},
+  {ch:'pwr',   x:84, y:938, anchor:'ctr', sub:'kwh', subLabel:'', subUnit:true},
   {ch:'oat',   x:84, y:1018, anchor:'ctr'},
   {ch:'fan',   x:84, y:1088, anchor:'ctr', target:'tfan'},
   // physics checks column
@@ -2676,6 +2690,7 @@ const TAGS_LAND = [
   {ch:'hp',    x:1060, y:340, from:[1040,340], mk:'press'},
   {ch:'rpserr', x:980, y:650, sub:'trps', subLabel:'target'},
   {ch:'inv1',  x:1130, y:650},
+  {ch:'pwr',   x:1264, y:650, sub:'kwh', subLabel:'', subUnit:true},
   {ch:'fin',   x:1200, y:760},
   {ch:'oat',   x:1240, y:400, anchor:'ctr'},
   {ch:'fan',   x:1240, y:466, anchor:'ctr', target:'tfan'},
@@ -3619,7 +3634,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v68';
+const APP_VERSION = 'v69';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
@@ -4059,7 +4074,7 @@ var V3 = (() => {
         for (const q of meshes) if (q.arrowOf === sv) parts.push(q); parts.forEach(q => { if (q){ q.svPart = true; q.comp = 'hgsv'; } });
         labels.push({name:'HOT GAS SV', at:[bx + 0.10, 0.70, bz]}); } }
     else { P('disch', [[cx, 0.46, cz], [cx, coilTop, cz], [ox + 0.19, coilTop, cz], [ox + 0.19, coilTop, coilZ], [coilR, coilTop, coilZ]], 0.012, {hi:true}); }
-    L('rps', [cx + 0.04, 0.37, cz + 0.097], {pri:1}); L('disch', [cx, H - 0.10, 0.0], {pri:1}); L('ochex', [ox - 0.30, H*0.78, coilZ + 0.03], {pri:2}); L('oat', [ox - 0.42, 0.14, 0.2], {pri:3}); L('fan', [hub[0], hub[1] - 0.2, 0.19], {pri:3}); if (dh9) L('fan2', [hubs[1][0], hubs[1][1] - 0.2, 0.19], {pri:4});
+    L('rps', [cx + 0.04, 0.37, cz + 0.097], {pri:1}); L('pwr', [cx + 0.04, 0.28, cz + 0.097], {pri:3}); L('disch', [cx, H - 0.10, 0.0], {pri:1}); L('ochex', [ox - 0.30, H*0.78, coilZ + 0.03], {pri:2}); L('oat', [ox - 0.42, 0.14, 0.2], {pri:3}); L('fan', [hub[0], hub[1] - 0.2, 0.19], {pri:3}); if (dh9) L('fan2', [hubs[1][0], hubs[1][1] - 0.2, 0.19], {pri:4});
     labels.push({name:'OUTDOOR UNIT', at:[ox - 0.12, H + 0.09, 0]});
     covComp = 'odu';
     { // outdoor cabinet: top, base pan, solid service side and panel over the compressor, fan grille on the front, wire guards over the coil
@@ -4499,7 +4514,8 @@ $('#settingsreset').addEventListener('click', () => { S = Object.assign({}, S_DE
 document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListener('input', () => {
   const k = inp.dataset.s; S[k] = inp.type === 'checkbox' ? inp.checked : (inp.type === 'range' ? +inp.value : inp.value);
   applySettings(); sbUi();
-  if (k === 'volts' && D){ computeCapacity(); buildCapCard(); buildDataTable(); drawAllStrips(); }
+  if (k === 'volts' && D){ computeCapacity(); buildCapCard(); buildDataTable(); buildSynopsis(); drawAllStrips(); }
+  if (k === 'rate' && D){ buildCapCard(); buildSynopsis(); }
   if (k === 'land') setLayout(); else if (D && !/^sb|^sync/.test(k)) renderCycle(cur);
 }));
 // boot
