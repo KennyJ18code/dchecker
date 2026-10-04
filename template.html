@@ -1563,6 +1563,26 @@ function rangeBaseFor(ch){
   if (bv.length < 6){ bv = []; for (let i = 0; i < n; i++) if (D.runSec[i] >= 300 && isN(a[i]) && !D.dropout[i]) bv.push(a[i]); }
   if (bv.length >= 3){ const srt = bv.slice().sort((x, y) => x - y); const med = srt[Math.floor(srt.length / 2)]; const mad = srt.map(x => Math.abs(x - med)).sort((x, y) => x - y)[Math.floor(srt.length / 2)]; D.base[ch.id] = {med, spread:Math.max(mad * 1.4826, Math.abs(med) * 0.01, 0.5)}; }
 }
+// At rest (compressor off ≥ RT.atRestMin) every outdoor thermistor should read outdoor air and both transducers should agree: the offsets
+// measured there are applied to the energy math below (the diagram keeps showing what the board sees, since the board controls on that).
+function restCalibration(){
+  const n = D.n, num = D.num, dt = D.interval / 60, cal = {n:0, min:0, off:{}, pdiff:null, applied:false};
+  const rows = []; let offMin = 0; for (let i = 0; i < n; i++){ offMin = D.runSec[i] < 0 ? offMin + dt : 0; if (offMin >= RT.atRestMin) rows.push(i); }
+  if (!rows.length) return cal;
+  const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  cal.n = rows.length; cal.min = rows.length * dt;
+  for (const id of ['disch', 'suct', 'liq', 'ochex', 'ocmid']){
+    if (!num[id] || !chById[id].present) continue;
+    const d = rows.map(i => (isN(num[id][i]) && isN(num.oat[i])) ? num[id][i] - num.oat[i] : null).filter(isN);
+    if (d.length >= 4){ const o = med(d); if (Math.abs(o) <= 6) cal.off[id] = o; else cal.off[id] = 0; cal['raw_' + id] = o; }
+  }
+  const pd = rows.map(i => (isN(num.hp[i]) && isN(num.lp[i]) && num.hp[i] > 20 && num.lp[i] > 20) ? num.hp[i] - num.lp[i] : null).filter(isN);
+  if (pd.length >= 4) cal.pdiff = med(pd);
+  cal.applied = Object.keys(cal.off).length > 0;
+  return cal;
+}
+const OIL = 0.02;   // share of what the compressor pumps that is oil, carrying almost no enthalpy
+const PR0 = 2.5;    // reference pressure ratio for the learned effective displacement
 function computeCapacity(){
   if (!D) return;
   const n = D.n, num = D.num, ref = REF.ref, V = capVolts();
@@ -1571,11 +1591,14 @@ function computeCapacity(){
   const fin = () => { for (const id of ['cap', 'cop', 'pwr', 'dtp']){ num[id] = {cap, cop, pwr, dtp}[id]; rangeBaseFor(chById[id]); } num.dtpdry = dtpDry.map((v, i) => D.mode[i] === 'cool' ? v : null); rangeBaseFor(chById.dtpdry); };
   if (D.fam === 'multi'){ info.why = 'a mini-split log has no pressure transducers and no compressor current, so capacity cannot be worked out from it'; return fin(); }
   if (!chById.hp.present || !chById.lp.present || !chById.inv1.present){ info.why = 'this log has no pressure or inverter-current columns'; return fin(); }
+  const cal = restCalibration(); info.cal = cal; const co = id => cal.off[id] || 0;
   const si = sizeInfo(), key = si && !si.generic ? `${si.fam}/${si.key}` : null;
   const store = loadJSON('dchk.disp', {}), saved = key ? store[key] : null;
-  const rows = [], implied = [];
+  const coilP = chById.ipress && chById.ipress.present;
+  const rows = [], good = [];
   for (let i = 0; i < n; i++){
-    const I = num.inv1[i], rps = num.rps[i], hp = num.hp[i], lp = num.lp[i], td = num.disch[i], ts = num.suct[i], m = D.mode[i];
+    const I = num.inv1[i], rps = num.rps[i], hp = num.hp[i], lp = num.lp[i], m = D.mode[i];
+    const td = isN(num.disch[i]) ? num.disch[i] - co('disch') : null, ts = isN(num.suct[i]) ? num.suct[i] - co('suct') : null;
     const Isys = isN(num.syscur[i]) && num.syscur[i] > 0 ? num.syscur[i] : I;
     if (isN(Isys) && Isys > 0.3 && isN(rps) && rps > 0) pwr[i] = V * Isys * CAP.PF / 1000;
     if (!isN(I) || I < 0.8 || !isN(rps) || rps <= 0 || !isN(hp) || !isN(lp) || !isN(td) || !isN(ts) || lp < 20 || hp <= lp + 20 || D.dropout[i] || (m !== 'cool' && m !== 'heat')) continue;
@@ -1583,32 +1606,64 @@ function computeCapacity(){
     const tcs = satF(hp, ref), tes = satF(lp, ref), dsh = td - tcs, ssh = ts - tes;
     const h1 = pHVap(tes, ssh, ref), h2 = pHVap(tcs, dsh, ref), dhc = h2 - h1;
     if (dhc < 6) continue;
-    const Pel = V * I * CAP.PF, mEB = Pel * (1 - CAP.LOSS) / 1000 / dhc;     // W; kg/s
-    const rho = pRho(tes, ssh, ref), pr = (hp + 14.7) / (lp + 14.7), etaV = Math.max(0.72, Math.min(0.97, 0.97 - 0.035 * (pr - 2)));
+    const Pel = V * I * CAP.PF, mEB = Pel * (1 - CAP.LOSS) / 1000 / dhc * (1 - OIL);     // W; kg/s of refrigerant
+    const rho = pRho(tes, ssh, ref), pr = (hp + 14.7) / (lp + 14.7);
     const sens = (pHVap(tcs, dsh + 10, ref) - h2) / dhc;                    // a 10 °F discharge-thermistor error moves the flow this much
     const grade = sens <= 0.12 ? 'good' : sens <= 0.2 ? 'fair' : 'poor';
     q[i] = grade;
-    if (grade === 'good' && D.steady[i] && D.runSec[i] >= 300) implied.push(mEB / (rps * rho * etaV) * 1e6);
-    rows.push({i, mEB, rho, rps, etaV, h2, tes, m});
+    if (grade === 'good' && D.steady[i] && D.runSec[i] >= 300) good.push({pr, eff:mEB / (rps * rho) * 1e6});   // effective cc/rev (displacement × η_v) at this pressure ratio
+    rows.push({i, mEB, rho, rps, pr, h2, tes, m});
   }
-  let disp = null, src = '';
-  if (implied.length >= 12){
-    const s = implied.slice().sort((a, b) => a - b); disp = s[Math.floor(s.length / 2)]; src = 'this log'; info.logDisp = disp; info.logN = implied.length;
-    if (key){ const prev = saved && saved.n ? saved : {cc:0, n:0}; const tot = prev.n + implied.length; const cc = (prev.cc * prev.n + disp * implied.length) / tot;
-      store[key] = {cc, n:Math.min(400, tot), at:new Date().toISOString().slice(0, 10)}; saveJSON('dchk.disp', store); disp = cc; if (prev.n) src = `${store[key].n} good samples over several logs of this model and size`; }
-  } else if (saved && saved.n >= 12){ disp = saved.cc; src = `${saved.n} good samples from earlier logs of this model and size`; }
-  Object.assign(info, {disp, dispSrc:src, method:disp ? 'disp' : (rows.length ? 'eb' : 'none'), n:rows.length, good:implied.length, size:si});
+  // learned effective displacement: eff(PR) = e0 + e1·(PR − 2.5). The slope is fitted when the log spans enough pressure ratios,
+  // otherwise it follows a generic rotary curve (η_v = 0.97 − 0.035·(PR − 2)). Merged with earlier logs of this exact model and size.
+  let fit = null, src = '';
+  if (good.length >= 12){
+    const prs = good.map(g => g.pr), lo = Math.min(...prs), hi = Math.max(...prs), N = good.length;
+    const mx = prs.reduce((a, b) => a + b, 0) / N, my = good.reduce((a, g) => a + g.eff, 0) / N;
+    let sxx = 0, sxy = 0; for (const g of good){ sxx += (g.pr - mx) ** 2; sxy += (g.pr - mx) * (g.eff - my); }
+    let e1 = hi - lo >= 1.0 && sxx > 0 ? sxy / sxx : null;
+    const effMed = good.map(g => g.eff).sort((a, b) => a - b)[Math.floor(N / 2)];
+    let e0 = e1 != null ? my + e1 * (PR0 - mx) : effMed;
+    const dflt = -0.035 / (0.97 - 0.035 * (PR0 - 2)) * e0;                 // generic slope for this displacement
+    if (e1 == null || e1 > 0 || e1 < 2.5 * dflt) e1 = dflt;                // keep a fitted slope only when it is physically plausible
+    fit = {e0, e1, n:N, prLo:lo, prHi:hi, fitted:e1 !== dflt}; src = 'this log'; info.logFit = fit;
+    if (key){
+      const prev = saved && saved.n ? (saved.e0 != null ? saved : {e0:saved.cc * (0.97 - 0.035 * (PR0 - 2)), e1:dflt, n:saved.n, prLo:lo, prHi:hi, fitted:false}) : null;
+      if (prev){ const tot = prev.n + N; fit = {e0:(prev.e0 * prev.n + e0 * N) / tot, e1:(prev.e1 * prev.n + e1 * N) / tot, n:Math.min(400, tot), prLo:Math.min(prev.prLo, lo), prHi:Math.max(prev.prHi, hi), fitted:prev.fitted || fit.fitted}; src = `${fit.n} good samples over several logs of this model and size`; }
+      store[key] = Object.assign({}, fit, {at:new Date().toISOString().slice(0, 10)}); saveJSON('dchk.disp', store);
+    }
+  } else if (saved && saved.n >= 12){
+    fit = saved.e0 != null ? saved : {e0:saved.cc * (0.97 - 0.035 * (PR0 - 2)), e1:-0.035 * saved.cc, n:saved.n, prLo:PR0, prHi:PR0, fitted:false};
+    src = `${saved.n} good samples from earlier logs of this model and size`;
+  }
+  const dispOf = f => f.e0 / (0.97 - 0.035 * (PR0 - 2));                   // the swept volume the generic curve would give at PR 2.5
+  Object.assign(info, {fit, disp:fit ? dispOf(fit) : null, dispSrc:src, method:fit ? 'disp' : (rows.length ? 'eb' : 'none'), n:rows.length, good:good.length, size:si, coilP});
   if (!rows.length) info.why = 'no rows with the compressor running in heating or cooling';
+  // per-row energy, then a trailing average over the last 5 minutes of the same run and mode (sensor noise falls by about 3×)
+  const kWraw = new Array(n).fill(null);
   for (const r of rows){
-    const i = r.i, m = disp ? disp * 1e-6 * r.rps * r.rho * r.etaV : r.mEB; let kW = null;
-    if (r.m === 'cool'){ const liq = num.liq[i]; if (!isN(liq)) continue; const ig = num.igas[i]; kW = m * (pHVap(r.tes, (isN(ig) ? ig : num.suct[i]) - r.tes, ref) - pHLiq(liq, ref)); }
-    else { const il = isN(num.iliq[i]) ? num.iliq[i] : num.liq[i]; if (!isN(il)) continue; kW = m * (r.h2 - pHLiq(il, ref)); }
+    const i = r.i, m = fit ? Math.max(0.2 * fit.e0, fit.e0 + fit.e1 * (r.pr - PR0)) * 1e-6 * r.rps * r.rho : r.mEB; let kW = null;
+    if (r.m === 'cool'){
+      const liq = num.liq[i]; if (!isN(liq)) continue; const ig = num.igas[i];
+      // gas leaving the coil: at the coil's own pressure when the indoor sensor has it (removes the suction-line pressure drop)
+      const ip = coilP ? num.ipress[i] : null, tco = (isN(ip) && ip > 20 && Math.abs(ip - num.lp[i]) <= 20) ? satF(ip, ref) : r.tes;
+      kW = m * (pHVap(tco, (isN(ig) ? ig : (num.suct[i] - co('suct'))) - tco, ref) - pHLiq(liq - co('liq'), ref));
+    } else { const il = isN(num.iliq[i]) ? num.iliq[i] : num.liq[i] - co('liq'); if (!isN(il)) continue; kW = m * (r.h2 - pHLiq(il, ref)); }
     if (!isN(kW) || kW <= 0) continue;
-    cap[i] = kW * 3412.14; if (isN(pwr[i]) && pwr[i] > 0.2) cop[i] = kW / pwr[i];
-    if (disp) q[i] = 'disp';
-    // what the grille should read: the same energy carried by the logged airflow
-    const cfm = num.cfm[i]; if (isN(cfm) && cfm >= 100){ const dT = cap[i] / (1.08 * cfm); if (r.m === 'heat'){ dtp[i] = dT; dtpDry[i] = dT; } else { dtpDry[i] = -dT; const wet = coolSupplyDrop(cap[i], cfm, r.tes); dtpWet[i] = isN(wet) ? wet : null; dtp[i] = isN(wet) ? (wet - dT) / 2 : -0.8 * dT; } }   // cooling: midpoint of the wet-coil … dry-coil bracket
+    kWraw[i] = kW; if (fit) q[i] = 'disp';
   }
+  const WIN = 300; let avgN = 0;
+  for (let i = 0; i < n; i++){
+    if (!isN(kWraw[i])) continue;
+    let s = 0, p = 0, c = 0, pc = 0, cf = 0, cfc = 0;
+    for (let j = i; j >= 0 && D.runOf[j] === D.runOf[i] && D.mode[j] === D.mode[i] && (D.t[i] - D.t[j]) / 1000 <= WIN; j--){
+      if (isN(kWraw[j])){ s += kWraw[j]; c++; } if (isN(pwr[j])){ p += pwr[j]; pc++; } if (isN(num.cfm[j])){ cf += num.cfm[j]; cfc++; } }
+    const kW = s / c, pw = pc ? p / pc : null; avgN = Math.max(avgN, c);
+    cap[i] = kW * 3412.14; if (isN(pw) && pw > 0.2) cop[i] = kW / pw;
+    // what the grille should read: the same energy carried by the logged airflow
+    const cfm = cfc ? cf / cfc : null; if (isN(cfm) && cfm >= 100){ const dT = cap[i] / (1.08 * cfm); if (D.mode[i] === 'heat'){ dtp[i] = dT; dtpDry[i] = dT; } else { dtpDry[i] = -dT; const wet = coolSupplyDrop(cap[i], cfm, satF(num.lp[i], ref)); dtpWet[i] = isN(wet) ? wet : null; dtp[i] = isN(wet) ? (wet - dT) / 2 : -0.8 * dT; } }   // cooling: midpoint of the wet-coil … dry-coil bracket
+  }
+  info.avgRows = avgN;
   fin();
 }
 // ---- Data tab card: method, confidence, nameplate, and an air-side check from grille readings ----
@@ -1630,9 +1685,11 @@ function buildCapCard(){
   let method = '';
   if (inf.method === 'none') method = `<p class="note">Not available: ${inf.why}.</p>`;
   else {
-    method = `<p class="note">Mass flow ${inf.method === 'disp' ? `from the compressor's effective displacement, <b>${inf.disp.toFixed(1)} cc/rev</b> learned from ${inf.dispSrc} (${inf.good} good samples in this log) — holds at any lift` :
+    method = `<p class="note">Mass flow ${inf.method === 'disp' ? `from the compressor's effective displacement, <b>${inf.disp.toFixed(1)} cc/rev</b> at PR 2.5 learned from ${inf.dispSrc} (${inf.good} good samples in this log; volumetric-efficiency slope ${inf.fit && inf.fit.fitted ? `fitted over PR ${inf.fit.prLo.toFixed(1)}–${inf.fit.prHi.toFixed(1)}` : 'generic rotary curve'}) — holds at any lift` :
       `from the compressor's power draw (${V} V × INV current × ${CAP.PF}, ${Math.round(CAP.LOSS * 100)}% not reaching the refrigerant) ÷ its enthalpy rise. ${inf.good ? `${inf.good} good samples so far; 12 are needed to learn the displacement${si && !si.generic ? '' : ' (pick the unit size above so it is kept for the next log)'}` : 'No good samples yet: the lift was too small for a confident answer'}`}.
       Capacity = flow × enthalpy change across the indoor coil; COP = capacity ÷ outdoor unit input (indoor blower not included). Expect ±10–15 % on good rows, ±25 % on poor ones.</p>`;
+    const c = inf.cal || {}, offs = Object.entries(c.off || {}).map(([id, o]) => `${chById[id].short} ${o >= 0 ? '+' : '−'}${Math.abs(o).toFixed(1)}`);
+    method += `<p class="note">Corrections in use: ${c.applied ? `at-rest thermistor offsets applied (${offs.join(', ')} °F against outdoor air, measured over ${Math.round(c.min)} min once the compressor had been off ${RT.atRestMin}+ min${isN(c.pdiff) ? `; the two transducers ${Math.abs(c.pdiff) <= 5 ? 'agree within' : 'disagree by'} ${Math.abs(c.pdiff).toFixed(0)} psi at rest` : ''})` : `no rest period of ${RT.atRestMin}+ min, so thermistor offsets could not be measured`} · ${inf.coilP ? 'coil-outlet enthalpy at the indoor pressure sensor' : 'coil-outlet enthalpy at outdoor LP (no indoor pressure sensor)'} · 2 % oil in the flow · 5-minute trailing average${inf.avgRows ? ` (up to ${inf.avgRows} rows)` : ''}.</p>`;
   }
   const plate = si ? `<p class="note">Nameplate (AHRI): <b>${si.fam} ${si.t} ton</b> · ${si.cool.toLocaleString()} BTU/h cooling at 95 °F · ${si.heat.toLocaleString()} heating at 47 °F${si.heat5 ? ` · ${si.heat5.toLocaleString()} at 5 °F` : ''}${si.generic ? ' (nominal 12,000 per ton; family not in the table)' : ''}${famGuessed() ? ' — family read off the log, since a plain CSV names no model' : ''}. Those are full-speed figures at rating conditions; at part speed or other temperatures the unit is meant to deliver less.</p>` :
     (D && D.fam !== 'multi' ? '<p class="note">Pick the unit size in the header bar to compare against its nameplate and to keep what the app learns about its compressor.</p>' : '');
@@ -3424,7 +3481,7 @@ window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
 /* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v67';
+const APP_VERSION = 'v68';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
 const sbReady = () => !!(S.sbUrl && S.sbKey);
