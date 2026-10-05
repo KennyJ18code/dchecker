@@ -1205,7 +1205,7 @@ const S_DEF = {sbUrl:'https://qowsaogbijuwzunuxoty.supabase.co', sbKey:'sb_publi
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
-if (S_DEF.sbUrl){ S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey; }
+if (S_DEF.sbUrl && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(S.sbUrl || '')){ S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey; }   // the baked endpoint wins, except for a test rig pointed at localhost
 function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); if (V3) V3.kick(); }
 function applySettings(){
   { const e = document.getElementById('appver'); if (e) e.textContent = APP_VERSION; }
@@ -3509,7 +3509,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v71';
+const APP_VERSION = 'v72';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -3598,7 +3598,9 @@ async function queueUpload(meta){
     CURRENT_REC = {sha, id:null}; showFeedback();
     let blob = new Blob([buf], {type:'text/csv'}), ext = 'csv';
     if (typeof CompressionStream === 'function'){ try { const gz = await new Response(new Blob([buf]).stream().pipeThrough(new CompressionStream('gzip'))).blob(); blob = new Blob([gz], {type:'application/gzip'}); ext = 'csv.gz'; } catch(e){} }
-    const base = String(meta.file_name || D.name || 'recording').replace(/\.(tgz|gz|tar|csv|log)$/i, '').replace(/[^\w.\- ]+/g, '_').slice(0, 80);
+    const clean = v => String(v || '').replace(/^INV_Unitary_/i, '').replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
+    const day = D.t[0] ? D.t[0].toISOString().slice(0, 10) : 'undated';
+    const base = [day, clean(meta.model || D.model || modelFamily() || 'log'), clean(meta.tech_name) || null, sha.slice(0, 8)].filter(Boolean).join('_');
     await qPut({sha, name:base + '.' + ext, type:blob.type, blob, meta:{file_name:meta.file_name || D.name, tech_name:meta.tech_name || null, company:meta.company || null, model:meta.model || D.model || null,
       row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, auto:EQ.auto}, summary:recordingSummary(),
       app_version:APP_VERSION, refrigerant:REF.ref, unit_size:SIZE || null, capacity:capacitySummary(), device_id:DEVICE}});
@@ -3616,13 +3618,13 @@ async function flushQueue(){
           const exists = await sbFetch(`/rest/v1/recordings?select=id&sha256=eq.${it.sha}`).then(r => r.json());
           let row = exists[0];
           if (!row){
-            const path = `${uid}/${it.sha}.${it.name.split('.').slice(1).join('.') || 'csv'}`;
+            const path = `${uid}/${it.name}`;
             await sbFetch('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type, 'x-upsert':'true'}, body:it.blob});
             row = (await sbInsert('recordings', Object.assign({file_path:path, sha256:it.sha, tech_email:SB.user.email}, it.meta)))[0];
           }
           if (CURRENT_REC && CURRENT_REC.sha === it.sha) CURRENT_REC.id = row.id;
         } else {
-          const path = `anon/${DEVICE}/${it.sha}.${it.name.split('.').slice(1).join('.') || 'csv'}`;
+          const path = `anon/${DEVICE}/${it.name}`;
           await sbAnon('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type}, body:it.blob});
           await sbAnon('/rest/v1/recordings', {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=minimal'}, body:JSON.stringify(Object.assign({file_path:path, sha256:it.sha}, it.meta))});
         }
