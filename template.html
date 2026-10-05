@@ -734,6 +734,10 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Line voltage</b><small>Multiplied by the logged current to get the compressor's power; a FIT log has no voltage column. Read it at the disconnect if you can.</small></span><input type="number" class="snum" data-s="volts" min="150" max="300" step="1" inputmode="numeric"></label>
       <label class="srow"><span class="t"><b>Electric rate</b><small>$ per kWh, for the running cost of the outdoor unit over a recording</small></span><input type="number" class="snum" data-s="rate" min="0" max="2" step="0.01" inputmode="decimal"></label>
     </section>
+    <section class="sgroup"><h3>Shop library</h3>
+      <label class="srow"><span class="t"><b>Save what this app analyzes</b><small>Every recording opened here is kept in the shop library to teach the software: the decoded log, the model, tech name, the app's findings and any grille readings you type. Customer name and address never leave the phone.</small></span><input type="checkbox" class="sw" data-s="share"></label>
+      <div class="note" id="sharestatus"></div>
+    </section>
     <section class="sgroup wide"><h3>Custom tags</h3>
         <div class="note">Build your own reading from the ones on screen. It appears as an orange tag you can drag anywhere on the diagram; tap it to pin its trend.</div>
         <div class="cmode"><button type="button" class="btn small" id="cm-build" aria-pressed="true">Pick from lists</button><button type="button" class="btn small" id="cm-free" aria-pressed="false">Type a formula</button></div>
@@ -947,7 +951,7 @@ const DEFAULT_RULES = [
 
 /* ---------- state ---------- */
 let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
-window.dchkDbg = () => ({D, cur, REF, S});   // read-only hook for tools/shot.html
+window.dchkDbg = () => ({D, cur, REF, S, AIRIN, CURRENT_REC, air:airSideCalc()});   // read-only hook for tools/shot.html
 let pins = loadJSON('dchk.pins', []);
 const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
           <g id="g-in">
@@ -1197,14 +1201,15 @@ function renderMulti(i, m, running){
 let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://ydddqdisgjkuncmbznai.supabase.co', sbKey:'sb_publishable_hlhKh1WgKTxEOx51tlJfkA_vEaG8tUX', syncUp:false, syncEv:false, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15};
+const S_DEF = {sbUrl:'', sbKey:'', share:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
-S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey;
+if (S_DEF.sbUrl){ S.sbUrl = S_DEF.sbUrl; S.sbKey = S_DEF.sbKey; }
 function syncAnim(){ const on = S.anim !== 'off' && !document.hidden && !$('#panel-cycle').hidden && (S.anim === 'always' || playing); document.body.classList.toggle('anim-off', !on); if (V3) V3.kick(); }
 function applySettings(){
   { const e = document.getElementById('appver'); if (e) e.textContent = APP_VERSION; }
+  if (typeof shareStatus === 'function') shareStatus();
   for (const k of ['flow', 'air', 'parts', 'sv', 'cabinet']) S[k] = true;   // always drawn; their switches left Settings
   saveJSON('dchk.settings', S); syncAnim();
   const b = document.body;
@@ -1639,7 +1644,7 @@ function computeCapacity(){
     if (key){
       const prev = saved && saved.n ? (saved.e0 != null ? saved : {e0:saved.cc * (0.97 - 0.035 * (PR0 - 2)), e1:dflt, n:saved.n, prLo:lo, prHi:hi, fitted:false}) : null;
       if (prev){ const tot = prev.n + N; fit = {e0:(prev.e0 * prev.n + e0 * N) / tot, e1:(prev.e1 * prev.n + e1 * N) / tot, n:Math.min(400, tot), prLo:Math.min(prev.prLo, lo), prHi:Math.max(prev.prHi, hi), fitted:prev.fitted || fit.fitted}; src = `${fit.n} good samples over several logs of this model and size`; }
-      store[key] = Object.assign({}, fit, {at:new Date().toISOString().slice(0, 10)}); saveJSON('dchk.disp', store);
+      store[key] = Object.assign({}, fit, {at:new Date().toISOString().slice(0, 10)}); saveJSON('dchk.disp', store); sendCalibration(key, store[key]);
     }
   } else if (saved && saved.n >= 12){
     fit = saved.e0 != null ? saved : {e0:saved.cc * (0.97 - 0.035 * (PR0 - 2)), e1:-0.035 * saved.cc, n:saved.n, prLo:PR0, prHi:PR0, fitted:false};
@@ -1710,7 +1715,7 @@ function buildCapCard(){
     <h4>Air-side check</h4><p class="note">Type what you measured at the grilles. Airflow is pre-filled from the blower's logged CFM at this row (its own estimate — it drifts high as static climbs); overwrite it if you measured. Sensible = 1.08 × CFM × ΔT, total = 4.5 × CFM × Δh with wet bulbs, latent = total − sensible. Heating with electric strips on is not comparable.</p>
     <div class="airgrid"><label>Return DB ${inp('radb', '°F')}</label><label>Return WB ${inp('rawb', '°F')}</label><label>Supply DB ${inp('sadb', '°F')}</label><label>Supply WB ${inp('sawb', '°F')}</label><label>CFM ${inp('cfm', 'cfm')}</label></div>
     <div id="airout" class="ptnow"></div>`;
-  host.querySelectorAll('[data-air]').forEach(el => el.addEventListener('input', () => { const k = el.dataset.air; const v = parseFloat(el.value); if (isN(v)) a[k] = v; else delete a[k]; if (k === 'cfm') a.cfmTouched = isN(v); saveJSON('dchk.airside', a); if (k === 'radb' || k === 'rawb'){ computeCapacity(); renderCycle(cur); } renderCapNow(cur); }));
+  host.querySelectorAll('[data-air]').forEach(el => el.addEventListener('input', () => { const k = el.dataset.air; const v = parseFloat(el.value); if (isN(v)) a[k] = v; else delete a[k]; if (k === 'cfm') a.cfmTouched = isN(v); saveJSON('dchk.airside', a); if (k === 'radb' || k === 'rawb'){ computeCapacity(); renderCycle(cur); } renderCapNow(cur); scheduleMeasurement(); }));
   renderCapNow(cur);
 }
 function renderCapNow(i){
@@ -1728,13 +1733,17 @@ function renderCapNow(i){
   if (cfmEl && !AIRIN.cfmTouched){ const v = D.num.cfm ? D.num.cfm[i] : null; cfmEl.value = isN(v) ? Math.round(v) : ''; }
   renderAirSide();
 }
-function renderAirSide(){
-  const out = $('#airout'); if (!out || !D) return;
-  const a = AIRIN, cfm = AIRIN.cfmTouched ? a.cfm : parseFloat(($('#capcard [data-air=cfm]') || {}).value);
-  if (!isN(a.radb) || !isN(a.sadb) || !isN(cfm) || cfm <= 0){ out.textContent = ''; return; }
+function airSideCalc(){
+  const a = AIRIN, typed = parseFloat(($('#capcard [data-air=cfm]') || {}).value), cfm = AIRIN.cfmTouched ? a.cfm : (isN(typed) && typed > 0 ? typed : (D && D.num.cfm && isN(D.num.cfm[cur]) ? D.num.cfm[cur] : null));
+  if (!isN(a.radb) || !isN(a.sadb) || !isN(cfm) || cfm <= 0) return null;
   const heating = a.sadb > a.radb, dT = Math.abs(a.radb - a.sadb), sens = 1.08 * cfm * dT;
   let tot = null; if (isN(a.rawb) && isN(a.sawb) && a.rawb <= a.radb + 0.5 && a.sawb <= a.sadb + 0.5) tot = Math.abs(4.5 * cfm * (hAir(a.radb, humRatio(a.radb, a.rawb)) - hAir(a.sadb, humRatio(a.sadb, a.sawb))));
-  const lat = tot != null ? Math.max(0, tot - sens) : null;
+  return {heating, dT, sens, tot, lat:tot != null ? Math.max(0, tot - sens) : null, cfm};
+}
+function renderAirSide(){
+  const out = $('#airout'); if (!out || !D) return;
+  const a = AIRIN, c = airSideCalc(); if (!c){ out.textContent = ''; return; }
+  const {heating, dT, sens, tot, lat} = c;
   const rs = D.num.cap ? D.num.cap[cur] : null;
   let h = `${heating ? 'Heating' : 'Cooling'} · ΔT ${dT.toFixed(1)} °F · sensible <b>${fmtBtu(sens).toLocaleString()}</b> BTU/h` + (tot != null ? ` · latent ${fmtBtu(lat).toLocaleString()} · total <b>${fmtBtu(tot).toLocaleString()}</b>` : ' · add wet bulbs for latent and total');
   const air = tot != null ? tot : (heating ? sens : null);
@@ -3480,26 +3489,33 @@ async function openFiles(files){
       const hdr = members.find(m => /header\.txt$/i.test(m.name)); const hf = hdr ? td.decode(hdr.data).split(',') : []; const cf = cust ? td.decode(cust.data).split(',') : [];
       const model = (hf[2] || '').replace(/\.txt$/i, '') || null;
       load(csv, arch.name + (who ? ' — ' + who : ''), model); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname);
-      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D) queueUpload(arch, {site:cf[1] || cf[0] || null, customer:cf[3] || null, tech_name:cf[7] || null, model}); return;
+      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D) queueUpload({file_name:arch.name, tech_name:cf[7] || null, company:cf[8] || null, model}); return;
     }
     const log = files.find(f => /\.log$/i.test(f.name)), lab = byName('datalabel\\.txt');
     if (log){
       if (!lab) throw new Error('pick datalabel.txt together with the .log (both are in the recording folder)');
       const csv = dlToCsv(dlParseLabels(await lab.text()), dlSplit(new Uint8Array(await log.arrayBuffer())));
-      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); logEvent('open_log', {source:'log', rows:D && D.n}); if (D) queueUpload(log, {}); return;
+      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); logEvent('open_log', {source:'log', rows:D && D.n}); if (D) queueUpload({file_name:log.name}); return;
     }
     const csvf = files.find(f => /\.csv$/i.test(f.name)) || files[0];
-    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true; logEvent('open_log', {source:'csv', rows:D && D.n}); if (D) queueUpload(csvf, {});
+    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true; logEvent('open_log', {source:'csv', rows:D && D.n}); if (D) queueUpload({file_name:csvf.name});
   } catch(e){ toast('Could not open: ' + e.message); }
 }
 window.dchkOpen = openFiles;
 window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built from a phone recording
 
-/* ---------- fleet sync: Supabase REST (auth, PostgREST, storage) without an SDK ---------- */
-const APP_VERSION = 'v69';
+/* ---------- shop library: every recording the app analyzes is saved so the software can be taught from it ----------
+   Supabase REST without an SDK. Anyone using the app uploads anonymously (insert-only; the publishable key cannot read anything back);
+   a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
+   analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
+   learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
+const APP_VERSION = 'v70';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
-let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}}
+const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
+let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
 const sbReady = () => !!(S.sbUrl && S.sbKey);
+// uploads run only from the published app, never from a local checkout or the test harness
+const shareOn = () => !!S.share && sbReady() && (/^http:\/\/(localhost|127\.0\.0\.1)/.test(S.sbUrl) || (location.protocol === 'https:' && !/localhost|127\.0\.0\.1|claude\.ai$/.test(location.hostname)));   // a localhost endpoint is a test rig
 async function sbAuth(path, body){
   const r = await fetch(S.sbUrl.replace(/\/$/, '') + '/auth/v1/' + path, {method:'POST', headers:{apikey:S.sbKey, 'Content-Type':'application/json'}, body:JSON.stringify(body)});
   const j = await r.json(); if (!r.ok) throw new Error(j.error_description || j.msg || j.error || ('auth ' + r.status)); return j;
@@ -3517,11 +3533,28 @@ async function sbFetch(path, opts = {}){
   if (!r.ok){ let t = ''; try { t = await r.text(); } catch(e){} throw new Error((r.status) + ' ' + t.slice(0, 160)); }
   return r;
 }
+// anonymous: the publishable key alone (insert-only by the database's row policies); a 409 or "already exists" is success
+async function sbAnon(path, opts = {}){
+  const h = Object.assign({apikey:S.sbKey, Authorization:'Bearer ' + S.sbKey}, opts.headers || {});
+  const r = await fetch(S.sbUrl.replace(/\/$/, '') + path, Object.assign({}, opts, {headers:h}));
+  if (!r.ok){ let t = ''; try { t = await r.text(); } catch(e){} if (r.status === 409 || /exist|duplicate/i.test(t)) return r; throw new Error((r.status) + ' ' + t.slice(0, 160)); }
+  return r;
+}
+const sbPost = (table, row) => (SB ? sbFetch : sbAnon)('/rest/v1/' + table, {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=minimal'}, body:JSON.stringify(row)});
 const sbInsert = (table, row) => sbFetch('/rest/v1/' + table, {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=representation'}, body:JSON.stringify(row)}).then(r => r.json());
 function sbUi(){   // the sign-in form left Settings; the Fleet tab shows only for a device that is still signed in from before
   const on = !!SB; const st = $('#sb-status'); if (st) st.textContent = on ? ('signed in as ' + SB.user.email) : 'not signed in';
   if ($('#sb-signin')){ $('#sb-signin').hidden = on; $('#sb-signout').hidden = !on; } $('#tab-fleet').hidden = !on;
   if (!on && !$('#panel-fleet').hidden) $('#tab-cycle').click();
+  shareStatus();
+}
+async function shareStatus(){
+  const e = $('#sharestatus'); if (!e) return;
+  if (!sbReady()){ e.textContent = 'Library not configured in this build — nothing is sent.'; return; }
+  if (!S.share){ e.textContent = 'Off — nothing from this device is sent.'; return; }
+  if (!shareOn()){ e.textContent = 'On, but this copy is not the published app, so nothing is sent from here.'; return; }
+  let q = 0; try { q = (await qAll()).length; } catch(e2){}
+  e.textContent = `On · device ${DEVICE.slice(0, 8)}${q ? ` · ${q} recording${q === 1 ? '' : 's'} waiting for a connection` : ' · up to date'}${SB ? ' · signed in as ' + SB.user.email : ''}`;
 }
 if ($('#sb-signin')) $('#sb-signin').addEventListener('click', async () => {
   try { if (!sbReady()) throw new Error('enter the project URL and anon key first'); sbSave(await sbAuth('token?grant_type=password', {email:$('#sb-email').value.trim(), password:$('#sb-pass').value})); $('#sb-pass').value = ''; toast('Signed in'); logEvent('sign_in', {}); flushQueue(); fleetRefresh(); }
@@ -3530,11 +3563,11 @@ if ($('#sb-signin')) $('#sb-signin').addEventListener('click', async () => {
 if ($('#sb-signout')) $('#sb-signout').addEventListener('click', () => { sbSave(null); toast('Signed out'); });
 // --- usage events: buffered, flushed every 30 s and on page hide ---
 const EVQ = [];
-function logEvent(kind, detail){ if (!S.syncEv) return; EVQ.push({kind, detail, session_id:SESSION_ID, app_version:APP_VERSION, device:navigator.userAgent.slice(0, 120)}); if (EVQ.length >= 20) flushEvents(); }
+function logEvent(kind, detail){ if (!shareOn() && !SB) return; EVQ.push({kind, detail, session_id:SESSION_ID, device_id:DEVICE, app_version:APP_VERSION, device:navigator.userAgent.slice(0, 120)}); if (EVQ.length >= 20) flushEvents(); }
 async function flushEvents(){
-  if (!EVQ.length || !SB || !sbReady() || !navigator.onLine) return;
+  if (!EVQ.length || !navigator.onLine || !(SB || shareOn())) return;
   const batch = EVQ.splice(0, EVQ.length);
-  try { await sbFetch('/rest/v1/events', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(batch), keepalive:true}); } catch(e){ EVQ.unshift(...batch); }
+  try { await (SB ? sbFetch : sbAnon)('/rest/v1/events', {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=minimal'}, body:JSON.stringify(batch), keepalive:true}); } catch(e){ EVQ.unshift(...batch); }
 }
 setInterval(flushEvents, 30000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushEvents(); syncAnim(); });
@@ -3551,61 +3584,97 @@ function recordingSummary(){
   return {findings, runs:D.runs.length, cycles_per_hr: spanH > 0 ? +(D.runs.length/spanH).toFixed(2) : null, steady_min: +(D.steady.filter(Boolean).length*D.interval/60).toFixed(0), signatures:sigs,
           max_disch: D.range.disch ? D.range.disch.max : null, max_hp: D.range.hp ? D.range.hp.max : null, min_lp: D.range.lp ? D.range.lp.min : null, modes:[...new Set(D.mode)]};
 }
-let CURRENT_REC = null;   // {sha, id?} for feedback
-async function queueUpload(file, meta){
-  if (!S.syncUp) return;
+function capacitySummary(){
+  const c = D.capinfo || {}, med = a => a.length ? a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)] : null;
+  const by = m => { const v = [], k = []; for (let i = 0; i < D.n; i++) if (D.mode[i] === m && isN(D.num.cap[i]) && (D.steady[i] || D.runSec[i] >= 600)){ v.push(D.num.cap[i]); if (isN(D.num.cop[i])) k.push(D.num.cop[i]); } return v.length ? {rows:v.length, btuh:Math.round(med(v)), cop:k.length ? +med(k).toFixed(2) : null} : null; };
+  return {method:c.method, disp:c.disp, good:c.good, n:c.n, energy:c.energy, cal:c.cal ? {off:c.cal.off, pdiff:c.cal.pdiff, min:c.cal.min} : null, cool:by('cool'), heat:by('heat'), volts:c.V};
+}
+let CURRENT_REC = null;   // {sha, id?} for feedback and measurements
+function showFeedback(){ const e = $('#fbthis'); if (e) e.hidden = !(CURRENT_REC && (CURRENT_REC.sha || CURRENT_REC.id) && (shareOn() || SB)); }
+async function queueUpload(meta){
+  if (!shareOn() && !SB) return;
   try {
-    const buf = await file.arrayBuffer(); const sha = await sha256(buf);
-    CURRENT_REC = {sha, id:null};
-    await qPut({sha, name:file.name, type:file.type || 'application/octet-stream', blob:new Blob([buf]), meta:Object.assign({}, meta, {row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, auto:EQ.auto}, summary:recordingSummary(), app_version:APP_VERSION})});
+    const text = D._text; const buf = new TextEncoder().encode(text); const sha = await sha256(buf);
+    CURRENT_REC = {sha, id:null}; showFeedback();
+    let blob = new Blob([buf], {type:'text/csv'}), ext = 'csv';
+    if (typeof CompressionStream === 'function'){ try { const gz = await new Response(new Blob([buf]).stream().pipeThrough(new CompressionStream('gzip'))).blob(); blob = new Blob([gz], {type:'application/gzip'}); ext = 'csv.gz'; } catch(e){} }
+    const base = String(meta.file_name || D.name || 'recording').replace(/\.(tgz|gz|tar|csv|log)$/i, '').replace(/[^\w.\- ]+/g, '_').slice(0, 80);
+    await qPut({sha, name:base + '.' + ext, type:blob.type, blob, meta:{file_name:meta.file_name || D.name, tech_name:meta.tech_name || null, company:meta.company || null, model:meta.model || D.model || null,
+      row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, auto:EQ.auto}, summary:recordingSummary(),
+      app_version:APP_VERSION, refrigerant:REF.ref, unit_size:SIZE || null, capacity:capacitySummary(), device_id:DEVICE}});
     flushQueue();
   } catch(e){ console.warn('queue', e); }
 }
-let flushing = false;
+let flushing = false, toldSaved = false;
 async function flushQueue(){
-  if (flushing || !SB || !sbReady() || !navigator.onLine) return; flushing = true;
+  if (flushing || !navigator.onLine || !(SB || shareOn())) return; flushing = true;
   try {
     for (const it of await qAll()){
       try {
-        const uid = SB.user.id;
-        const exists = await sbFetch(`/rest/v1/recordings?select=id&sha256=eq.${it.sha}&uploaded_by=eq.${uid}`).then(r => r.json());
-        let row = exists[0];
-        if (!row){
-          const ext = (it.name.match(/\.(tgz|gz|tar|csv|log)$/i) || ['', 'bin'])[1].toLowerCase();
-          const path = `${uid}/${it.sha}.${ext}`;
-          await sbFetch('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type, 'x-upsert':'true'}, body:it.blob});
-          row = (await sbInsert('recordings', Object.assign({file_name:it.name, file_path:path, sha256:it.sha, tech_email:SB.user.email}, it.meta)))[0];
-          toast('Recording saved to the shop library');
+        if (SB){
+          const uid = SB.user.id;
+          const exists = await sbFetch(`/rest/v1/recordings?select=id&sha256=eq.${it.sha}`).then(r => r.json());
+          let row = exists[0];
+          if (!row){
+            const path = `${uid}/${it.sha}.${it.name.split('.').slice(1).join('.') || 'csv'}`;
+            await sbFetch('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type, 'x-upsert':'true'}, body:it.blob});
+            row = (await sbInsert('recordings', Object.assign({file_path:path, sha256:it.sha, tech_email:SB.user.email}, it.meta)))[0];
+          }
+          if (CURRENT_REC && CURRENT_REC.sha === it.sha) CURRENT_REC.id = row.id;
+        } else {
+          const path = `anon/${DEVICE}/${it.sha}.${it.name.split('.').slice(1).join('.') || 'csv'}`;
+          await sbAnon('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type}, body:it.blob});
+          await sbAnon('/rest/v1/recordings', {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=minimal'}, body:JSON.stringify(Object.assign({file_path:path, sha256:it.sha}, it.meta))});
         }
-        if (CURRENT_REC && CURRENT_REC.sha === it.sha){ CURRENT_REC.id = row.id; $('#fbthis').hidden = false; }
+        if (!toldSaved){ toldSaved = true; toast('Saved to the shop library'); }
         await qDel(it.sha);
       } catch(e){ console.warn('upload', e); break; }
     }
-  } finally { flushing = false; }
+  } finally { flushing = false; showFeedback(); shareStatus(); }
 }
 window.addEventListener('online', () => { flushQueue(); flushEvents(); });
-// --- fleet list ---
+window.dchkFlush = () => { flushEvents(); flushQueue(); };   // test hook
+// --- what the tech measured at the grilles, paired with what the app calculated on that row: the calibration data for the capacity math ---
+let measT = null, lastMeas = '';
+function scheduleMeasurement(){ clearTimeout(measT); measT = setTimeout(sendMeasurement, 4000); }
+async function sendMeasurement(){
+  if (!D || !CURRENT_REC || !CURRENT_REC.sha || !(shareOn() || SB)) return;
+  const a = airSideCalc(); if (!a) return;
+  const i = cur, row = {device_id:DEVICE, sha256:CURRENT_REC.sha, row_time:D.t[i] && D.t[i].toISOString(), mode:D.mode[i], return_db:AIRIN.radb, return_wb:isN(AIRIN.rawb) ? AIRIN.rawb : null, supply_db:AIRIN.sadb, supply_wb:isN(AIRIN.sawb) ? AIRIN.sawb : null,
+    cfm:a.cfm, cfm_logged:isN(D.num.cfm[i]) ? D.num.cfm[i] : null, cfm_typed:!!AIRIN.cfmTouched, air_sensible:Math.round(a.sens), air_total:a.tot != null ? Math.round(a.tot) : null,
+    ref_capacity:isN(D.num.cap[i]) ? Math.round(D.num.cap[i]) : null, ref_grade:D.capq ? D.capq[i] : null, ref_cop:isN(D.num.cop[i]) ? +D.num.cop[i].toFixed(2) : null, expected_dt:isN(D.num.dtp[i]) ? +D.num.dtp[i].toFixed(1) : null,
+    rps:D.num.rps[i], oat:D.num.oat[i], model:D.model || modelFamily() || null, unit_size:SIZE || null, volts:capVolts(), refrigerant:REF.ref, app_version:APP_VERSION};
+  const key = JSON.stringify([row.sha256, row.row_time, row.return_db, row.return_wb, row.supply_db, row.supply_wb, row.cfm]); if (key === lastMeas) return; lastMeas = key;
+  try { await sbPost('measurements', row); logEvent('measurement', {mode:row.mode}); } catch(e){ console.warn('measurement', e); }
+}
+async function sendCalibration(key, fit){
+  if (!(shareOn() || SB)) return;
+  try { await sbPost('calibrations', {device_id:DEVICE, model_key:key, e0:fit.e0, e1:fit.e1, n:fit.n, pr_lo:fit.prLo, pr_hi:fit.prHi, fitted:!!fit.fitted, sha256:CURRENT_REC && CURRENT_REC.sha, app_version:APP_VERSION}); } catch(e){ console.warn('calibration', e); }
+}
+// --- fleet list (a device signed in from before) ---
 async function fleetRefresh(){
   if (!SB || !sbReady()) return;
   const st = $('#fleetstatus'); st.textContent = 'loading…';
   try {
-    const rows = await sbFetch('/rest/v1/recordings?select=id,created_at,site,customer,tech_name,tech_email,model,started_at,row_count,equipment,summary,file_name,file_path&order=created_at.desc&limit=200').then(r => r.json());
+    const rows = await sbFetch('/rest/v1/recordings?select=id,created_at,site,customer,tech_name,tech_email,company,model,started_at,row_count,equipment,summary,file_name,file_path&order=created_at.desc&limit=200').then(r => r.json());
     const tb = $('#fleettable tbody'); tb.innerHTML = '';
     for (const r of rows){
       const tr = document.createElement('tr');
       const sg = r.summary && r.summary.signatures ? Object.entries(r.summary.signatures).map(([k, v]) => `${k} (${v})`).join('; ') : '';
       const eq = r.equipment ? (r.equipment.out === 'ac' ? 'AC' : 'HP') + (r.equipment.auto ? ' (auto)' : '') : '';
-      tr.innerHTML = `<td>${new Date(r.created_at).toLocaleString()}</td><td>${r.site || ''}${r.customer ? ' · ' + r.customer : ''}</td><td>${r.tech_name || (r.tech_email || '').split('@')[0]}</td><td>${r.model || ''}</td><td>${r.started_at ? new Date(r.started_at).toLocaleString() : ''}</td><td>${r.row_count || ''}</td><td>${eq}</td><td>${r.summary ? r.summary.runs : ''}</td><td class="sigs">${sg || '—'}</td><td><button class="btn small" type="button">Open</button></td>`;
-      tr.querySelector('button').addEventListener('click', async () => { try { toast('Downloading…'); const blob = await sbFetch('/storage/v1/object/authenticated/recordings/' + r.file_path).then(x => x.blob()); await openFiles([new File([blob], r.file_name)]); CURRENT_REC = {sha:null, id:r.id}; $('#fbthis').hidden = false; $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
+      tr.innerHTML = `<td>${new Date(r.created_at).toLocaleString()}</td><td>${r.site || r.company || ''}${r.customer ? ' · ' + r.customer : ''}</td><td>${r.tech_name || (r.tech_email || '').split('@')[0]}</td><td>${r.model || ''}</td><td>${r.started_at ? new Date(r.started_at).toLocaleString() : ''}</td><td>${r.row_count || ''}</td><td>${eq}</td><td>${r.summary ? r.summary.runs : ''}</td><td class="sigs">${sg || '—'}</td><td><button class="btn small" type="button">Open</button></td>`;
+      tr.querySelector('button').addEventListener('click', async () => { try { toast('Downloading…'); let blob = await sbFetch('/storage/v1/object/authenticated/recordings/' + r.file_path).then(x => x.blob()); let name = r.file_path.split('/').pop(); if (/\.gz$/i.test(name) && typeof DecompressionStream === 'function'){ blob = await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).blob(); name = name.replace(/\.gz$/i, ''); } await openFiles([new File([blob], name)]); CURRENT_REC = {sha:null, id:r.id}; showFeedback(); $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
       tb.appendChild(tr);
     }
     st.textContent = `${rows.length} recording${rows.length === 1 ? '' : 's'}`;
   } catch(e){ st.textContent = 'could not load: ' + e.message; }
 }
 $('#fleetrefresh').addEventListener('click', fleetRefresh);
+// feedback lives at the foot of the synopsis, where the app's read is
+{ const fb = $('#fbthis'), syn = $('#panel-synopsis'); if (fb && syn) syn.appendChild(fb); }
 document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('click', async () => {
-  if (!CURRENT_REC || !CURRENT_REC.id) return;
-  try { await sbInsert('feedback', {recording_id:CURRENT_REC.id, verdict:b.dataset.v, note:$('#fbnote').value.trim() || null}); toast('Thanks — feedback saved'); $('#fbnote').value = ''; } catch(e){ toast('Could not save feedback: ' + e.message); }
+  if (!CURRENT_REC) return;
+  try { await sbPost('feedback', {recording_id:CURRENT_REC.id || null, sha256:CURRENT_REC.sha || null, device_id:DEVICE, verdict:b.dataset.v, note:$('#fbnote').value.trim() || null, app_version:APP_VERSION}); toast('Thanks — feedback saved'); $('#fbnote').value = ''; } catch(e){ toast('Could not save feedback: ' + e.message); }
 }));
 
 /* ====================== 3D cycle view (WebGL, no libraries) ======================
@@ -4378,6 +4447,7 @@ document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListe
   applySettings(); sbUi();
   if (k === 'volts' && D){ computeCapacity(); buildCapCard(); buildDataTable(); buildSynopsis(); drawAllStrips(); }
   if (k === 'rate' && D){ buildCapCard(); buildSynopsis(); }
+  if (k === 'share'){ shareStatus(); if (S.share) flushQueue(); }
   if (k === 'land') setLayout(); else if (D && !/^sb|^sync/.test(k)) renderCycle(cur);
 }));
 // boot

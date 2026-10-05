@@ -70,6 +70,10 @@ A FIT log has no air temperatures, but it has everything for the refrigerant sid
 - **Input kW and energy**: outdoor unit draw on every row, a running total of kWh, and the cost at the electric rate set in Settings (card and synopsis).
 - **Corrections from the log itself**: at-rest thermistor offsets (compressor off 30+ min), coil-outlet enthalpy at the indoor pressure sensor, 2 % oil, a 5-minute trailing average, and a volumetric-efficiency slope fitted per model when a log spans enough pressure ratio. `docs/calculated-readings.md` explains every calculated reading and what to trust when.
 
+## Shop library (teaching data)
+
+Every recording the published app analyzes is saved to the shop's Supabase project so the software can be taught from real jobs: the decoded CSV (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille readings a tech types (paired with the app's calculated capacity on that row — the calibration set), the compressor calibrations the app learns, and thumbs-up/down feedback on the synopsis. **Customer name and address never leave the phone.** The switch is in Settings → Shop library, on by default, with a status line; uploads queue offline and send when there is signal. Anyone using the app uploads anonymously with the publishable key, which cannot read anything back; reading is for signed-in users in the Supabase dashboard. Schema: `supabase/schema.sql` (run once in a fresh project, then put the project URL and publishable key in `S_DEF`). Nothing is sent from a local checkout or the test harness.
+
 ## Error codes
 
 An error byte in the log is decoded to the code the unit shows (U4, F3, A5 …) and shown with its meaning as a header chip, in the narration line, and as a synopsis card with how long it was present, the raw byte, the readings that bear on it and the first checks. The Data tab has the full searchable table. The byte-to-code reading follows Daikin's bus convention and is still to be confirmed on a real fault recording; see `docs/decode-walkthrough.md` §9.
