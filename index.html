@@ -1339,7 +1339,7 @@ function renderMulti(i, m, running){
 let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'', sbKey:'', share:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15};
+const S_DEF = {sbUrl:'https://qowsaogbijuwzunuxoty.supabase.co', sbKey:'sb_publishable_kdmWouVV5XfqQCDdwJpL_Q_A5akIuKV', share:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
@@ -3647,7 +3647,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v70';
+const APP_VERSION = 'v71';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
