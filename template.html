@@ -3025,7 +3025,7 @@ function buildSynopsis(){
   $('#synhead').textContent = `This ${unit} ran ${f0(runMin)} min in ${modes} over ${f0(n * dt)} min of recording and ${verdict}.`;
   const facts = [`<span><b>${D.runs.length}</b> run${D.runs.length === 1 ? '' : 's'}</span>`, `<span><b>${f0(steadyMin)}</b> min steady</span>`, D.range.oat ? `<span>outdoor <b>${f0(D.range.oat.min)}–${f0(D.range.oat.max)}°F</b></span>` : '', D.range.rps ? `<span>comp <b>${f0(D.range.rps.min)}–${f0(D.range.rps.max)} rps</b></span>` : '', D.range.disch ? `<span>discharge <b>${f0(D.range.disch.min)}–${f0(D.range.disch.max)}°F</b></span>` : '', D.range.hp ? `<span>HP <b>${f0(D.range.hp.min)}–${f0(D.range.hp.max)}</b> · LP <b>${f0(D.range.lp.min)}–${f0(D.range.lp.max)} psi</b></span>` : ''];
   $('#synfacts').innerHTML = facts.filter(Boolean).join('');
-  $('#synlist').innerHTML = F.map(f => `<div class="syn ${f.st}"><h3>${f.rid ? '<span class="rid">' + synEsc(f.rid) + '</span> ' : ''}${synEsc(f.title)}</h3><p class="why">${synEsc(f.why)}</p>${Array.isArray(f.fix) ? '<ol>' + f.fix.map(x => '<li>' + synEsc(x) + '</li>').join('') + '</ol>' : '<p class="do">' + synEsc(f.do || '') + '</p>'}</div>`).join('');
+  $('#synlist').innerHTML = F.map(f => `<div class="syn ${f.st}"><h3>${synEsc(f.title)}</h3><p class="why">${synEsc(f.why)}</p>${Array.isArray(f.fix) ? '<ol>' + f.fix.map(x => '<li>' + synEsc(x) + '</li>').join('') + '</ol>' : '<p class="do">' + synEsc(f.do || '') + '</p>'}</div>`).join('');
   $('#synnote').textContent = D.fam === 'multi' ? 'A multi-zone log has no pressure sensors, humidity or airflow, so these findings rest on coil, pipe and air temperatures plus the EV positions. Confirm humidity with a meter.' : 'Findings use the unit\'s own targets and the signature thresholds in the Runs tab. They point at what to check first; they are not a replacement for gauges and a scale.';
 }
 function drawTicks(){
@@ -3509,7 +3509,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v72';
+const APP_VERSION = 'v73';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
