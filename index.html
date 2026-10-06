@@ -719,7 +719,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>"What it is doing now" line</b><small>Plain-language narration above the diagram</small></span><input type="checkbox" class="sw" data-s="narr"></label>
       <label class="srow"><span class="t"><b>Status chips</b><small>Mode, run, settling and error chips in the header</small></span><input type="checkbox" class="sw" data-s="chips"></label>
       <label class="srow"><span class="t"><b>Control-event chips</b><small>Startup, defrost, demand and drop controls</small></span><input type="checkbox" class="sw" data-s="events"></label>
-      <label class="srow"><span class="t"><b>Rulebook chips</b><small>Daikin inverter rules with their L / S / M ids</small></span><input type="checkbox" class="sw" data-s="rulebook"></label>
+      <label class="srow"><span class="t"><b>Rulebook chips</b><small>Daikin inverter rules — speed-lock, charge, defrost and head checks</small></span><input type="checkbox" class="sw" data-s="rulebook"></label>
       <label class="srow"><span class="t"><b>Signature chips</b><small>Blue pattern matches</small></span><input type="checkbox" class="sw" data-s="sigs"></label>
       <label class="srow"><span class="t"><b>Fault-library chips</b><small>Amber classic-fault scores</small></span><input type="checkbox" class="sw" data-s="faults"></label>
       <label class="srow"><span class="t"><b>Pinned trend strips</b><small>The bottom bar under the diagram</small></span><input type="checkbox" class="sw" data-s="dock"></label>
@@ -1756,6 +1756,7 @@ function computeCapacity(){
     if (!isN(I) || I < 0.8 || !isN(rps) || rps <= 0 || !isN(hp) || !isN(lp) || !isN(td) || !isN(ts) || lp < 20 || hp <= lp + 20 || D.dropout[i] || (m !== 'cool' && m !== 'heat')) continue;
     if (D.str.defrost && /^(on|yes|1)$/i.test((D.str.defrost[i] || '').trim())) continue;
     const tcs = satF(hp, ref), tes = satF(lp, ref), dsh = td - tcs, ssh = ts - tes;
+    if (ssh < 4 || dsh < 15){ q[i] = 'wet'; continue; }
     const h1 = pHVap(tes, ssh, ref), h2 = pHVap(tcs, dsh, ref), dhc = h2 - h1;
     if (dhc < 6) continue;
     const Pel = V * I * CAP.PF, mEB = Pel * (1 - CAP.LOSS) / 1000 / dhc * (1 - OIL);     // W; kg/s of refrigerant
@@ -1764,7 +1765,7 @@ function computeCapacity(){
     const grade = sens <= 0.12 ? 'good' : sens <= 0.2 ? 'fair' : 'poor';
     q[i] = grade;
     if (grade === 'good' && D.steady[i] && D.runSec[i] >= 300) good.push({pr, eff:mEB / (rps * rho) * 1e6});   // effective cc/rev (displacement × η_v) at this pressure ratio
-    rows.push({i, mEB, rho, rps, pr, h2, tes, m});
+    rows.push({i, mEB, rho, rps, pr, h2, tes, tcs, m});
   }
   // learned effective displacement: eff(PR) = e0 + e1·(PR − 2.5). The slope is fitted when the log spans enough pressure ratios,
   // otherwise it follows a generic rotary curve (η_v = 0.97 − 0.035·(PR − 2)). Merged with earlier logs of this exact model and size.
@@ -1796,11 +1797,11 @@ function computeCapacity(){
   for (const r of rows){
     const i = r.i, m = fit ? Math.max(0.2 * fit.e0, fit.e0 + fit.e1 * (r.pr - PR0)) * 1e-6 * r.rps * r.rho : r.mEB; let kW = null;
     if (r.m === 'cool'){
-      const liq = num.liq[i]; if (!isN(liq)) continue; const ig = num.igas[i];
+      const liq = num.liq[i]; if (!isN(liq)) continue; const sc = num.suct[i] - co('suct'); const ig0 = num.igas[i], ig = (isN(ig0) && ig0 >= r.tes - 5 && ig0 <= sc + 25 && ig0 <= 140) ? ig0 : null;
       // gas leaving the coil: at the coil's own pressure when the indoor sensor has it (removes the suction-line pressure drop)
       const ip = coilP ? num.ipress[i] : null, tco = (isN(ip) && ip > 20 && Math.abs(ip - num.lp[i]) <= 20) ? satF(ip, ref) : r.tes;
-      kW = m * (pHVap(tco, (isN(ig) ? ig : (num.suct[i] - co('suct'))) - tco, ref) - pHLiq(liq - co('liq'), ref));
-    } else { const il = isN(num.iliq[i]) ? num.iliq[i] : num.liq[i] - co('liq'); if (!isN(il)) continue; kW = m * (r.h2 - pHLiq(il, ref)); }
+      kW = m * (pHVap(tco, (isN(ig) ? ig : sc) - tco, ref) - pHLiq(liq - co('liq'), ref));
+    } else { const il0 = num.iliq[i], il = (isN(il0) && il0 > 20 && il0 <= r.tcs + 3 && il0 >= r.tcs - 60) ? il0 : num.liq[i] - co('liq'); if (!isN(il)) continue; kW = m * (r.h2 - pHLiq(il, ref)); }
     if (!isN(kW) || kW <= 0) continue;
     kWraw[i] = kW; if (fit) q[i] = 'disp';
   }
@@ -1859,8 +1860,8 @@ function buildCapCard(){
 function renderCapNow(i){
   const e = $('#capnow'); if (!e || !D) return;
   const c = D.num.cap ? D.num.cap[i] : null, cop = D.num.cop ? D.num.cop[i] : null, p = D.num.pwr ? D.num.pwr[i] : null, g = D.capq ? D.capq[i] : null;
-  const gl = {good:'good — large lift', fair:'fair — moderate lift', poor:'poor — small lift, trust ±25 %', disp:'from displacement'}[g] || '';
-  e.innerHTML = `<b>${fmtTime(D.t[i])}</b> · ${D.mode[i] === 'heat' ? 'heating' : D.mode[i] === 'cool' ? 'cooling' : D.mode[i]} · ` + (isN(c) ? `calculated <b>${fmtBtu(c).toLocaleString()} BTU/h</b> (${(c / 12000).toFixed(1)} ton)${isN(cop) ? ` · COP ${cop.toFixed(1)}` : ''}${isN(p) ? ` · ${p.toFixed(2)} kW in` : ''} · ${fmt(D.num.rps[i])} rps${gl ? ` · confidence: ${gl}` : ''}` : (isN(p) ? `${p.toFixed(2)} kW in · no capacity on this row` : 'compressor off'));
+  const gl = {good:'good — large lift', fair:'fair — moderate lift', poor:'poor — small lift, trust ±25 %', disp:'from displacement', wet:'not computable — wet compressor inlet (suction SH under 4 °F or discharge SH under 15 °F means liquid is coming back, and the power-draw method needs dry gas)'}[g] || '';
+  e.innerHTML = `<b>${fmtTime(D.t[i])}</b> · ${D.mode[i] === 'heat' ? 'heating' : D.mode[i] === 'cool' ? 'cooling' : D.mode[i]} · ` + (isN(c) ? `calculated <b>${fmtBtu(c).toLocaleString()} BTU/h</b> (${(c / 12000).toFixed(1)} ton)${isN(cop) ? ` · COP ${cop.toFixed(1)}` : ''}${isN(p) ? ` · ${p.toFixed(2)} kW in` : ''} · ${fmt(D.num.rps[i])} rps${gl ? ` · confidence: ${gl}` : ''}` : (isN(p) ? `${p.toFixed(2)} kW in · no capacity on this row${gl ? ' · ' + gl : ''}` : 'compressor off'));
   const g2 = $('#capexp'); if (g2){ const d = D.num.dtp ? D.num.dtp[i] : null, dd = D.dtpDry ? D.dtpDry[i] : null, cfm = D.num.cfm ? D.num.cfm[i] : null, a = AIRIN, rc = returnCond();
     if (!isN(d) || !isN(cfm)) g2.textContent = isN(c) ? 'No logged airflow on this row, so no expected grille reading.' : '';
     else if (D.mode[i] === 'heat') g2.innerHTML = `Calculated, not measured — expected at a supply grille: <b>${d.toFixed(0)} °F above return</b> at the logged ${Math.round(cfm)} cfm (heating is all sensible, so this is exact for that airflow).` + (isN(a.radb) && isN(a.sadb) ? ` You typed ${(a.sadb - a.radb).toFixed(0)} °F → ${Math.abs(a.sadb - a.radb - d) <= 3 ? 'matches' : a.sadb - a.radb < d ? 'less than expected: airflow above the blower\'s figure, or capacity below the estimate' : 'more than expected: airflow below the blower\'s figure (static), or strips on'}.` : '');
@@ -2150,7 +2151,7 @@ function runRulebook(){
   const raw = new Array(n);
   for (let i = 0; i < n; i++){ const c = ruleCtx(i); raw[i] = []; for (const R of RULEBOOK){ if (R.fam && R.fam !== D.fam) continue; let t = null; try { t = R.test(c); } catch(e){ t = null; } if (t === true) raw[i].push({R, detail:(() => { try { return R.detail(c); } catch(e){ return ''; } })()}); } }
   const hasR = (i, id) => i >= 0 && i < n && raw[i].some(x => x.R.id === id);
-  for (let i = 0; i < n; i++) for (const x of raw[i]){ const id = x.R.id; const keep = (hasR(i-1, id) && hasR(i-2, id)) || (hasR(i-1, id) && hasR(i+1, id)) || (hasR(i+1, id) && hasR(i+2, id)); if (keep) D.sig[i].push({code:'R:' + id, rule:x.R, label:(x.R.rid || x.R.id) + ' ' + x.R.title, detail:x.detail, st:'rule', sev:x.R.sev}); }
+  for (let i = 0; i < n; i++) for (const x of raw[i]){ const id = x.R.id; const keep = (hasR(i-1, id) && hasR(i-2, id)) || (hasR(i-1, id) && hasR(i+1, id)) || (hasR(i+1, id) && hasR(i+2, id)); if (keep) D.sig[i].push({code:'R:' + id, rule:x.R, label:x.R.title, detail:x.detail, st:'rule', sev:x.R.sev}); }
 }
 // recording-level rulebook findings (L2 sensor check, S10 defrost rate, S15 recurring codes, M12 short head cycles) + per-row rules aggregated
 function rulebookFindings(){
@@ -2200,7 +2201,7 @@ function sensorChecks(){
   const n = D.n, num = D.num, dt = D.interval / 60, F = [], marks = [];
   const run = i => D.runSec[i] >= 0;
   const list = sensorList();
-  const mark = (a, b, rule, detail) => { for (let i = a; i <= b; i++) D.sig[i].push({code:'R:' + rule.id + ':' + rule.title, rule, label:rule.rid + ' ' + rule.title, detail, st:'rule', sev:rule.sev}); };
+  const mark = (a, b, rule, detail) => { for (let i = a; i <= b; i++) D.sig[i].push({code:'R:' + rule.id + ':' + rule.title, rule, label:rule.title, detail, st:'rule', sev:rule.sev}); };
   for (const S of list){
     const a = num[S.id], ch = chById[S.id], isPress = S.kind === 'press';
     // ---- stuck: identical value for stuckMin while the system is running and moving ----
@@ -2259,7 +2260,7 @@ function evChecks(){
       i += k8;
     }
     if (moves >= XT.evMinMoves){
-      if (dead / moves >= XT.evBadFrac){ const rule = {id:V.id, rid:V.id, sev:'major', title:`${V.name} not responding`}; for (const [a, b, d] of deadRows) for (let j = a; j <= b; j++) D.sig[j].push({code:'R:' + V.id + ':' + V.name, rule, label:`${V.id} ${V.name} not responding`, detail:d, st:'rule', sev:'major'});
+      if (dead / moves >= XT.evBadFrac){ const rule = {id:V.id, rid:V.id, sev:'major', title:`${V.name} not responding`}; for (const [a, b, d] of deadRows) for (let j = a; j <= b; j++) D.sig[j].push({code:'R:' + V.id + ':' + V.name, rule, label:`${V.name} not responding`, detail:d, st:'rule', sev:'major'});
         F.push({rid:V.id, sev:'major', st:'warn', title:`${V.name} not responding: ${dead} of ${moves} pulse moves changed nothing`, why:`Moves of ≥${V.thr} pulses at steady compressor speed should change ${V.modes[Object.keys(V.modes)[0]].what} by ≥${XT.evResp}°F within ${XT.evWindow} min; first unanswered move at ${fmtTime(D.t[firstDead])}. The board is commanding the valve and the refrigerant is not following.`,
                 fix:['Check the EEV coil: resistance per the service manual, connector seated, no broken lead.','Watch the pulse count and the metered temperature together: if pulses move and the temperature never follows, the valve body is stuck or the coil is slipping steps — replace the coil first, then the body.','Rule out a starved circuit (low charge or a restriction upstream) which also mutes the valve\'s effect.']}); }
       else if (dead / moves <= XT.evOkFrac) F.push({rid:V.id, sev:'law', st:'ok', title:`${V.name} responds: ${moves - dead} of ${moves} pulse moves answered`, why:`Moves of ≥${V.thr} pulses at steady speed were followed by the expected change in ${V.modes[Object.keys(V.modes)[0]].what}.`, fix:['The valve and its coil are doing what the board asks.']});
@@ -2950,7 +2951,7 @@ function renderNow(i){
   const sigs = e.sigs.slice().sort((a,b) => (b.conf||0) - (a.conf||0) || (a.st === 'fault' ? -1 : 1));
   for (const x of sigs){ if (x.st === 'rule') continue; if (x.st === 'fault' && !S.faults) continue; if (x.st === 'sig' && !S.sigs) continue; if (x.st === 'info' && !S.events) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
   if (S.rulebook){ const ord = {critical:0, major:1, moderate:2, minor:3, law:4}; const rl = e.sigs.filter(x => x.st === 'rule').sort((a, b) => ord[a.sev] - ord[b.sev]).slice(0, 3);
-    const seen = new Set(); for (const x of rl){ if (seen.has(x.code)) continue; seen.add(x.code); const c = document.createElement('span'); c.className = 'chip rule ' + x.sev; c.innerHTML = `<b>${synEsc(x.rule.rid || x.rule.id)}</b>${synEsc(x.rule.title)}`; c.title = x.detail; mc.appendChild(c); } }
+    const seen = new Set(); for (const x of rl){ if (seen.has(x.code)) continue; seen.add(x.code); const c = document.createElement('span'); c.className = 'chip rule ' + x.sev; c.innerHTML = synEsc(x.rule.title); c.title = x.detail; mc.appendChild(c); } }
   // always-visible demand / call readout
   { const dm = D.num.demand[i], op = (D.str.opmode[i] || D.str.imode[i] || '—'), th = D.str.therm[i];
     const s = D.str, ph = s.defrost[i] === 'ON' ? 'DEFROST' : s.oilret[i] === 'ON' ? 'OIL RETURN' : s.startup[i] === 'ON' ? 'STARTUP' : s.restart[i] === 'ON' ? 'RESTART STANDBY' : s.freeze[i] === 'ON' ? 'FREEZE PROTECT' : ['dropDisch','dropInv','dropHp','dropLp','dropFin'].some(id => s[id][i] === 'ON') ? 'DROP CTRL' : (D.runSec[i] >= 0 ? (D.steady[i] ? 'STEADY' : 'RUNNING') : 'OFF');
@@ -2998,7 +2999,7 @@ function narrateRow(i){
       if (isN(num.dsh[i]) && rs >= 5 && num.dsh[i] < SIG.dshLow) parts.push(`<span class="a">discharge SH only ${f1s(num.dsh[i])}°F</span>`);
     }
   }
-  if (S.rulebook){ const ord = {critical:0, major:1, moderate:2, minor:3, law:4}; const top = (D.sig[i] || []).filter(x => x.st === 'rule').sort((a, b) => ord[a.sev] - ord[b.sev])[0]; if (top) parts.push(`<span class="${top.sev === 'critical' ? 'a' : top.sev === 'major' ? 'w' : ''}">${synEsc((top.rule.rid || top.rule.id) + ' ' + top.rule.title)}</span>`); }
+  if (S.rulebook){ const ord = {critical:0, major:1, moderate:2, minor:3, law:4}; const top = (D.sig[i] || []).filter(x => x.st === 'rule').sort((a, b) => ord[a.sev] - ord[b.sev])[0]; if (top) parts.push(`<span class="${top.sev === 'critical' ? 'a' : top.sev === 'major' ? 'w' : ''}">${synEsc(top.rule.title)}</span>`); }
   const sigs = (D.sig[i] || []).filter(x => (x.st === 'sig' && S.sigs) || (x.st === 'fault' && S.faults)).slice(0, 2);
   for (const x of sigs) parts.push(`<span class="${x.st === 'fault' ? 'a' : 'w'}">${synEsc(x.label)}</span>`);
   { const errs = rowErrors(i); if (errs.length) parts.unshift(`<span class="a">ERROR ${synEsc(errs.map(e => (e.who === 'Outdoor' ? '' : e.who + ' ') + (e.code || e.raw) + (e.k ? ' ' + e.k.t : '')).join(' · '))}</span>`); }
@@ -3647,7 +3648,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v73';
+const APP_VERSION = 'v74';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -4403,7 +4404,7 @@ var V3 = (() => {
     if (c && !c.run) st = 'Compressor off: the refrigerant is not being pumped right now';
     const live = (kb.live(i, c, k) || []).filter(Boolean), ph = phOf(kb, m), fam = D.fam === 'multi' ? 'multi' : 'unitary', rules = [];
     for (const id of kb.rules || []){ const R = RULEBOOK.find(r => r.id === id || r.rid === id); if (!R || (R.fam && R.fam !== fam)) continue;
-      const on = (D.sig[i] || []).some(x => x.st === 'rule' && x.rule && (x.rule.id === id || x.rule.rid === id)); rules.push(`<span class="${on ? 'on' : ''}" title="${esc(R.why || '')}">${esc(id)} ${esc(R.title)}${on ? ' · firing now' : ''}</span>`); }
+      const on = (D.sig[i] || []).some(x => x.st === 'rule' && x.rule && (x.rule.id === id || x.rule.rid === id)); rules.push(`<span class="${on ? 'on' : ''}" title="${esc(R.why || '')}">${esc(R.title)}${on ? ' · firing now' : ''}</span>`); }
     el.innerHTML = `<button type="button" class="x" aria-label="Close">×</button><b class="t">${esc(kb.t)}${k != null ? ' · Zone ' + MZ.letters[k] : ''}</b>${st ? `<div class="st">${esc(st)}</div>` : ''}`
       + (base === 'compressor' ? `<div class="pump"><svg id="pumpsvg" viewBox="-66 -66 132 132" aria-label="Swing compressor pump, cross-section from above"><circle cx="0" cy="0" r="62" fill="var(--panel2)" stroke="var(--ink2)" stroke-width="1.5"/><path id="pm-s" fill="var(--lo)"/><path id="pm-c" fill="var(--hi)"/><circle cx="0" cy="0" r="46" fill="none" stroke="var(--ink)" stroke-width="2"/><rect x="-6" y="-60" width="12" height="16" fill="var(--panel2)"/><path id="pm-pt" d="" fill="none"/><rect id="pm-sp" width="9" height="9" fill="var(--lo)"/><rect id="pm-dp" width="9" height="9" fill="var(--hi)"/><polygon id="pm-bl" fill="#E3B341" stroke="var(--ink)" stroke-width="1"/><polygon id="pm-b1" fill="var(--ink2)"/><polygon id="pm-b2" fill="var(--ink2)"/><circle id="pm-pi" r="33" fill="#E3B341" stroke="var(--ink)" stroke-width="1.5"/><circle id="pm-ec" r="15" fill="var(--metal2)" stroke="var(--ink)" stroke-width="1"/><circle cx="0" cy="0" r="6" fill="var(--ink2)"/><line id="pm-cr" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/></svg><small>Inside the pump, seen from above. The shaft's eccentric carries the gold piston round the bore without letting it spin; its blade slides through the rocking bushing at the top. <b style="color:var(--lo)">Blue</b>: gas being drawn in from the accumulator. <b style="color:var(--hi)">Red</b>: gas being squeezed, deeper as the pocket shrinks, until it leaves through the discharge port.${c && c.run ? '' : ' Compressor is off right now.'}</small></div>` : '')
       + `<p>${esc(kb.what(m))}</p>`
