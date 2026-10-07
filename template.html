@@ -2886,7 +2886,7 @@ function narrateRow(i){
    fixed on a real job, 'provisional' = written from the physics and not yet confirmed on a repair (the card says so and asks for the
    👍/👎). As confirmed jobs come in through the shop library the thresholds tighten and the label flips. */
 let CHAINS_ACTIVE = [];   // [{id, cause:[channel ids], effect:[channel ids], rows:[[a,b],…]}] — drives the cause / effect marks on the cycle view
-const CHAIN_CONFIRMED = {C1:'1 job (2026-06-15, R-32 FIT, cooling)'};   // chains confirmed on a real repair, with the evidence
+const CHAIN_CONFIRMED = {C1:'1 job — R-32 FIT in cooling, June 2026: the indoor gas-pipe thermistor was the failed part'};   // chains confirmed on a real repair, with the evidence
 function chainCtx(){
   const num = D.num, s = D.str, n = D.n, dt = D.interval / 60;
   const all = [...Array(n).keys()], run = all.filter(i => D.runSec[i] >= 0), settled = run.filter(i => D.runSec[i] >= SIG.settle * 60);
@@ -4048,7 +4048,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v76';
+const APP_VERSION = 'v77';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
