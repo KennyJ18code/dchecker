@@ -684,6 +684,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <span class="grow"></span>
       <button class="btn small primary" id="libzip" type="button">Download new as zip</button>
       <button class="btn small" id="libseen" type="button" title="Mark everything as seen on this device">All seen</button>
+      <button class="btn small" id="libtidy" type="button" hidden title="Move the first weeks' files from anon/ into the library layout and delete strays">Tidy old files</button>
       <button class="btn small" id="fleetrefresh" type="button">Refresh</button>
     </div>
     <p class="note" style="padding:0 14px 6px">Tap <b>Open</b> to view a recording here with no download; <b>CSV</b> saves the plain file; the zip holds every recording not yet opened on this device. Files are stored as plain CSV under <code>library/year/month/</code>, named date_model_tech_id.</p>
@@ -4057,7 +4058,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v81';
+const APP_VERSION = 'v82';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -4255,6 +4256,7 @@ async function fleetRefresh(){
   try {
     LIB_ROWS = await sbFetch('/rest/v1/recordings?select=id,created_at,tech_name,company,model,refrigerant,unit_size,started_at,ended_at,row_count,interval_s,equipment,summary,capacity,file_name,file_path,sha256&order=started_at.desc.nullslast&limit=500').then(r => r.json());
     libRender();
+    try { $('#libtidy').hidden = !(LIB_ROWS.some(r => /^anon\//.test(r.file_path || '')) || (await libList('anon')).length); } catch(e){ $('#libtidy').hidden = true; }
   } catch(e){ st.textContent = 'could not load: ' + e.message; }
 }
 $('#fleetrefresh').addEventListener('click', fleetRefresh);
@@ -4270,6 +4272,33 @@ $('#libzip').addEventListener('click', async () => {
   } catch(e){ toast('Download stopped: ' + e.message); }
   libRender();
 });
+// --- Tidy: move what the first weeks left under anon/ into the library layout (plain CSV, library/yyyy/mm/, readable name), repoint the rows,
+//     and delete what has no row (raw files from the old sync, probes). Signed-in readers only; one click, idempotent. ---
+async function libList(prefix){ const r = await sbFetch('/storage/v1/object/list/recordings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prefix, limit:1000, offset:0, sortBy:{column:'name', order:'asc'}})}); return r.json(); }
+async function libListDeep(prefix){ const out = []; for (const e of await libList(prefix)){ const path = prefix ? prefix + '/' + e.name : e.name; if (e.id) out.push(path); else out.push(...await libListDeep(path)); } return out; }
+async function libDelete(paths){ if (paths.length) await sbFetch('/storage/v1/object/recordings', {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prefixes:paths})}); }
+function libNewPath(r){
+  const clean = v => String(v || '').replace(/^INV_Unitary_/i, '').replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
+  const day = r.started_at ? r.started_at.slice(0, 10) : 'undated', ym = r.started_at ? r.started_at.slice(0, 7).replace('-', '/') : 'undated/undated';
+  return `library/${ym}/${[day, clean(r.model || 'log'), clean(r.tech_name) || null, (r.sha256 || '').slice(0, 8) || null].filter(Boolean).join('_')}.csv`;
+}
+async function libTidy(){
+  const b = $('#libtidy'); b.disabled = true; let moved = 0, removed = 0;
+  try {
+    const rows = await sbFetch('/rest/v1/recordings?file_path=like.anon*&select=id,file_path,started_at,model,tech_name,sha256').then(r => r.json());
+    for (const r of rows){
+      b.textContent = `Moving ${++moved} of ${rows.length}…`;
+      const {blob} = await libFetchFile(r), np = libNewPath(r);
+      try { await sbFetch('/storage/v1/object/recordings/' + np, {method:'POST', headers:{'Content-Type':'text/csv', 'x-upsert':'true'}, body:blob}); } catch(e){ if (!/exist|duplicate|409/i.test(e.message)) throw e; }
+      await sbFetch(`/rest/v1/recordings?id=eq.${r.id}`, {method:'PATCH', headers:{'Content-Type':'application/json', Prefer:'return=minimal'}, body:JSON.stringify({file_path:np, file_name:np.split('/').pop()})});
+    }
+    const left = (await libListDeep('anon')).concat((await libListDeep('library')).filter(p => /probe/i.test(p)));
+    await libDelete(left); removed = left.length;
+    toast(`Tidy done: ${rows.length} recording${rows.length === 1 ? '' : 's'} moved, ${removed} stray file${removed === 1 ? '' : 's'} removed`);
+  } catch(e){ toast('Tidy stopped: ' + e.message); }
+  b.textContent = 'Tidy old files'; b.disabled = false; fleetRefresh();
+}
+$('#libtidy').addEventListener('click', libTidy);
 // feedback lives at the foot of the synopsis, where the app's read is
 { const fb = $('#fbthis'), syn = $('#panel-synopsis'); if (fb && syn) syn.appendChild(fb); }
 document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('click', async () => {
