@@ -138,7 +138,7 @@ body.no-narr .nowline{display:none}
 .synlist{display:flex;flex-direction:column;gap:8px;padding:0 14px 12px}
 .syn{border:1px solid var(--line);border-left-width:5px;border-radius:8px;padding:8px 12px;background:var(--panel)}
 .syn.alarm{border-left-color:var(--alarm)}.syn.warn{border-left-color:var(--warn)}.syn.sig{border-left-color:var(--accent)}.syn.info{border-left-color:var(--muted)}.syn.ok{border-left-color:var(--ok)}
-.syn.chain h3{font-size:15px;line-height:1.3}.syn.chain{border-left-width:7px}
+.syn .conf{font-size:11.5px;color:var(--muted);margin:0 0 6px}.syn .conf.confirmed{color:var(--ok)}.syn.chain h3{font-size:15px;line-height:1.3}.syn.chain{border-left-width:7px}
 .synnotes{margin-top:6px}.synnotes summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:6px 2px}.synnotes .syn{margin-top:8px}
 .synkey{font-size:12px;color:var(--muted);margin:10px 2px 0}.synkey i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid var(--line)}.synkey i.crit{background:var(--tint-crit)}.synkey i.minor{background:var(--tint-minor)}.synkey i.fan{background:var(--tint-fan)}.synkey i.humid{background:var(--tint-humid)}.synkey i:first-child{margin-left:0}
 .syn h3{margin:0 0 4px;font-size:14px}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
@@ -1662,7 +1662,7 @@ function computeCapacity(){
     src = `${saved.n} good samples from earlier logs of this model and size`;
   }
   const dispOf = f => f.e0 / (0.97 - 0.035 * (PR0 - 2));                   // the swept volume the generic curve would give at PR 2.5
-  Object.assign(info, {fit, disp:fit ? dispOf(fit) : null, dispSrc:src, method:fit ? 'disp' : (rows.length ? 'eb' : 'none'), n:rows.length, good:good.length, size:si, coilP});
+  Object.assign(info, {saved, fit, disp:fit ? dispOf(fit) : null, dispSrc:src, method:fit ? 'disp' : (rows.length ? 'eb' : 'none'), n:rows.length, good:good.length, size:si, coilP});
   if (!rows.length) info.why = 'no rows with the compressor running in heating or cooling';
   // per-row energy, then a trailing average over the last 5 minutes of the same run and mode (sensor noise falls by about 3×)
   const kWraw = new Array(n).fill(null);
@@ -2881,89 +2881,505 @@ function narrateRow(i){
   return parts.join(' · ');
 }
 // whole-recording findings: {st, title, why, do}
-/* ---------- diagnostic chains: one card that tells the cause → effect story in place of the separate symptoms ---------- */
+/* ---------- diagnostic chains: one card that tells the cause → effect story in place of the separate symptoms ----------
+   Every chain is a declared pattern with firm evidence thresholds. `conf` says how it has earned its place: 'confirmed' = seen and
+   fixed on a real job, 'provisional' = written from the physics and not yet confirmed on a repair (the card says so and asks for the
+   👍/👎). As confirmed jobs come in through the shop library the thresholds tighten and the label flips. */
 let CHAINS_ACTIVE = [];   // [{id, cause:[channel ids], effect:[channel ids], rows:[[a,b],…]}] — drives the cause / effect marks on the cycle view
-function chainFindings(){
-  const out = []; CHAINS_ACTIVE = [];
-  if (!D || D.fam === 'multi') return out;   // FIT splits for now; the multi has its own flooding rules
-  const num = D.num, n = D.n, dt = D.interval / 60;
-  const run = i => D.runSec[i] >= 0, settled = [...Array(n).keys()].filter(i => run(i) && D.runSec[i] >= SIG.settle * 60);
+const CHAIN_CONFIRMED = {C1:'1 job (2026-06-15, R-32 FIT, cooling)'};   // chains confirmed on a real repair, with the evidence
+function chainCtx(){
+  const num = D.num, s = D.str, n = D.n, dt = D.interval / 60;
+  const all = [...Array(n).keys()], run = all.filter(i => D.runSec[i] >= 0), settled = run.filter(i => D.runSec[i] >= SIG.settle * 60);
   const cool = settled.filter(i => D.mode[i] === 'cool'), heat = settled.filter(i => D.mode[i] === 'heat');
-  const med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
-  const share = (arr, pred) => arr.length ? arr.filter(pred).length / arr.length : 0;
+  const v = (id, i) => num[id] ? num[id][i] : null, sv = (id, i) => s[id] ? s[id][i] : null;
+  const has = id => !!(chById[id] && chById[id].present !== false && num[id] && num[id].some(isN));
+  const hasS = id => !!(s[id] && s[id].some(x => x != null));
+  const med = (rows, id) => { const a = rows.map(i => typeof id === 'function' ? id(i) : v(id, i)).filter(isN).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : null; };
+  const share = (rows, pred) => rows.length ? rows.filter(pred).length / rows.length : 0;
+  const on = (rows, id) => share(rows, i => sv(id, i) === 'ON');
   const span = rows => rows.length ? [[rows[0], rows[rows.length - 1]]] : [];
-  const v = (id, i) => num[id] ? num[id][i] : null, has = id => chById[id] && chById[id].present !== false && num[id] && num[id].some(isN);
-  const push = c => { out.push(Object.assign({chain:true, st:'alarm', sev:'critical'}, c)); CHAINS_ACTIVE.push({id:c.id, cause:c.cause, effect:c.effect, rows:c.rows}); };
-  // 1. a dead indoor gas thermistor drives the indoor EEV wide open and floods the compressor (cooling)
-  if (cool.length >= 10 && has('igas') && has('iliq') && has('iev')){
-    const bad = share(cool, i => isN(v('igas', i)) && isN(v('iliq', i)) && (v('igas', i) > 140 || Math.abs(v('igas', i) - v('iliq', i)) > XT.idCoil));
-    const pinned = share(cool, i => isN(v('ievpct', i)) && v('ievpct', i) >= 95);
-    const sh = med(cool.map(i => v('sh', i))), dsh = med(cool.map(i => v('dsh', i)));
-    if (bad >= 0.5 && pinned >= 0.7 && isN(sh) && (sh < 4 || (isN(dsh) && dsh < 15))){
-      const ig = med(cool.map(i => v('igas', i))), il = med(cool.map(i => v('iliq', i))), tsh = med(cool.map(i => v('tsh', i))), ev = med(cool.map(i => v('ievpct', i)));
-      push({id:'C1', cats:['crit'], cause:['igas'], effect:['ievpct', 'sh', 'dsh', 'disch', 'suct'], rows:span(cool),
-        title:'Indoor gas thermistor failed → indoor EEV driven wide open → liquid flooding the compressor',
-        why:`The indoor gas-pipe thermistor read ${f0(ig)}°F for ${pct(bad, 1)}% of the cooling run, against ${f0(il)}°F on the liquid pipe beside it: a fixed, impossible value, the way an open circuit or an unplugged sensor reads. The indoor board controls its EEV on coil superheat (gas − liquid), so it saw about ${f0(ig - il)}°F of superheat against a ${isN(tsh) ? f0(tsh) : '—'}°F target and did the only thing its logic allows: opened the valve to ${f0(ev)}% and held it there at every speed. The coil was overfed, suction superheat sat at ${f1s(sh)}°F and discharge superheat at ${isN(dsh) ? f1s(dsh) : '—'}°F, so liquid is reaching the compressor. Neither board raised a code: to the indoor board a hot gas pipe is not a fault, it is a reason to open the valve.`,
-        fix:['Resistance-check the indoor gas-pipe thermistor against the service-manual table (it should read near the coil outlet, 40s–50s °F in cooling) and reseat its plug on the indoor board.', 'After the repair, watch the indoor EEV come off 100% and suction superheat climb to its target within a few minutes.', 'Expect a sweating or frosted suction line and a cold compressor shell on site; check the oil if it has run like this for long.'],
-        absorb:[/^Implausible reading: Indoor gas/, /^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]});
-    }
-  }
-  // 2. indoor airflow short → coil running cold → liquid back (cooling)
-  if (cool.length >= 10 && has('cfm') && has('reqcfm') && !out.length){
-    const shortA = share(cool, i => isN(v('cfm', i)) && isN(v('reqcfm', i)) && v('reqcfm', i) > 0 && v('cfm', i) < 0.85 * v('reqcfm', i));
-    const sh = med(cool.map(i => v('sh', i))), te = med(cool.map(i => v('evap', i)));
-    if (shortA >= 0.3 && isN(sh) && (sh < 4 || (isN(te) && te < 35))){
-      push({id:'C2', cats:['crit', 'fan'], cause:['cfm'], effect:['evap', 'sh', 'dsh'], rows:span(cool),
-        title:'Indoor airflow short → coil running cold → liquid returning to the compressor',
-        why:`The blower delivered under 85% of the airflow the outdoor unit asked for on ${pct(shortA, 1)}% of the cooling run (median ${f0(med(cool.map(i => v('cfm', i))))} of ${f0(med(cool.map(i => v('reqcfm', i))))} cfm). With less air across it the coil cannot boil off what the EEV feeds it: evaporating temperature settled at ${isN(te) ? f1s(te) : '—'}°F and suction superheat at ${f1s(sh)}°F, so liquid is leaving the coil.`,
-        fix:['Filter, coil face, blower wheel and closed registers first; then static pressure against the blower table.', 'If the blower setting was trimmed down, bring it back to the matched airflow.'],
-        absorb:[/^Indoor airflow short of request/, /^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]});
-    }
-  }
-  // 3. indoor EEV not closing with a sane sensor → coil overfed → liquid back (cooling)
-  if (cool.length >= 10 && has('iev') && !out.length){
-    const pinned = share(cool, i => isN(v('ievpct', i)) && v('ievpct', i) >= 95), sh = med(cool.map(i => v('sh', i))), rps = med(cool.map(i => v('rps', i)));
-    if (pinned >= 0.7 && isN(sh) && sh < 4 && isN(rps) && D.ref.rpsMax && rps < 0.8 * D.ref.rpsMax){
-      push({id:'C3', cats:['crit'], cause:['ievpct'], effect:['sh', 'dsh', 'coildt'], rows:span(cool),
-        title:'Indoor EEV sitting wide open → coil overfed → liquid returning to the compressor',
-        why:`The indoor EEV stayed at or above 95% open for ${pct(pinned, 1)}% of the cooling run while the compressor ran at ${f0(rps)} rps, well under its maximum, and the coil superheat at the indoor sensors (${f1s(med(cool.map(i => v('coildt', i))))}°F) agreed with the suction superheat (${f1s(sh)}°F): both near zero. The valve is not closing when the board asks, or the board is not asking.`,
-        fix:['Check the EEV coil resistance and connector; cycle power and listen for the valve stepping closed on start-up.', 'If the valve moves, suspect the indoor board\'s thermistor inputs; if it does not, the valve body.'],
-        absorb:[/^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]});
-    }
-  }
-  // 4. low charge (heating): outdoor EEV wide open chasing subcooling → starved evaporator → hot discharge
-  if (heat.length >= 10 && has('ev')){
-    const pinned = share(heat, i => isN(v('evpct', i)) && v('evpct', i) >= 95), scerr = med(heat.map(i => v('scerr', i))), sh = med(heat.map(i => v('sh', i))), dsh = med(heat.map(i => v('dsh', i)));
-    if (pinned >= 0.7 && isN(scerr) && scerr <= -3 && isN(sh) && sh >= 15){
-      push({id:'C4', cats:['crit'], cause:['sc'], effect:['evpct', 'sh', 'dsh', 'disch', 'lp'], rows:span(heat),
-        title:'Low charge → outdoor EEV wide open chasing subcooling → starved evaporator and hot discharge',
-        why:`Subcooling ran ${f1s(-scerr)}°F under its target once settled while the outdoor EEV sat at or above 95% open for ${pct(pinned, 1)}% of the heating run: the valve is as open as it gets and still cannot hold liquid in the condenser. The evaporator is starved in turn: suction superheat ${f1s(sh)}°F, discharge superheat ${isN(dsh) ? f1s(dsh) : '—'}°F. Low charge, or a restriction between the liquid-line sensor and the outdoor EEV.`,
-        fix:['Weigh the charge against nameplate plus the line-set allowance before adding anything.', 'If the charge is right, look for a restriction: liquid-line strainer, drier, a kinked line.'],
-        absorb:[/^Subcooling ran .* under target/, /^Suction superheat high/, /^Starved compressor/, /^Discharge peaked/]});
-    }
-  }
-  // 5. condenser not rejecting heat (cooling): approach high with the fan flat out → high head, hot discharge, derating
-  if (cool.length >= 10 && has('fan')){
-    const appr = med(cool.map(i => v('appr', i))), fanMax = Math.max(0, ...num.fan.filter(isN)), fanHi = share(cool, i => isN(v('fan', i)) && v('fan', i) >= 0.95 * fanMax), hp = med(cool.map(i => v('hp', i)));
-    const capped = share(cool, i => isN(v('rpserr', i)) && v('rpserr', i) <= -SIG.rpsHold);
-    if (isN(appr) && appr >= 25 && fanHi >= 0.7 && (capped >= 0.2 || (D.range.disch && D.range.disch.max >= 220))){
-      push({id:'C5', cats:['crit', 'fan'], cause:['appr'], effect:['hp', 'cond', 'disch', 'fan', 'rpserr'], rows:span(cool),
-        title:'Condenser not rejecting heat → head pressure and discharge climbing → compressor derating',
-        why:`The condensing temperature ran ${f1s(appr)}°F over outdoor air once settled, with the outdoor fan at full speed for ${pct(fanHi, 1)}% of the run (it has nothing more to give). Head pressure settled at ${f0(hp)} psi${D.range.disch ? ` and discharge peaked at ${f0(D.range.disch.max)}°F` : ''}${capped >= 0.2 ? `; the board held the compressor under its target speed ${pct(capped, 1)}% of the time to protect itself` : ''}. A clean coil at full fan runs 10–20°F over ambient.`,
-        fix:['Coil face and fins (both rows on a two-row coil), recirculation off a wall or fence, debris inside the cabinet.', 'If the coil is clean, confirm the fan reaches its target rpm and the blade is intact.'],
-        absorb:[/^Discharge peaked/, /^Compressor held/, /^Protection control is capping speed/, /^Outdoor coil approach/]});
-    }
-  }
-  // 6. frosting outdoor coil (heating): evaporating temperature falling away from ambient with frequent defrosts
-  if (heat.length >= 10){
-    const appr = med(heat.map(i => v('appr', i))), d = D.runs.reduce((a, r) => a + (r.defrost || 0), 0), hrs = n * dt / 60;
-    if (isN(appr) && appr >= 25 && d && d / hrs >= 2){
-      push({id:'C6', cats:['minor'], st:'warn', sev:'moderate', cause:['appr'], effect:['evap', 'lp', 'ochex'], rows:span(heat),
-        title:'Outdoor coil frosting → evaporating temperature falling away from ambient → frequent defrosts',
-        why:`Once settled the coil evaporated ${f1s(appr)}°F below outdoor air (10–20°F is normal), and the unit defrosted ${d} times in ${hrs.toFixed(1)} h. Frost insulates the coil, the evaporating temperature drops further, and the defrost sensor trips sooner each cycle.`,
-        fix:['Look for ice a defrost is not clearing (bottom rows, behind the fan), pan drainage, and the coil thermistor placement.', 'If the coil is clear, the charge and the outdoor EEV are the next suspects.'],
-        absorb:[/^Defrost/, /^Outdoor coil approach/]});
-    }
+  const slope = (rows, id) => { const pts = rows.map(i => [D.t[i] / 3.6e6, v(id, i)]).filter(p => isN(p[1])); if (pts.length < 6) return null; const mx = pts.reduce((a, p) => a + p[0], 0) / pts.length, my = pts.reduce((a, p) => a + p[1], 0) / pts.length; let sxx = 0, sxy = 0; for (const [x, y] of pts){ sxx += (x - mx) ** 2; sxy += (x - mx) * (y - my); } return sxx > 0 ? sxy / sxx : null; };   // units per hour
+  const episodesOf = (pred, minRows) => { const out = []; let a = -1; for (let i = 0; i <= n; i++){ const o = i < n && !!pred(i); if (o && a < 0) a = i; if (!o && a >= 0){ if (i - a >= (minRows || 1)) out.push([a, i - 1]); a = -1; } } return out; };
+  const sf = re => (D.sensorFindings || []).some(f => re.test(f.title || ''));
+  const cal = (D.capinfo && D.capinfo.cal) || {off:{}}, cap = D.capinfo || {};
+  const hrs = n * dt / 60, defrosts = D.runs.reduce((a, r) => a + (r.defrost || 0), 0), rpsMax = D.ref.rpsMax, rpsMin = D.ref.rpsMin;
+  const fanMax = has('fan') ? Math.max(0, ...num.fan.filter(isN)) : 0;
+  const dfEp = hasS('defrost') ? episodesOf(i => sv('defrost', i) === 'ON', 1) : [];
+  const zones = D.zones || [], L = k => MZ.letters[k];
+  return {num, s, n, dt, all, run, settled, cool, heat, v, sv, has, hasS, med, share, on, span, slope, episodesOf, sf, cal, cap, hrs, defrosts, rpsMax, rpsMin, fanMax, dfEp, zones, L, multi:D.fam === 'multi', r32:REF.ref === 'R32'};
+}
+// each chain: when(c) → evidence object (truthy) or null; text(e, c) → {title, why, fix}; cause/effect may be functions of e
+const CHAIN_DEFS = [
+ // ---- A. thermistors lying to the control ----
+ {id:'C1', fam:'unitary', cats:['crit'], cause:['igas'], effect:['ievpct', 'sh', 'dsh', 'disch', 'suct'],
+  when:c => { if (c.cool.length < 10 || !c.has('igas') || !c.has('iliq') || !c.has('iev')) return null;
+    const bad = c.share(c.cool, i => isN(c.v('igas', i)) && isN(c.v('iliq', i)) && (c.v('igas', i) > 140 || Math.abs(c.v('igas', i) - c.v('iliq', i)) > XT.idCoil)), pinned = c.share(c.cool, i => c.v('ievpct', i) >= 95), sh = c.med(c.cool, 'sh'), dsh = c.med(c.cool, 'dsh');
+    return bad >= 0.5 && pinned >= 0.7 && isN(sh) && (sh < 4 || (isN(dsh) && dsh < 15)) ? {rows:c.span(c.cool), bad, pinned, sh, dsh, ig:c.med(c.cool, 'igas'), il:c.med(c.cool, 'iliq'), tsh:c.med(c.cool, 'tsh'), ev:c.med(c.cool, 'ievpct')} : null; },
+  text:e => ({title:'Indoor gas thermistor failed → indoor EEV driven wide open → liquid flooding the compressor',
+    why:`The indoor gas-pipe thermistor read ${f0(e.ig)}°F for ${pct(e.bad, 1)}% of the cooling run, against ${f0(e.il)}°F on the liquid pipe beside it: a fixed, impossible value, the way an open circuit or an unplugged sensor reads. The indoor board controls its EEV on coil superheat (gas − liquid), so it saw about ${f0(e.ig - e.il)}°F of superheat against a ${isN(e.tsh) ? f0(e.tsh) : '—'}°F target and did the only thing its logic allows: opened the valve to ${f0(e.ev)}% and held it there at every speed. The coil was overfed, suction superheat sat at ${f1s(e.sh)}°F and discharge superheat at ${isN(e.dsh) ? f1s(e.dsh) : '—'}°F, so liquid is reaching the compressor. Neither board raised a code: to the indoor board a hot gas pipe is not a fault, it is a reason to open the valve.`,
+    fix:['Resistance-check the indoor gas-pipe thermistor against the service-manual table (it should read near the coil outlet, 40s–50s °F in cooling) and reseat its plug on the indoor board.', 'After the repair, watch the indoor EEV come off 100% and suction superheat climb to its target within a few minutes.', 'Expect a sweating or frosted suction line and a cold compressor shell on site; check the oil if it has run like this for long.']}),
+  absorb:[/^Implausible reading: Indoor gas/, /^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]},
+ {id:'A2', fam:'unitary', cats:['crit'], cause:e => [e.sensor], effect:['ievpct', 'sh', 'lp', 'evap'],
+  when:c => { if (c.cool.length < 10 || !c.has('igas') || !c.has('iliq') || !c.has('iev')) return null;
+    const cdt = c.med(c.cool, 'coildt'), te = c.med(c.cool, 'evap'), ig = c.med(c.cool, 'igas'), il = c.med(c.cool, 'iliq'), evp = c.med(c.cool, 'ievpct'), sh = c.med(c.cool, 'sh');
+    if (!isN(cdt) || !isN(evp) || !isN(sh) || evp > 15 || sh < 20) return null;
+    if (cdt <= -2 || (isN(te) && ig < te - 8)) return {rows:c.span(c.cool), sensor:'igas', cdt, ig, il, te, evp, sh, lp:c.med(c.cool, 'lp')};
+    if (isN(te) && il > te + 25) return {rows:c.span(c.cool), sensor:'iliq', cdt, ig, il, te, evp, sh, lp:c.med(c.cool, 'lp')};
+    return null; },
+  text:e => ({title:`Indoor ${e.sensor === 'igas' ? 'gas' : 'liquid'} thermistor reading ${e.sensor === 'igas' ? 'low' : 'high'} → board sees no coil superheat → indoor EEV driven shut → starved coil, high superheat, freeze risk`,
+    why:`At the indoor coil the gas pipe read ${f0(e.ig)}°F and the liquid pipe ${f0(e.il)}°F (coil ΔT ${f1s(e.cdt)}°F) while the evaporating temperature was ${f1s(e.te)}°F: ${e.sensor === 'igas' ? 'gas colder than the liquid feeding it, which cannot happen; the gas sensor is reading low (shorted, lying on the wrong pipe, or in the airstream)' : 'a liquid pipe far above the evaporating temperature it should sit at; the liquid sensor is reading high'}. Seeing no superheat, the board closed the EEV to ${f0(e.evp)}%, and the real coil starved: suction superheat ${f1s(e.sh)}°F at the outdoor unit, low pressure ${f0(e.lp)} psi. Capacity is down and the coil can frost.`,
+    fix:['Clamp a probe beside the indoor gas and liquid thermistors and compare; the one that disagrees with the probe is the fault.', 'Check sensor placement and clip contact before the resistance table.']}),
+  absorb:[/^Implausible reading: Indoor gas/, /^Suction superheat high/, /^Indoor coil freezing/]},
+ {id:'A4', fam:'unitary', cats:['crit'], cause:['iliq'], effect:['scid', 'hp', 'cap'],
+  when:c => { if (c.heat.length < 10 || !c.has('iliq') || !c.has('cond')) return null; const il = c.med(c.heat, 'iliq'), tc = c.med(c.heat, 'cond'), scid = c.med(c.heat, 'scid');
+    return isN(il) && isN(tc) && tc >= 90 && il < 40 && isN(scid) && scid >= 50 ? {rows:c.span(c.heat), il, tc, scid} : null; },
+  text:e => ({title:'Indoor liquid thermistor reading low (heating) → board sees huge indoor subcooling → under-feeds the condenser → heating capacity down',
+    why:`In heating the indoor liquid sensor is the condenser outlet and should sit a few degrees under the condensing temperature. It read ${f0(e.il)}°F against a condensing temperature of ${f1s(e.tc)}°F, an apparent ${f0(e.scid)}°F of subcooling that no coil produces. A control that believes that holds head pressure down and starves the indoor coil of hot gas.`,
+    fix:['Probe the indoor liquid line next to the sensor; expect it within 5–15°F of the condensing temperature.', 'Check the sensor is on the liquid pipe, not the distributor or a header, and its plug on the indoor board.']}),
+  absorb:[/^Implausible reading: Indoor gas/]},
+ {id:'A5', fam:'unitary', cats:['crit'], cause:['disch'], effect:['dsh', 'isod'],
+  when:c => { if (c.settled.length < 10 || !c.has('isod')) return null; const iso = c.med(c.settled, 'isod'), sh = c.med(c.settled, 'sh'), dsh = c.med(c.settled, 'dsh');
+    return isN(iso) && iso <= -8 && isN(sh) && sh >= 5 && isN(dsh) && dsh >= 0 ? {rows:c.span(c.settled), iso, sh, dsh, td:c.med(c.settled, 'disch')} : null; },
+  text:e => ({title:'Discharge thermistor reading low → the board cannot see how hot the compressor runs → no derate when it should → compressor at risk',
+    why:`The logged discharge (${f0(e.td)}°F) sat ${f1s(-e.iso)}°F below what an ideal compression of the measured suction gas would produce, with suction superheat ${f1s(e.sh)}°F (dry gas). Real compressors always run hotter than ideal, never colder; a reading below the ideal line with dry suction means the sensor is low, and every discharge-temperature protection and control that relies on it is blind by the same amount.`,
+    fix:['Clamp a probe on the discharge line beside the thermistor and compare at steady speed.', 'Check the thermistor clip and insulation; a loose or exposed sensor reads the air, not the pipe.']}),
+  absorb:[]},
+ {id:'A6', fam:'unitary', cats:['crit'], cause:['disch'], effect:['rpserr', 'dsh', 'sh'],
+  when:c => { if (c.settled.length < 10 || !c.hasS('dropDisch')) return null; const dd = c.on(c.run, 'dropDisch'), iso = c.med(c.settled, 'isod'), dsh = c.med(c.settled, 'dsh'), lift = c.med(c.settled, 'lift');
+    return dd >= 0.2 && isN(iso) && iso >= 60 && isN(dsh) && dsh >= 90 && isN(lift) && lift < 70 ? {rows:c.span(c.settled), dd, iso, dsh, lift, held:c.share(c.settled, i => c.v('rpserr', i) <= -SIG.rpsHold)} : null; },
+  text:e => ({title:'Discharge thermistor reading high → false "discharge too hot" → board derates speed and opens the EEV → capacity capped, superheat pulled down',
+    why:`The discharge-temperature drop control was active ${pct(e.dd, 1)}% of the run and the compressor was held under its target ${pct(e.held, 1)}% of the settled time, yet the lift was only ${f0(e.lift)}°F and the logged discharge sat ${f0(e.iso)}°F above an ideal compression, far outside what any swing compressor adds. The reading, not the compressor, is hot.`,
+    fix:['Probe the discharge line beside the thermistor; if the pipe is 30°F+ cooler than the reading, replace the sensor.', 'Until then the unit will cap itself on warm days for no mechanical reason.']}),
+  absorb:[/^Protection control is capping speed/, /^Compressor held/, /^Discharge peaked/]},
+ {id:'A7', fam:'unitary', cats:['crit'], cause:['suct'], effect:['evpct', 'lp', 'appr'],
+  when:c => { if (c.heat.length < 10 || !c.has('ev')) return null; const sh = c.med(c.heat, 'sh'), dsh = c.med(c.heat, 'dsh'), evp = c.med(c.heat, 'evpct'), appr = c.med(c.heat, 'appr');
+    return isN(sh) && sh < 2 && isN(dsh) && dsh >= 30 && isN(evp) && evp <= 15 ? {rows:c.span(c.heat), sh, dsh, evp, appr, lp:c.med(c.heat, 'lp')} : null; },
+  text:e => ({title:'Suction thermistor reading low (heating) → board sees zero superheat → outdoor EEV shut → starved outdoor coil, falling suction pressure, defrost storms',
+    why:`Suction superheat read ${f1s(e.sh)}°F while discharge superheat was ${f1s(e.dsh)}°F: dry, hot discharge cannot come from a flooded suction, so the suction sensor is reading cold. The board, seeing flooding, closed the outdoor EEV to ${f0(e.evp)}%; the real coil starved (evaporating ${f1s(e.appr)}°F below outdoor air, low pressure ${f0(e.lp)} psi) and will frost early and often.`,
+    fix:['Probe the suction line at the thermistor; a sensor reading 10°F+ under the pipe is the fault.', 'Check the clip and insulation wrap over it.']}),
+  absorb:[/^Suction superheat near zero/, /^Liquid returning to the compressor/]},
+ {id:'A8', fam:'unitary', cats:['crit'], cause:['suct'], effect:['evpct', 'dsh', 'disch', 'coildt'],
+  when:c => { if (c.heat.length < 10 || !c.has('ev')) return null; const sh = c.med(c.heat, 'sh'), dsh = c.med(c.heat, 'dsh'), evp = c.med(c.heat, 'evpct');
+    return isN(sh) && sh >= 25 && isN(dsh) && dsh < 15 && isN(evp) && evp >= 90 ? {rows:c.span(c.heat), sh, dsh, evp} : null; },
+  text:e => ({title:'Suction thermistor reading high (heating) → board sees high superheat → outdoor EEV opened wide → liquid returning to the compressor',
+    why:`Suction superheat read ${f1s(e.sh)}°F while discharge superheat was only ${f1s(e.dsh)}°F. Dry gas at the inlet makes hot gas at the outlet; cold discharge with a "hot" suction means the suction sensor is reading high. The board chased it: outdoor EEV ${f0(e.evp)}% open, coil overfed, liquid back to the compressor.`,
+    fix:['Probe the suction line at the thermistor and compare.', 'Check that the sensor is on the suction pipe and not touching the compressor shell or discharge line.']}),
+  absorb:[/^Suction superheat high/, /^Discharge superheat under/, /^Liquid returning to the compressor/]},
+ {id:'A9', fam:'unitary', cats:['crit'], cause:['ochex'], effect:['evap', 'lp', 'appr', 'cfm'],
+  when:c => { if (c.heat.length < 10 || !c.has('ochex')) return null; const oat = c.med(c.heat, 'oat'), appr = c.med(c.heat, 'appr'), odsat = c.med(c.heat, 'odsat');
+    if (c.heat.length * c.dt >= 90 && !c.defrosts && isN(appr) && appr >= 30 && isN(odsat) && odsat >= 15) return {rows:c.span(c.heat), kind:'warm', appr, odsat, min:c.heat.length * c.dt};
+    if (c.defrosts && c.defrosts / c.hrs >= 3 && isN(oat) && oat >= 40) return {rows:c.span(c.heat), kind:'cold', oat, d:c.defrosts, hrs:c.hrs};
+    return null; },
+  text:e => e.kind === 'warm' ? ({title:'Outdoor coil thermistor reading warm → defrost never triggers → coil icing over → evaporating temperature falling, capacity gone',
+    why:`Over ${f0(e.min)} min of heating the coil evaporated ${f1s(e.appr)}°F below outdoor air (frost territory) and the coil thermistor sat ${f1s(e.odsat)}°F above the evaporating temperature, yet no defrost ran. The sensor the defrost logic trusts is not seeing the ice.`,
+    fix:['Look at the coil: ice on the lower rows with a thermistor that reads above freezing is the confirmation.', 'Check the coil thermistor is in its well and making contact; resistance-check it.']})
+  : ({title:'Outdoor coil thermistor reading cold → defrost on a mild day → defrost storms, heating interrupted',
+    why:`${e.d} defrosts in ${e.hrs.toFixed(1)} h at an outdoor temperature of ${f0(e.oat)}°F, where a clean coil rarely frosts at all. The coil thermistor is reading colder than the coil.`,
+    fix:['Compare the coil thermistor with a probe at the same spot while running.', 'If the coil is genuinely frosting at 40°F+, look at charge and the outdoor EEV instead.']}),
+  absorb:[/^\d+ defrosts? in/, /^Heating: outdoor coil/]},
+ {id:'A10', fam:'unitary', cats:['minor'], cause:['oat'], effect:['fan', 'appr'],
+  when:c => { const offs = ['ochex', 'ocmid', 'suct', 'liq', 'disch'].map(id => c.cal['raw_' + id]).filter(isN); if (offs.length < 3) return null;
+    const sign = Math.sign(offs[0]); return offs.every(o => Math.abs(o) >= 4 && Math.sign(o) === sign) ? {rows:c.span(c.run), off:offs.reduce((a, b) => a + b, 0) / offs.length, n:offs.length} : null; },
+  text:e => ({title:`Outdoor air thermistor reading ${e.off > 0 ? 'low' : 'high'} → fan speed and defrost windows chosen for the wrong weather`,
+    why:`With the compressor off for 30+ minutes, ${e.n} outdoor thermistors all sat ${Math.abs(e.off).toFixed(1)}°F ${e.off > 0 ? 'above' : 'below'} the outdoor-air reading, in the same direction. One sensor disagreeing with four that agree is the one that is wrong: the outdoor-air thermistor. The board picks condenser fan speed, cold-climate limits and defrost rules from it.`,
+    fix:['Compare the outdoor-air thermistor with a shaded probe; check it is out of the sun and the fan discharge.', 'The energy math in this app does not correct for it, since it is the reference the others are checked against.']}),
+  absorb:[/^Thermistor drift at rest/]},
+ {id:'A11', fam:'unitary', cats:['crit'], cause:['fin'], effect:['rpserr', 'cap'],
+  when:c => { if (c.settled.length < 10 || !c.has('fin') || !c.hasS('dropFin')) return null; const df = c.on(c.run, 'dropFin'), rise = c.med(c.settled, i => isN(c.v('fin', i)) && isN(c.v('oat', i)) ? c.v('fin', i) - c.v('oat', i) : null), inv = c.med(c.settled, 'inv1');
+    return df >= 0.1 && isN(rise) && rise >= 90 && isN(inv) && inv <= 8 ? {rows:c.span(c.settled), df, rise, inv} : null; },
+  text:e => ({title:'Inverter fin thermistor reading high → false heat-sink derate → compressor capped on a cool day',
+    why:`The fin-temperature drop control was active ${pct(e.df, 1)}% of the run with the fin reading ${f0(e.rise)}°F over outdoor air at only ${f1s(e.inv)} A of inverter current. A heat sink at that current does not run that hot; the sensor or its mounting is the fault, and the unit is throttling itself for nothing.`,
+    fix:['Check the fin thermistor seating on the heat sink and its connector.', 'If the heat sink is genuinely hot at low current, the fan over it or the airflow path through the control box is blocked.']}),
+  absorb:[/^Protection control is capping speed/, /^Compressor held/]},
+ {id:'A12', fam:'unitary', cats:['crit'], cause:e => [e.sensor], effect:['rpserr', 'fan', 'cond', 'evap'],
+  when:c => { if (c.settled.length < 10) return null; const tcc = c.med(c.settled, 'tcchk'), tec = c.med(c.settled, 'techk'), hpd = c.hasS('dropHp') ? c.on(c.run, 'dropHp') : 0, lpd = c.hasS('dropLp') ? c.on(c.run, 'dropLp') : 0, held = c.share(c.settled, i => c.v('rpserr', i) <= -SIG.rpsHold);
+    if (isN(tcc) && Math.abs(tcc) >= 6 && (hpd >= 0.1 || held >= 0.2)) return {rows:c.span(c.settled), sensor:'hp', err:tcc, drop:hpd, held, pd:c.cal.pdiff};
+    if (isN(tec) && Math.abs(tec) >= 6 && (lpd >= 0.1 || held >= 0.2)) return {rows:c.span(c.settled), sensor:'lp', err:tec, drop:lpd, held, pd:c.cal.pdiff};
+    return null; },
+  text:e => ({title:`${e.sensor === 'hp' ? 'High' : 'Low'}-pressure transducer off → board sees ${e.sensor === 'hp' ? 'high head' : 'freeze risk'} that is not there → speed capped${e.sensor === 'hp' ? ', fan flat out' : ''}`,
+    why:`The board's saturation temperature from the ${e.sensor === 'hp' ? 'high' : 'low'}-pressure transducer disagreed with this app's own PT-table conversion by ${f1s(Math.abs(e.err))}°F once settled${isN(e.pd) ? `, and the two transducers differed by ${f0(Math.abs(e.pd))} psi with the system equalised at rest` : ''}. Its drop control was active ${pct(e.drop, 1)}% of the run and the compressor was held under target ${pct(e.held, 1)}% of the settled time: the unit is protecting itself from a pressure that only the sensor sees.`,
+    fix:['Gauge the service port against the logged pressure at steady speed; a steady offset of 15 psi+ is the transducer.', 'Check the refrigerant selector in this app first: an R-32 unit read as R-410A produces the same symptom.']}),
+  absorb:[/^Protection control is capping speed/, /^Compressor held/]},
+ {id:'A13', fam:'unitary', cats:['minor'], cause:e => [e.sensor], effect:e => e.effects,
+  when:c => { const map = {suct:['sh'], liq:['sc', 'scerr'], disch:['dsh', 'isod'], ochex:['odsat', 'appr'], ocmid:[]}; for (const [id, eff] of Object.entries(map)){ const raw = c.cal['raw_' + id]; if (isN(raw) && Math.abs(raw) > 6) return {rows:c.span(c.run), sensor:id, raw, effects:eff}; } return null; },
+  text:(e, c) => ({title:`${chById[e.sensor].label} thermistor ${Math.abs(e.raw).toFixed(0)}°F off at rest → every number built on it is off by the same amount`,
+    why:`With the compressor off 30+ minutes every outdoor thermistor should read outdoor air; this one sat ${Math.abs(e.raw).toFixed(1)}°F ${e.raw > 0 ? 'above' : 'below'} it while the others agreed. Too large to be corrected automatically, so the readings derived from it (${e.effects.map(x => chById[x] ? chById[x].short : x).join(', ') || 'its checks'}) carry the same error and the board controls on it.`,
+    fix:['Resistance-check the thermistor at a measured temperature; check the connector and clip.']}),
+  absorb:[/^Thermistor drift at rest/]},
+ {id:'C2', fam:'unitary', cats:['crit', 'fan'], cause:['cfm'], effect:['evap', 'sh', 'dsh'],
+  when:c => { if (c.cool.length < 10 || !c.has('cfm') || !c.has('reqcfm')) return null; const shortA = c.share(c.cool, i => isN(c.v('cfm', i)) && isN(c.v('reqcfm', i)) && c.v('reqcfm', i) > 0 && c.v('cfm', i) < 0.85 * c.v('reqcfm', i)), sh = c.med(c.cool, 'sh'), te = c.med(c.cool, 'evap');
+    return shortA >= 0.3 && isN(sh) && (sh < 4 || (isN(te) && te < 35)) ? {rows:c.span(c.cool), shortA, sh, te, cfm:c.med(c.cool, 'cfm'), req:c.med(c.cool, 'reqcfm')} : null; },
+  text:e => ({title:'Indoor airflow short → coil running cold → liquid returning to the compressor',
+    why:`The blower delivered under 85% of the airflow the outdoor unit asked for on ${pct(e.shortA, 1)}% of the cooling run (median ${f0(e.cfm)} of ${f0(e.req)} cfm). With less air across it the coil cannot boil off what the EEV feeds it: evaporating temperature settled at ${isN(e.te) ? f1s(e.te) : '—'}°F and suction superheat at ${f1s(e.sh)}°F, so liquid is leaving the coil.`,
+    fix:['Filter, coil face, blower wheel and closed registers first; then static pressure against the blower table.', 'If the blower setting was trimmed down, bring it back to the matched airflow.']}),
+  absorb:[/^Indoor airflow short of request/, /^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]},
+ {id:'C3', fam:'unitary', cats:['crit'], cause:['ievpct'], effect:['sh', 'dsh', 'coildt'],
+  when:c => { if (c.cool.length < 10 || !c.has('iev') || !c.rpsMax) return null; const pinned = c.share(c.cool, i => c.v('ievpct', i) >= 95), sh = c.med(c.cool, 'sh'), rps = c.med(c.cool, 'rps');
+    return pinned >= 0.7 && isN(sh) && sh < 4 && isN(rps) && rps < 0.8 * c.rpsMax ? {rows:c.span(c.cool), pinned, sh, rps, cdt:c.med(c.cool, 'coildt')} : null; },
+  text:e => ({title:'Indoor EEV sitting wide open → coil overfed → liquid returning to the compressor',
+    why:`The indoor EEV stayed at or above 95% open for ${pct(e.pinned, 1)}% of the cooling run while the compressor ran at ${f0(e.rps)} rps, well under its maximum, and the coil superheat at the indoor sensors (${f1s(e.cdt)}°F) agreed with the suction superheat (${f1s(e.sh)}°F): both near zero. The valve is not closing when the board asks, or the board is not asking.`,
+    fix:['Check the EEV coil resistance and connector; cycle power and listen for the valve stepping closed on start-up.', 'If the valve moves, suspect the indoor board\'s thermistor inputs; if it does not, the valve body.']}),
+  absorb:[/^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]},
+ // ---- B. valves ----
+ {id:'B2', fam:'unitary', cats:['crit'], cause:['ievpct'], effect:['sh', 'lp', 'evap', 'cfm'],
+  when:c => { if (c.cool.length < 10 || !c.sf(/^Indoor EV not responding/)) return null; const sh = c.med(c.cool, 'sh'), evp = c.med(c.cool, 'ievpct'), te = c.med(c.cool, 'evap');
+    return isN(sh) && sh >= 20 && isN(evp) && evp >= 40 ? {rows:c.span(c.cool), sh, evp, te} : null; },
+  text:e => ({title:'Indoor EEV not moving when commanded → coil starved → high superheat, low suction pressure, freeze risk',
+    why:`The board stepped the indoor EEV and the coil did not answer (pulse moves with no change in coil superheat), with the valve commanded to ${f0(e.evp)}% and suction superheat stuck at ${f1s(e.sh)}°F, evaporating at ${f1s(e.te)}°F. A valve that is commanded open but physically closed starves the coil the same way low charge would, except the subcooling stays normal.`,
+    fix:['Check the EEV coil resistance and connector; power-cycle and listen for the valve stepping on start-up.', 'If the coil steps and nothing changes, the valve body or a blocked inlet strainer.']}),
+  absorb:[/^Indoor EV not responding/, /^Suction superheat high/, /^Indoor coil freezing/]},
+ {id:'B4', fam:'unitary', cats:['crit'], cause:['evpct'], effect:['sh', 'dsh', 'sc'],
+  when:c => { if (c.heat.length < 10 || !c.sf(/^Outdoor EV not responding/)) return null; const sh = c.med(c.heat, 'sh'), evp = c.med(c.heat, 'evpct');
+    return isN(sh) && sh < 4 && isN(evp) && evp >= 80 ? {rows:c.span(c.heat), sh, evp, dsh:c.med(c.heat, 'dsh')} : null; },
+  text:e => ({title:'Outdoor EEV not closing when commanded (heating) → outdoor coil overfed → liquid returning to the compressor',
+    why:`The board stepped the outdoor EEV and superheat did not answer; the valve sat at ${f0(e.evp)}% with suction superheat ${f1s(e.sh)}°F and discharge superheat ${f1s(e.dsh)}°F. The control is asking for less flow and not getting it.`,
+    fix:['EEV coil resistance and connector; listen for the stepping on start-up.', 'A valve that steps but does not change superheat is stuck or has debris on its seat.']}),
+  absorb:[/^Outdoor EV not responding/, /^Suction superheat near zero/, /^Liquid returning to the compressor/, /^Discharge superheat under/]},
+ {id:'B5', fam:'unitary', cats:['crit'], cause:['evpct'], effect:['sh', 'lp', 'appr', 'disch'],
+  when:c => { if (c.heat.length < 10 || !c.sf(/^Outdoor EV not responding/)) return null; const sh = c.med(c.heat, 'sh'), evp = c.med(c.heat, 'evpct');
+    return isN(sh) && sh >= 20 && isN(evp) && evp <= 30 ? {rows:c.span(c.heat), sh, evp, lp:c.med(c.heat, 'lp'), appr:c.med(c.heat, 'appr')} : null; },
+  text:e => ({title:'Outdoor EEV not opening when commanded (heating) → starved outdoor coil → suction pressure falling, frosting, hot discharge',
+    why:`Pulse moves on the outdoor EEV changed nothing while the valve sat at ${f0(e.evp)}% and superheat ran ${f1s(e.sh)}°F; the coil evaporated ${f1s(e.appr)}°F below outdoor air at ${f0(e.lp)} psi. The board wants more flow and the valve is not giving it.`,
+    fix:['EEV coil and connector; strainer ahead of the valve.', 'Watch for defrosts stacking up as the coil runs cold.']}),
+  absorb:[/^Outdoor EV not responding/, /^Suction superheat high/, /^Starved compressor/]},
+ {id:'B6', fam:'unitary', cats:['crit'], cause:['suct'], effect:['dsh', 'disch', 'isod', 'cap'],
+  when:c => { if (c.cool.length < 10 || !c.has('igas')) return null; const dsh = c.med(c.cool, 'dsh'), sh = c.med(c.cool, 'sh'), iso = c.med(c.cool, 'isod'), pick = c.med(c.cool, i => isN(c.v('suct', i)) && isN(c.v('igas', i)) ? c.v('suct', i) - c.v('igas', i) : null), sv = c.hasS('svhot') ? c.on(c.cool, 'svhot') : 0;
+    return isN(dsh) && dsh < 20 && isN(sh) && sh >= 8 && isN(iso) && iso < 5 && isN(pick) && pick >= 12 && sv <= 0.1 ? {rows:c.span(c.cool), dsh, sh, iso, pick} : null; },
+  text:e => ({title:'4-way valve bleeding hot gas to suction → suction warmed, discharge cooled → low discharge superheat with a normal coil, capacity down',
+    why:`The coil itself was dry (coil superheat ${f1s(e.sh)}°F) yet the gas arriving at the compressor was ${f1s(e.pick)}°F warmer than it left the coil, and the discharge ran only ${f1s(e.dsh)}°F over condensing (${f1s(e.iso)}°F from the ideal line, where a healthy compressor sits 15–40°F above it). Hot gas is leaking straight from the discharge side to the suction side inside the reversing valve, with the hot-gas bypass closed. It looks like floodback from the outdoor unit but the indoor coil says otherwise.`,
+    fix:['Feel the four lines at the reversing valve: the suction line should be cold and the line from the indoor coil only slightly warmer; a suction tube warm near the valve body is the leak.', 'A temperature difference under 3°F between the two low-side tubes at the valve confirms it; the valve is replaced, not repaired.']}),
+  absorb:[/^Discharge superheat under/, /^Liquid returning to the compressor/]},
+ {id:'B7', fam:'unitary', cats:['crit'], cause:['igas', 'iliq'], effect:['hp', 'lp', 'disch'],
+  when:c => { if (!c.has('igas') || !c.has('iliq')) return null; const r = c.run.filter(i => D.runSec[i] >= 180);
+    const h = r.filter(i => D.mode[i] === 'heat' && isN(c.v('igas', i)) && isN(c.v('iliq', i)) && c.v('igas', i) < 60 && c.v('iliq', i) < 60 && c.v('cond', i) > 90);
+    const k = r.filter(i => D.mode[i] === 'cool' && isN(c.v('igas', i)) && isN(c.v('iliq', i)) && c.v('igas', i) > 100 && c.v('iliq', i) > 100);
+    const rows = h.length >= k.length ? h : k; return rows.length * c.dt >= 5 ? {rows:c.span(rows), mode:h.length >= k.length ? 'heat' : 'cool', min:rows.length * c.dt} : null; },
+  text:e => ({title:`4-way valve did not shift → unit ${e.mode === 'heat' ? 'cooling while heating is called' : 'heating while cooling is called'} → indoor coil ${e.mode === 'heat' ? 'cold' : 'hot'}, no comfort, wrong-side pressures`,
+    why:`For ${f0(e.min)} min the mode said ${e.mode === 'heat' ? 'heating' : 'cooling'} while the indoor coil's own thermistors said the opposite (${e.mode === 'heat' ? 'both under 60°F with the compressor condensing above 90°F' : 'both over 100°F'}). The refrigerant is flowing the wrong way for the call: the reversing valve stayed where it was.`,
+    fix:['Check the 4-way solenoid coil and its command (the 4-way column); if commanded and not shifting, the pilot or slide is stuck.', 'A pressure difference too small to shift the slide (very low charge) can do the same; check charge if the valve proves good.']}),
+  absorb:[/^Implausible reading/]},
+ {id:'B8', fam:'unitary', cats:['crit'], cause:['suct'], effect:['dsh', 'disch', 'cap'],
+  when:c => { if (c.settled.length < 10 || !c.hasS('svhot') || !c.rpsMax) return null; const fast = c.settled.filter(i => c.v('rps', i) >= 0.5 * c.rpsMax && isN(c.v('lp', i)) && c.v('lp', i) > 100); if (fast.length < 10) return null;
+    const sv = c.on(fast, 'svhot'), dsh = c.med(fast, 'dsh'); return sv >= 0.8 && isN(dsh) && dsh < 20 ? {rows:c.span(fast), sv, dsh, lp:c.med(fast, 'lp')} : null; },
+  text:e => ({title:'Hot-gas bypass valve open when it should not be → discharge dumped to suction → low discharge superheat, capacity lost',
+    why:`The hot-gas bypass solenoid showed open ${pct(e.sv, 1)}% of the time at half speed or more with low pressure at ${f0(e.lp)} psi, nowhere near the freeze floor that justifies it, and discharge superheat ran ${f1s(e.dsh)}°F. Discharge gas is being recycled to the suction side instead of doing work.`,
+    fix:['Confirm the command vs the valve: if the column says ON, the board is opening it (check the LP transducer, A12); if OFF with the signature present, the valve is stuck open.', 'Feel the bypass line: it should be cold when closed.']}),
+  absorb:[/^Discharge superheat under/, /^Liquid returning to the compressor/]},
+ {id:'B9', fam:'unitary', cats:['crit'], cause:['lp'], effect:['rpserr', 'suct', 'evap'],
+  when:c => { if (c.settled.length < 10 || !c.hasS('svhot') || !c.hasS('dropLp') || !c.rpsMax) return null; const slow = c.settled.filter(i => c.v('rps', i) <= 0.4 * c.rpsMax); if (slow.length < 6) return null;
+    const lpd = c.on(slow, 'dropLp'), sv = c.on(slow, 'svhot'), lp = c.med(slow, 'lp'); return lpd >= 0.2 && sv >= 0.5 && isN(lp) && lp < 100 ? {rows:c.span(slow), lpd, sv, lp} : null; },
+  text:e => ({title:'Hot-gas bypass commanded but suction pressure still falling → bypass valve not opening → low-pressure drop control limiting the unit at low load',
+    why:`At low speed the board opened the hot-gas bypass ${pct(e.sv, 1)}% of the time and still had its low-pressure drop control active ${pct(e.lpd, 1)}% of the time with suction at ${f0(e.lp)} psi. The bypass is the board's tool for exactly this; commanded and not helping means the solenoid is not opening.`,
+    fix:['Check the solenoid coil (magnet test at the stem) and the bypass strainer.', 'If the bypass line warms when commanded, the valve is fine and the low pressure has another cause: airflow or charge.']}),
+  absorb:[/^Freeze-up protection in cooling/]},
+ {id:'B10', fam:'unitary', cats:['crit'], cause:['evinj'], effect:['disch', 'dsh', 'rpserr'],
+  when:c => { if (c.heat.length < 10 || !c.has('evinj')) return null; const hot = c.heat.filter(i => isN(c.v('disch', i)) && c.v('disch', i) >= 200); if (hot.length < 6) return null;
+    const inj = c.med(hot, 'evinj'), dd = c.hasS('dropDisch') ? c.on(hot, 'dropDisch') : 0; return inj === 0 && (dd >= 0.1 || c.share(hot, i => c.v('rpserr', i) <= -SIG.rpsHold) >= 0.2) ? {rows:c.span(hot), td:c.med(hot, 'disch'), dd} : null; },
+  text:e => ({title:'Injection EEV not opening in cold heating → discharge climbing unchecked → board derates the compressor',
+    why:`Discharge reached ${f0(e.td)}°F with the injection valve at zero pulses the whole time; injection is this compressor's way of cooling itself at high lift, and the board instead fell back on its discharge-temperature drop control (${pct(e.dd, 1)}% of the time) and speed limits. Heating capacity is being given up to keep the compressor alive.`,
+    fix:['Check the injection EEV coil and connector; the valve should step as discharge climbs past about 190°F.', 'If pulses are commanded but discharge does not respond, the valve body or its strainer.']}),
+  absorb:[/^Protection control is capping speed/, /^Discharge peaked/, /^Compressor held/]},
+ {id:'B11', fam:'unitary', cats:['crit'], cause:['evinj'], effect:['dsh', 'disch'],
+  when:c => { if (c.heat.length < 10 || !c.has('evinj')) return null; const mild = c.heat.filter(i => isN(c.v('oat', i)) && c.v('oat', i) >= 45); if (mild.length < 10) return null;
+    const inj = c.med(mild, 'evinj'), dsh = c.med(mild, 'dsh'); return isN(inj) && inj > 30 && isN(dsh) && dsh < 15 ? {rows:c.span(mild), inj, dsh, oat:c.med(mild, 'oat')} : null; },
+  text:e => ({title:'Injection EEV open in mild weather → liquid into the compressor mid-stroke → discharge superheat collapsing',
+    why:`At ${f0(e.oat)}°F outdoors the injection valve sat at ${f0(e.inj)} pulses and discharge superheat at ${f1s(e.dsh)}°F. Injection belongs to cold, high-lift heating; open here it is quenching a compressor that was not hot, and the wet discharge says so.`,
+    fix:['Check the injection valve closes fully at power-up (listen for the steps).', 'If it is being commanded, the discharge thermistor may be reading high (A6).']}),
+  absorb:[/^Discharge superheat under/]},
+ {id:'B12', fam:'unitary', cats:['minor'], cause:['liq'], effect:['sc', 'scerr', 'cap'],
+  when:c => { if (c.heat.length < 10 || !c.hasS('svdrain')) return null; const sv = c.on(c.heat, 'svdrain'), scerr = c.med(c.heat, 'scerr'), evp = c.med(c.heat, 'evpct');
+    return sv >= 0.9 && isN(scerr) && scerr <= -3 && isN(evp) && evp < 90 ? {rows:c.span(c.heat), sv, scerr, evp} : null; },
+  text:e => ({title:'Drain-pan heater valve open the whole run → warm liquid diverted through the pan loop → subcooling robbed, heating capacity down',
+    why:`The pan-heater solenoid read open ${pct(e.sv, 1)}% of the heating run. The loop bleeds warm liquid around the pan, so subcooling ran ${f1s(-e.scerr)}°F under target while the outdoor EEV was only ${f0(e.evp)}% open, which rules out a charge shortage: the liquid is there, it is being spent on the pan.`,
+    fix:['The valve should cycle with pan temperature in cold weather and stay closed otherwise; a coil energised continuously or a stuck-open valve is the fault.', 'Feel the pan loop line: warm all the time means open all the time.']}),
+  absorb:[/^Subcooling ran .* under target/]},
+ {id:'B13', fam:'unitary', cats:['minor', 'fan'], cause:['fancur'], effect:['fan'],
+  when:c => { if (c.heat.length < 10 || !c.hasS('svdrain') || !c.has('fancur')) return null; const cold = c.heat.filter(i => isN(c.v('oat', i)) && c.v('oat', i) <= 25); if (cold.length * c.dt < 120) return null;
+    const sv = c.on(cold, 'svdrain'), sl = c.slope(cold, 'fancur'), fc = c.med(cold, 'fancur'); return sv === 0 && isN(sl) && isN(fc) && fc > 0 && sl / fc >= 0.2 ? {rows:c.span(cold), min:cold.length * c.dt, rise:sl / fc} : null; },
+  text:e => ({title:'Drain-pan heater never opened in freezing weather → pan icing → fan working harder each hour',
+    why:`Over ${f0(e.min)} min below 25°F the pan-heater valve never opened, and the outdoor fan's current climbed ${Math.round(e.rise * 100)}% per hour at the same speed: ice building in the pan is loading the blade.`,
+    fix:['Look in the pan for ice reaching the blade; check the pan solenoid coil and its command.', 'Clear the ice before it takes the fan.']}),
+  absorb:[/^Base pan ice/]},
+ // ---- C. charge and the liquid line ----
+ {id:'C4', fam:'unitary', cats:['crit'], cause:['sc'], effect:['evpct', 'sh', 'dsh', 'disch', 'lp'],
+  when:c => { if (c.heat.length < 10 || !c.has('ev')) return null; const pinned = c.share(c.heat, i => c.v('evpct', i) >= 95), scerr = c.med(c.heat, 'scerr'), sh = c.med(c.heat, 'sh');
+    return pinned >= 0.7 && isN(scerr) && scerr <= -3 && isN(sh) && sh >= 15 ? {rows:c.span(c.heat), pinned, scerr, sh, dsh:c.med(c.heat, 'dsh')} : null; },
+  text:e => ({title:'Low charge → outdoor EEV wide open chasing subcooling → starved evaporator and hot discharge',
+    why:`Subcooling ran ${f1s(-e.scerr)}°F under its target once settled while the outdoor EEV sat at or above 95% open for ${pct(e.pinned, 1)}% of the heating run: the valve is as open as it gets and still cannot hold liquid in the condenser. The evaporator is starved in turn: suction superheat ${f1s(e.sh)}°F, discharge superheat ${isN(e.dsh) ? f1s(e.dsh) : '—'}°F. Low charge, or a restriction between the liquid-line sensor and the outdoor EEV.`,
+    fix:['Weigh the charge against nameplate plus the line-set allowance before adding anything.', 'If the charge is right, look for a restriction: liquid-line strainer, drier, a kinked line.']}),
+  absorb:[/^Subcooling ran .* under target/, /^Suction superheat high/, /^Starved compressor/, /^Discharge peaked/, /^Low charge: EEV wide open/]},
+ {id:'CC2', fam:'unitary', cats:['crit'], cause:['sc'], effect:['ievpct', 'sh', 'lp', 'disch'],
+  when:c => { if (c.cool.length < 10 || !c.has('iev')) return null; const pinned = c.share(c.cool, i => c.v('ievpct', i) >= 95), sc = c.med(c.cool, 'sc'), sh = c.med(c.cool, 'sh');
+    return pinned >= 0.7 && isN(sc) && sc < 3 && isN(sh) && sh >= 15 ? {rows:c.span(c.cool), pinned, sc, sh, lp:c.med(c.cool, 'lp'), td:c.med(c.cool, 'disch')} : null; },
+  text:e => ({title:'Low charge (cooling) → no subcooling to feed the indoor EEV → valve wide open chasing superheat → starved coil, hot discharge',
+    why:`Subcooling at the outdoor unit was only ${f1s(e.sc)}°F once settled (liquid barely leaving the condenser as liquid), the indoor EEV sat at or above 95% open ${pct(e.pinned, 1)}% of the run trying to get flow, and the coil still ran ${f1s(e.sh)}°F of superheat at ${f0(e.lp)} psi with discharge at ${f0(e.td)}°F. Everything downstream of the condenser is short of refrigerant.`,
+    fix:['Find and fix the leak before weighing in charge.', 'A restriction in the liquid line gives high SC, not low; low SC with a pinned indoor valve is charge.']}),
+  absorb:[/^Suction superheat high/, /^Starved compressor/, /^Discharge peaked/, /^Low charge: EEV wide open/]},
+ {id:'CC3', fam:'unitary', cats:['crit'], cause:['sc'], effect:e => [e.valve, 'hp', 'disch'],
+  when:c => { const rows = c.cool.length >= c.heat.length ? c.cool : c.heat; if (rows.length < 10) return null; const mode = rows === c.cool ? 'cool' : 'heat', valve = mode === 'cool' ? 'ievpct' : 'evpct'; if (!c.has(valve === 'ievpct' ? 'iev' : 'ev')) return null;
+    const scerr = c.med(rows, 'scerr'), sc = c.med(rows, 'sc'), evp = c.med(rows, valve), appr = c.med(rows, 'appr');
+    const high = isN(scerr) ? scerr >= 5 : (isN(sc) && sc >= 20); return high && isN(evp) && evp <= 20 && isN(appr) && appr < 25 ? {rows:c.span(rows), mode, valve, sc, scerr, evp, hp:c.med(rows, 'hp'), appr} : null; },
+  text:e => ({title:'Too much refrigerant → liquid backing up in the condenser → EEV nearly closed, high head and hot discharge',
+    why:`Subcooling ran ${f1s(e.sc)}°F${isN(e.scerr) ? ` (${f1s(e.scerr)}°F over target)` : ''} once settled while the ${e.valve === 'ievpct' ? 'indoor' : 'outdoor'} EEV was throttled to ${f0(e.evp)}% and head pressure sat at ${f0(e.hp)} psi. The condenser's approach to outdoor air was a normal ${f1s(e.appr)}°F, so it is rejecting heat fine; it is simply full of liquid. That is charge, not a dirty coil.`,
+    fix:['Recover to nameplate weight plus line-set allowance.', 'If the charge weighs right, look for a restriction downstream of the liquid-line sensor (drier, strainer, indoor EEV inlet).']}),
+  absorb:[/^Subcooling ran .* over target/, /^Discharge peaked/, /^High head/]},
+ {id:'CC4', fam:'unitary', cats:['crit'], cause:['hp'], effect:['cond', 'odsat', 'appr'],
+  when:c => { if (c.cool.length < 10 || !c.has('ochex')) return null; const odsat = c.med(c.cool, 'odsat'), appr = c.med(c.cool, 'appr'), coilair = c.med(c.cool, i => isN(c.v('ochex', i)) && isN(c.v('oat', i)) ? c.v('ochex', i) - c.v('oat', i) : null), scerr = c.med(c.cool, 'scerr'), sc = c.med(c.cool, 'sc');
+    return isN(odsat) && odsat >= 12 && isN(appr) && appr >= 25 && isN(coilair) && coilair <= 20 && (isN(scerr) ? scerr >= -2 : (isN(sc) && sc >= 5)) ? {rows:c.span(c.cool), odsat, appr, coilair, sc} : null; },
+  text:e => ({title:'Non-condensables in the system → head pressure higher than the coil temperature explains → derate, with subcooling and the coil itself looking normal',
+    why:`The pressure transducer put condensing at ${f1s(e.appr)}°F over outdoor air, but the coil thermistor sat only ${f1s(e.coilair)}°F over the air, ${f1s(e.odsat)}°F below the saturation temperature the pressure implies, with subcooling a normal ${f1s(e.sc)}°F. A dirty coil raises both the pressure and the coil temperature together; only a gas that does not condense (air, nitrogen) raises the pressure alone.`,
+    fix:['With the unit off and fully equalised, compare the standing pressure with the PT chart at the coil temperature; pressure above the chart is non-condensables.', 'Recover, evacuate to 500 microns with a decay test, weigh the charge back in.']}),
+  absorb:[/^High head/, /^Outdoor coil approach/]},
+ {id:'CC5', fam:'unitary', cats:['crit'], cause:['liq'], effect:e => e.mode === 'cool' ? ['sc', 'sh', 'lp', 'ievpct'] : ['sc', 'sh', 'lp', 'linedt'],
+  when:c => { const rows = c.cool.length >= c.heat.length ? c.cool : c.heat; if (rows.length < 10) return null; const mode = rows === c.cool ? 'cool' : 'heat';
+    const scerr = c.med(rows, 'scerr'), sc = c.med(rows, 'sc'), sh = c.med(rows, 'sh'); const high = isN(scerr) ? scerr >= 4 : (isN(sc) && sc >= 15); if (!(high && isN(sh) && sh >= 15)) return null;
+    if (mode === 'cool'){ const evp = c.med(rows, 'ievpct'); return isN(evp) && evp >= 80 ? {rows:c.span(rows), mode, sc, sh, evp, lp:c.med(rows, 'lp')} : null; }
+    const ld = c.med(rows, 'linedt'); return isN(ld) && ld >= 10 ? {rows:c.span(rows), mode, sc, sh, ld, lp:c.med(rows, 'lp')} : null; },
+  text:e => ({title:'Liquid-line restriction → liquid backs up behind it, starves the coil ahead of it → high subcooling and high superheat at the same time',
+    why:`Subcooling ran ${f1s(e.sc)}°F (liquid stacking up in the condenser) and suction superheat ${f1s(e.sh)}°F (a starved evaporator) at the same time${e.mode === 'cool' ? `, with the indoor EEV ${f0(e.evp)}% open and getting nothing` : `, with ${f1s(e.ld)}°F lost along the liquid line between the indoor coil and the outdoor unit`}; low pressure ${f0(e.lp)} psi. Overcharge gives high SC with low SH; low charge gives low SC with high SH; both high at once is a restriction between the two sensors.`,
+    fix:['Feel along the liquid line for a cold spot or frost: drier, strainer, a kinked or crushed section, the EEV inlet screen.', 'A drier that is cold on its outlet is plugged.']}),
+  absorb:[/^Subcooling ran .* over target/, /^Suction superheat high/, /^Starved compressor: restriction/]},
+ {id:'CC7', fam:'unitary', cats:['minor'], cause:['linedt'], effect:['sc'],
+  when:c => { if (c.heat.length < 10 || !c.has('linedt')) return null; const ld = c.med(c.heat, 'linedt'), tsc = D.runs.map(r => r.tSc).filter(isN); const slow = tsc.length ? tsc.sort((a, b) => a - b)[Math.floor(tsc.length / 2)] : null;
+    return isN(ld) && ld >= 8 && isN(slow) && slow >= 15 ? {rows:c.span(c.heat), ld, slow} : null; },
+  text:e => ({title:'Long or exposed line set → heat lost along the liquid line → subcooling slow to settle and read low at the outdoor unit',
+    why:`The liquid left the indoor coil ${f1s(e.ld)}°F warmer than it arrived at the outdoor unit, and subcooling took ${f0(e.slow)} min to reach target after start. That is heat leaving the line between the two, an installation characteristic rather than a fault; it costs heating capacity and makes charge adjustments slow to show.`,
+    fix:['Confirm line-set length against the charge allowance, and insulation on the liquid line where it runs through unconditioned space.']}),
+  absorb:[]},
+ {id:'CC8', fam:'unitary', cats:['minor'], cause:['sh'], effect:['cap'],
+  when:c => { if (!c.hasS('oilret')) return null; const ep = c.episodesOf(i => c.sv('oilret', i) === 'ON', 1); return ep.length >= 3 && ep.length / c.hrs >= 2 ? {rows:c.span(c.run), ep:ep.length, hrs:c.hrs} : null; },
+  text:e => ({title:'Oil-return operation running often → oil logging in the coil or line set → capacity dips every cycle',
+    why:`The board ran its oil-return routine ${e.ep} times in ${e.hrs.toFixed(1)} h. It does that when it has run long at low speed and expects oil to be lying in the evaporator and suction line; frequent returns point at a long line set, a low-speed habit (oversizing) or a riser without a trap.`,
+    fix:['Check line-set length and the suction riser for a trap; check whether the unit spends its life at minimum speed.']}),
+  absorb:[]},
+ // ---- D. airflow and coils ----
+ {id:'D2', fam:'unitary', cats:['crit', 'fan'], cause:['cfm'], effect:['hp', 'disch', 'coildt'],
+  when:c => { if (c.heat.length < 10 || !c.has('cfm') || !c.has('reqcfm')) return null; const shortA = c.share(c.heat, i => isN(c.v('cfm', i)) && isN(c.v('reqcfm', i)) && c.v('reqcfm', i) > 0 && c.v('cfm', i) < 0.85 * c.v('reqcfm', i)), hp = c.med(c.heat, 'hp'), hpd = c.hasS('dropHp') ? c.on(c.heat, 'dropHp') : 0, cdt = c.med(c.heat, 'coildt');
+    return shortA >= 0.3 && ((isN(hp) && hp >= (c.r32 ? 420 : 380)) || hpd >= 0.1 || (isN(cdt) && cdt >= 40)) ? {rows:c.span(c.heat), shortA, hp, hpd, cdt, cfm:c.med(c.heat, 'cfm'), req:c.med(c.heat, 'reqcfm')} : null; },
+  text:e => ({title:'Indoor airflow short (heating) → condenser cannot shed its heat → head pressure and discharge climbing → high-pressure derate',
+    why:`The blower delivered under 85% of the requested airflow ${pct(e.shortA, 1)}% of the heating run (median ${f0(e.cfm)} of ${f0(e.req)} cfm). In heating the indoor coil is the condenser; starve it of air and head pressure climbs: ${f0(e.hp)} psi settled${e.hpd ? `, HP drop control active ${pct(e.hpd, 1)}% of the time` : ''}, ${f1s(e.cdt)}°F drop across the coil.`,
+    fix:['Filter, coil face, blower wheel, closed registers, then static pressure.', 'A blower trimmed down for noise will do this every winter.']}),
+  absorb:[/^Indoor airflow short of request/, /^Discharge peaked/, /^Heating peak-cut/, /^Protection control is capping speed/]},
+ {id:'D3', fam:'unitary', cats:['minor', 'fan'], cause:['cfm'], effect:['reqcfm'],
+  when:c => { if (c.run.length < 20 || !c.has('cfm') || !c.has('reqcfm')) return null; const ok = c.run.filter(i => isN(c.v('cfm', i)) && isN(c.v('reqcfm', i)) && c.v('reqcfm', i) > 0); if (ok.length < 20) return null;
+    const reqs = ok.map(i => c.v('reqcfm', i)).sort((a, b) => a - b), lo = reqs[Math.floor(reqs.length / 3)], hi = reqs[Math.floor(reqs.length * 2 / 3)]; if (hi - lo < 100) return null;
+    const def = rows => c.med(rows, i => 1 - c.v('cfm', i) / c.v('reqcfm', i)), dlo = def(ok.filter(i => c.v('reqcfm', i) <= lo)), dhi = def(ok.filter(i => c.v('reqcfm', i) >= hi));
+    return isN(dlo) && isN(dhi) && dlo < 0.05 && dhi >= 0.15 ? {rows:c.span(ok), dlo, dhi, lo, hi} : null; },
+  text:e => ({title:'Blower at its torque limit → delivers at low speed, falls short as the request rises → the whole system de-rated at high load',
+    why:`At requests of ${f0(e.lo)} cfm and under the blower delivered within ${Math.round(e.dlo * 100)}% of request; at ${f0(e.hi)} cfm and over it fell ${Math.round(e.dhi * 100)}% short. Static pressure grows with the square of airflow, and this blower runs out of torque before it reaches the matched airflow: duct restriction, not a blower fault.`,
+    fix:['Measure total external static at high speed; compare with the air handler\'s rating.', 'Filter type and size, return duct, closed dampers, coil face.']}),
+  absorb:[/^Indoor airflow short of request/]},
+ {id:'D4', fam:'unitary', cats:['minor', 'fan', 'humid'], cause:['cfm'], effect:['sh', 'evap'],
+  when:c => { if (c.cool.length < 10 || !c.has('cfm') || !c.has('reqcfm')) return null; const over = c.share(c.cool, i => isN(c.v('cfm', i)) && isN(c.v('reqcfm', i)) && c.v('reqcfm', i) > 0 && c.v('cfm', i) > 1.1 * c.v('reqcfm', i)), sh = c.med(c.cool, 'sh'), te = c.med(c.cool, 'evap');
+    return over >= 0.3 && isN(sh) && sh >= 12 ? {rows:c.span(c.cool), over, sh, te, cfm:c.med(c.cool, 'cfm'), req:c.med(c.cool, 'reqcfm')} : null; },
+  text:e => ({title:'Blower delivering more than asked → coil running warm → little latent removal, superheat high',
+    why:`Airflow exceeded the request by 10% or more on ${pct(e.over, 1)}% of the cooling run (${f0(e.cfm)} of ${f0(e.req)} cfm), evaporating at ${f1s(e.te)}°F with ${f1s(e.sh)}°F of superheat. Too much air across the coil keeps it above the dew point: the house cools but does not dry.`,
+    fix:['Check the blower\'s airflow setting / trim against the matched outdoor unit (the spec sheet limits trim-up).', 'Enable the thermostat\'s dehumidification airflow reduction.']}),
+  absorb:[/^Shoulder-season humidity/]},
+ {id:'D6', fam:'unitary', cats:['crit', 'fan'], cause:['fan'], effect:e => e.mode === 'cool' ? ['appr', 'hp', 'disch'] : ['appr', 'lp'],
+  when:c => { if (c.settled.length < 10 || !c.has('fan') || !c.has('tfan')) return null; const under = c.share(c.settled, i => isN(c.v('fan', i)) && isN(c.v('tfan', i)) && c.v('tfan', i) > 200 && c.v('fan', i) < 0.9 * c.v('tfan', i)); if (under < 0.3) return null;
+    const mode = c.cool.length >= c.heat.length ? 'cool' : 'heat', fc = c.med(c.settled, 'fancur'), fanm = c.med(c.settled, 'fan'), tf = c.med(c.settled, 'tfan'); return {rows:c.span(c.settled), under, mode, fc, fanm, tf, appr:c.med(c.settled, 'appr')}; },
+  text:e => ({title:`Outdoor fan not reaching its target speed → coil ${e.mode === 'cool' ? 'cannot reject heat → head pressure and discharge climbing' : 'cannot pick up heat → suction pressure falling, frosting'}`,
+    why:`The fan ran under 90% of its commanded speed ${pct(e.under, 1)}% of the settled time (${f0(e.fanm)} of ${f0(e.tf)} rpm)${isN(e.fc) ? `, drawing ${f1s(e.fc)} A` : ''}; the coil's approach to outdoor air widened to ${f1s(e.appr)}°F. ${isN(e.fc) && e.fc > 1.5 ? 'High current at low speed says the blade is loaded: ice, debris, a bearing.' : 'Normal or low current at low speed points at the motor or its driver rather than the blade.'}`,
+    fix:['Spin the blade by hand with power off: drag, wobble, debris, ice in the shroud.', 'Check the fan motor connector and the driver (fan fin temperature on models that log it).']}),
+  absorb:[/^High head/, /^Outdoor coil approach/, /^Heating: outdoor coil/]},
+ {id:'D7', fam:'unitary', cats:['crit', 'fan'], cause:['fanfin'], effect:['fan', 'appr'],
+  when:c => { if (c.settled.length < 10 || !c.has('fanfin')) return null; const rise = c.med(c.settled, i => isN(c.v('fanfin', i)) && isN(c.v('oat', i)) ? c.v('fanfin', i) - c.v('oat', i) : null), under = c.has('tfan') ? c.share(c.settled, i => isN(c.v('fan', i)) && isN(c.v('tfan', i)) && c.v('tfan', i) > 200 && c.v('fan', i) < 0.9 * c.v('tfan', i)) : 0;
+    return isN(rise) && rise >= 80 && under >= 0.2 ? {rows:c.span(c.settled), rise, under} : null; },
+  text:e => ({title:'Fan driver overheating → fan speed pulled back to protect it → coil short of air',
+    why:`The fan driver's heat sink ran ${f0(e.rise)}°F over outdoor air while the fan sat under 90% of its target ${pct(e.under, 1)}% of the time. The driver is derating the fan to save itself.`,
+    fix:['Clear the driver\'s cooling path (it sits in the fan airstream); check the heat-sink paste and mounting.', 'A loaded blade (ice, debris) makes the driver work harder and hotter: look at the blade too.']}),
+  absorb:[]},
+ {id:'D9', fam:'unitary', cats:['minor'], cause:['ochex'], effect:['evap', 'appr'],
+  when:c => { if (c.dfEp.length < 2 || !c.has('ochex')) return null; const durs = c.dfEp.map(([a, b]) => (b - a + 1) * c.dt), mean = durs.reduce((x, y) => x + y, 0) / durs.length, tight = durs.every(d => Math.abs(d - mean) <= 0.1 * mean + 0.6);
+    const endCoil = c.dfEp.map(([a, b]) => c.v('ochex', b)).filter(isN), endMed = endCoil.length ? endCoil.sort((x, y) => x - y)[Math.floor(endCoil.length / 2)] : null;
+    return tight && mean >= 8 && isN(endMed) && endMed < 40 ? {rows:c.dfEp, n:durs.length, mean, endMed} : null; },
+  text:e => ({title:'Defrosts ending on their time limit, not on coil temperature → coil never fully clears → the next frost cycle starts sooner',
+    why:`${e.n} defrosts all ran about ${f0(e.mean)} min, the same length each time, and the coil thermistor was still ${f0(e.endMed)}°F when they ended: a defrost that terminated on temperature would stop as soon as the coil cleared, at different lengths. Ice is being left behind each cycle.`,
+    fix:['Look at the coil at the end of a defrost: ice remaining low on the coil or behind the fan is the confirmation.', 'Pan drainage, the coil thermistor position, and a 4-way valve that is slow to shift all shorten the effective defrost.']}),
+  absorb:[/^\d+ defrosts? in/]},
+ {id:'D10', fam:'unitary', cats:['crit', 'fan'], cause:['evap'], effect:['cfm', 'lp', 'sh'],
+  when:c => { if (c.cool.length < 10 || !c.has('cfm')) return null; const frozen = c.cool.filter(i => isN(c.v('evap', i)) && c.v('evap', i) < 32); if (frozen.length * c.dt < 10) return null;
+    const first = c.med(frozen.slice(0, Math.max(3, Math.floor(frozen.length / 4))), 'cfm'), last = c.med(frozen.slice(-Math.max(3, Math.floor(frozen.length / 4))), 'cfm');
+    return isN(first) && isN(last) && first > 0 && last < 0.8 * first ? {rows:c.span(frozen), min:frozen.length * c.dt, first, last, te:c.med(frozen, 'evap'), sh:c.med(frozen, 'sh'), sc:c.med(frozen, 'sc')} : null; },
+  text:e => { const up = isN(e.sc) && e.sc < 3 ? 'low charge' : (isN(e.sh) && e.sh >= 15 ? 'a starving metering device' : 'low airflow to begin with'); return ({title:`Indoor coil frosting in cooling → airflow collapsing as the ice builds → low-pressure trips; upstream cause looks like ${up}`,
+    why:`The coil evaporated below freezing (${f1s(e.te)}°F) for ${f0(e.min)} min and the blower's delivered airflow fell from ${f0(e.first)} to ${f0(e.last)} cfm over that time as ice closed the coil face. Superheat ${f1s(e.sh)}°F and subcooling ${f1s(e.sc)}°F point at ${up} as what started it.`,
+    fix:['Thaw the coil fully before judging anything else; then address the upstream cause named above.', 'Low charge: find the leak. Starving valve: indoor EEV and strainer. Airflow: filter, blower, ducts.']}); },
+  absorb:[/^Indoor coil freezing in cooling/, /^Cooling in cold weather/, /^Freeze-up protection in cooling/]},
+ {id:'C5', fam:'unitary', cats:['crit', 'fan'], cause:['appr'], effect:['hp', 'cond', 'disch', 'fan', 'rpserr'],
+  when:c => { if (c.cool.length < 10 || !c.has('fan')) return null; const appr = c.med(c.cool, 'appr'), fanHi = c.share(c.cool, i => isN(c.v('fan', i)) && c.v('fan', i) >= 0.95 * c.fanMax), hp = c.med(c.cool, 'hp'), capped = c.share(c.cool, i => c.v('rpserr', i) <= -SIG.rpsHold);
+    return isN(appr) && appr >= 25 && fanHi >= 0.7 && (capped >= 0.2 || (D.range.disch && D.range.disch.max >= 220)) ? {rows:c.span(c.cool), appr, fanHi, hp, capped} : null; },
+  text:e => ({title:'Condenser not rejecting heat → head pressure and discharge climbing → compressor derating',
+    why:`The condensing temperature ran ${f1s(e.appr)}°F over outdoor air once settled, with the outdoor fan at full speed for ${pct(e.fanHi, 1)}% of the run (it has nothing more to give). Head pressure settled at ${f0(e.hp)} psi${D.range.disch ? ` and discharge peaked at ${f0(D.range.disch.max)}°F` : ''}${e.capped >= 0.2 ? `; the board held the compressor under its target speed ${pct(e.capped, 1)}% of the time to protect itself` : ''}. A clean coil at full fan runs 10–20°F over ambient.`,
+    fix:['Coil face and fins (both rows on a two-row coil), recirculation off a wall or fence, debris inside the cabinet.', 'If the coil is clean, confirm the fan reaches its target rpm and the blade is intact.']}),
+  absorb:[/^Discharge peaked/, /^Compressor held/, /^Protection control is capping speed/, /^Outdoor coil approach/, /^High head/]},
+ {id:'C6', fam:'unitary', cats:['minor'], cause:['appr'], effect:['evap', 'lp', 'ochex'],
+  when:c => { if (c.heat.length < 10) return null; const appr = c.med(c.heat, 'appr'); return isN(appr) && appr >= 25 && c.defrosts && c.defrosts / c.hrs >= 2 ? {rows:c.span(c.heat), appr, d:c.defrosts, hrs:c.hrs} : null; },
+  text:e => ({title:'Outdoor coil frosting → evaporating temperature falling away from ambient → frequent defrosts',
+    why:`Once settled the coil evaporated ${f1s(e.appr)}°F below outdoor air (10–20°F is normal), and the unit defrosted ${e.d} times in ${e.hrs.toFixed(1)} h. Frost insulates the coil, the evaporating temperature drops further, and the defrost sensor trips sooner each cycle.`,
+    fix:['Look for ice a defrost is not clearing (bottom rows, behind the fan), pan drainage, and the coil thermistor placement.', 'If the coil is clear, the charge and the outdoor EEV are the next suspects.']}),
+  absorb:[/^\d+ defrosts? in/, /^Outdoor coil approach/, /^Heating: outdoor coil/]},
+ // ---- E. compressor and inverter ----
+ {id:'E1', fam:'unitary', cats:['crit'], cause:['rps'], effect:['cap', 'hp', 'lp'],
+  when:c => { const f = c.cap.logFit, s0 = c.cap.saved && (c.cap.saved.e0 != null ? c.cap.saved.e0 : (c.cap.saved.cc ? c.cap.saved.cc * 0.9525 : null)); if (!f || !isN(s0) || !(c.cap.saved.n >= 24) || f.n < 12) return null;
+    return f.e0 <= 0.85 * s0 ? {rows:c.span(c.settled), ratio:f.e0 / s0, n:f.n} : null; },
+  text:e => ({title:'Compressor moving less refrigerant per revolution than this model used to → pumping capacity lost → same speed, less cooling and heating',
+    why:`From ${e.n} good rows the compressor's effective displacement came out ${Math.round((1 - e.ratio) * 100)}% under the value learned for this model and size on earlier logs. Speed, pressures and sensors all read normally; the compressor simply pumps less per turn: a worn vane, a leaking discharge valve, or internal bypass.`,
+    fix:['Confirm with a second log at higher lift (good-grade rows).', 'If it holds, the compressor is wearing; plan the replacement before the oil gives out.']}),
+  absorb:[]},
+ {id:'E2', fam:'unitary', cats:['minor'], cause:['isod'], effect:['disch', 'apr'],
+  when:c => { if (c.settled.length < 20 || !c.has('isod')) return null; const sl = c.slope(c.settled, 'isod'), iso = c.med(c.settled, 'isod'), apr = c.med(c.settled, 'apr');
+    return (isN(sl) && sl >= 10 && c.settled.length * c.dt >= 40) || (isN(iso) && iso >= 50) ? {rows:c.span(c.settled), sl, iso, apr} : null; },
+  text:e => ({title:'Compressor running hotter than its compression explains → internal heat (bearings, oil) → discharge-temperature derate coming',
+    why:`Discharge ran ${f0(e.iso)}°F above the ideal compression line once settled${isN(e.sl) && e.sl >= 10 ? ` and that gap grew ${f0(e.sl)}°F per hour during the run` : ''}. A healthy swing compressor sits 15–40°F above the line and stays there; heat that is not coming from compressing gas is coming from friction.`,
+    fix:['Check amps per rps against earlier logs of this unit (it rises with friction).', 'Oil level and colour if accessible; listen for a change in the compressor\'s note.']}),
+  absorb:[]},
+ {id:'E3', fam:'unitary', cats:['crit'], cause:e => [e.driver], effect:['rps', 'hp', 'lp', 'sh'],
+  when:c => { if (!c.F.some(f => /^Compressor hunting/.test(f.title || ''))) return null;
+    const dchg = c.has('demand') ? c.run.filter((i, k) => k > 0 && isN(c.v('demand', i)) && isN(c.v('demand', c.run[k-1])) && Math.abs(c.v('demand', i) - c.v('demand', c.run[k-1])) >= 10).length : 0;
+    const drops = ['dropDisch', 'dropInv', 'dropHp', 'dropLp', 'dropFin'].filter(id => c.hasS(id) && c.episodesOf(i => c.sv(id, i) === 'ON', 1).length >= 3);
+    const driver = dchg / c.hrs >= 6 ? 'demand' : drops.length ? drops[0] : 'other'; return {rows:c.span(c.run), driver, dchg, drops}; },
+  text:(e, c) => ({title:e.driver === 'demand' ? 'Thermostat demand flapping → compressor hunting → pressures and superheat never settle' : e.driver !== 'other' ? `${STAT.find(x => x.id === e.driver).label} engaging and releasing → compressor hunting → nothing settles` : 'Compressor hunting → pressures and superheat never settle → readings taken while ramping are invalid',
+    why:e.driver === 'demand' ? `The thermostat's demand changed by 10% or more ${e.dchg} times (${Math.round(e.dchg / c.hrs)} per hour) and the compressor reversed direction repeatedly chasing it. Nothing refrigerant-side can be judged on a unit that never holds a speed; fix the control first.` : e.driver !== 'other' ? `A protection control (${STAT.find(x => x.id === e.driver).label}) switched on and off ${c.episodesOf(i => c.sv(e.driver, i) === 'ON', 1).length} times, pulling speed down and letting it back up each time. The hunting is the symptom; the limit it keeps hitting is the fault.` : 'The compressor reversed direction every few minutes without a demand change or a protection control behind it. A sensor that oscillates, or a control parameter, is driving it.',
+    fix:e.driver === 'demand' ? ['Thermostat placement (sun, supply register, interior wall), staging and cycle settings in the Daikin One+.'] : e.driver !== 'other' ? ['Follow the chain for that protection control: discharge temperature, head pressure, suction pressure, current or heat-sink heat.'] : ['Trend the pressures and superheat with the speed; the one that leads the reversal is the driver.']}),
+  absorb:[/^Compressor hunting/]},
+ {id:'E4', fam:'unitary', cats:['crit'], cause:e => [e.kind === 'heat' ? 'fin' : 'inv1'], effect:['rpserr', 'cap'],
+  when:c => { if (c.settled.length < 10 || !c.hasS('dropInv')) return null; const di = c.on(c.run, 'dropInv'); if (di < 0.1) return null; const rise = c.med(c.settled, i => isN(c.v('fin', i)) && isN(c.v('oat', i)) ? c.v('fin', i) - c.v('oat', i) : null), apr = c.med(c.settled, 'apr'), base = D.base && D.base.apr ? D.base.apr.med : null;
+    return {rows:c.span(c.settled), di, rise, kind:isN(rise) && rise >= 70 ? 'heat' : 'load', apr, held:c.share(c.settled, i => c.v('rpserr', i) <= -SIG.rpsHold)}; },
+  text:e => ({title:e.kind === 'heat' ? 'Inverter heat sink running hot → current limit reached early → compressor capped on a warm day' : 'Compressor drawing more current for its speed → inverter current limit → speed capped, capacity short',
+    why:`The inverter-current drop control was active ${pct(e.di, 1)}% of the run and the compressor was held under target ${pct(e.held, 1)}% of the settled time. ${e.kind === 'heat' ? `The heat sink ran ${f0(e.rise)}°F over outdoor air: the drive is limiting current because it is hot, not because the compressor needs the current. Airflow over the heat sink (fan, cabinet) or the sink itself.` : `The heat sink was not hot; the compressor itself is drawing ${isN(e.apr) ? f1s(e.apr) + ' A per rps' : 'high current for its speed'}, which is mechanical load: high head, liquid in the cylinder, or a compressor beginning to drag.`}`,
+    fix:e.kind === 'heat' ? ['Clean the heat-sink fins and the path the fan pulls air through; check the fan reaches target speed.'] : ['Compare amps per rps with earlier logs of this unit; check head pressure and floodback chains first.']}),
+  absorb:[/^Protection control is capping speed/, /^Compressor held/, /^Drive stress/]},
+ {id:'E5', fam:'multi', cats:['crit'], cause:['volt'], effect:['rps', 'syscur'],
+  when:c => { if (c.settled.length < 10 || !c.has('volt')) return null; const low = c.share(c.settled, i => isN(c.v('volt', i)) && c.v('volt', i) < 200), vm = c.med(c.settled, 'volt'), lim = c.has('liminv') ? c.share(c.settled, i => isN(c.v('liminv', i)) && c.v('liminv', i) > 0 && c.v('liminv', i) < (c.rpsMax || 999)) : 0;
+    return (low >= 0.2 || (isN(vm) && vm < 208)) && lim >= 0.1 ? {rows:c.span(c.settled), low, vm, lim} : null; },
+  text:e => ({title:'Low line voltage → more current for the same work → inverter current limit sooner → speed capped',
+    why:`Line voltage read under 200 V ${pct(e.low, 1)}% of the settled time (median ${f0(e.vm)} V) and the inverter-current speed limit was active ${pct(e.lim, 1)}% of the time. At low voltage the drive draws proportionally more current to deliver the same power and hits its limit on a day it would otherwise have run flat out.`,
+    fix:['Measure voltage at the disconnect under load; check connections and conductor size on a long run.', 'If the utility voltage is low, there is nothing wrong with the unit.']}),
+  absorb:[/limiter active/]},
+ {id:'E7', fam:'unitary', cats:['minor'], cause:['rps'], effect:['sh', 'sc'],
+  when:c => { if (!c.hasS('restart')) return null; const ep = c.episodesOf(i => c.sv('restart', i) === 'ON', 1); const shortRuns = D.runs.filter(r => r.min < 8).length; return ep.length >= 3 && shortRuns >= 2 ? {rows:c.span(c.all), ep:ep.length, shortRuns, runs:D.runs.length} : null; },
+  text:e => ({title:'Restart standby firing repeatedly → runs cut short → the unit never reaches a state worth judging',
+    why:`The anti-short-cycle standby engaged ${e.ep} times and ${e.shortRuns} of ${e.runs} runs lasted under 8 minutes. Something is stopping the compressor and calling it back: thermostat cycling, a power interruption, or a protection trip.`,
+    fix:['Check the retry codes and error cards for what stopped it; check the thermostat\'s cycle settings and the power supply.']}),
+  absorb:[/^Short cycling/, /^Retry codes/]},
+ // ---- F. controls and settings ----
+ {id:'F2', fam:'unitary', cats:['minor', 'fan'], cause:['rps'], effect:['rpserr', 'fan', 'cap'],
+  when:c => { if (c.settled.length < 10 || !c.hasS('lownoise')) return null; const ln = c.on(c.run, 'lownoise'), held = c.share(c.settled, i => c.v('rpserr', i) <= -SIG.rpsHold); return ln >= 0.5 && held >= 0.3 ? {rows:c.span(c.run), ln, held} : null; },
+  text:e => ({title:'Low-noise mode active → compressor and fan held below what the call needs → capacity capped by a setting, not a fault',
+    why:`Low-noise control was on ${pct(e.ln, 1)}% of the run and the compressor sat under its target speed ${pct(e.held, 1)}% of the settled time while the thermostat kept calling. The unit is doing what its schedule tells it; it will look weak on a hot night.`,
+    fix:['Check the quiet-mode schedule in the thermostat / outdoor unit settings before touching anything else.']}),
+  absorb:[/^Compressor held/, /^Pinned at max speed/]},
+ {id:'F3', fam:'unitary', cats:['minor'], cause:['rps'], effect:['rpserr', 'cap'],
+  when:c => { if (c.settled.length < 10 || !c.hasS('dsig')) return null; const ds = c.on(c.run, 'dsig'), held = c.share(c.settled, i => c.v('rpserr', i) <= -SIG.rpsHold); return ds >= 0.5 && held >= 0.3 ? {rows:c.span(c.run), ds, held} : null; },
+  text:e => ({title:'Demand-limit signal active → compressor capped by the utility or a setting → capacity short on purpose',
+    why:`The demand signal was on ${pct(e.ds, 1)}% of the run with the compressor held under target ${pct(e.held, 1)}% of the settled time. External demand control, not a fault.`,
+    fix:['Confirm the demand-control wiring or program; the unit is obeying it.']}),
+  absorb:[/^Compressor held/]},
+ {id:'F4', fam:'unitary', cats:['crit', 'fan'], cause:e => [e.causeId], effect:['rps', 'lp', 'evap'],
+  when:c => { if (c.cool.length < 10 || !c.hasS('freeze')) return null; const fz = c.on(c.cool, 'freeze'); if (fz < 0.1) return null;
+    const shortA = c.has('cfm') && c.has('reqcfm') ? c.share(c.cool, i => isN(c.v('cfm', i)) && isN(c.v('reqcfm', i)) && c.v('reqcfm', i) > 0 && c.v('cfm', i) < 0.85 * c.v('reqcfm', i)) : 0, sc = c.med(c.cool, 'sc'), rpsFloor = c.share(c.cool, i => isN(c.v('rps', i)) && isN(c.rpsMin) && c.v('rps', i) <= c.rpsMin + 2);
+    const up = shortA >= 0.3 ? 'airflow' : (isN(sc) && sc < 3 ? 'charge' : 'load'); return {rows:c.span(c.cool), fz, up, shortA, sc, rpsFloor, causeId:up === 'airflow' ? 'cfm' : up === 'charge' ? 'sc' : 'rps'}; },
+  text:e => ({title:e.up === 'airflow' ? 'Low indoor airflow → coil heading for freezing → freeze protection limiting the compressor' : e.up === 'charge' ? 'Low charge → suction pressure at the floor → freeze protection limiting the compressor' : 'Load too small for the unit → compressor at minimum, coil still too cold → freeze protection limiting it',
+    why:`Freeze protection was active ${pct(e.fz, 1)}% of the cooling run. ${e.up === 'airflow' ? `Airflow ran short of request ${pct(e.shortA, 1)}% of the time: not enough air to keep the coil above freezing.` : e.up === 'charge' ? `Subcooling was ${f1s(e.sc)}°F: too little refrigerant to keep suction pressure up.` : `Airflow and charge both look right and the compressor sat at its minimum speed ${pct(e.rpsFloor, 1)}% of the time: the unit cannot turn down far enough for this load.`}`,
+    fix:e.up === 'airflow' ? ['Filter, coil, blower, registers.'] : e.up === 'charge' ? ['Find the leak; weigh in charge.'] : ['Oversized for the space or the season: thermostat dehumidification settings, or accept the cycling.']}),
+  absorb:[/^Freeze-up protection in cooling/, /^Cooling in cold weather/]},
+ {id:'F5', fam:'unitary', cats:['minor'], cause:[], effect:[],
+  when:c => { const drops = D.dropout.filter(Boolean).length, retries = c.has('retry') ? c.episodesOf(i => isN(c.v('retry', i)) && c.v('retry', i) > 0, 1).length : 0; return drops >= 3 && retries >= 1 ? {rows:[], drops, retries} : null; },
+  text:e => ({title:'Sensor dropouts with retry codes → indoor–outdoor communication stumbling → readings lost and restarts logged',
+    why:`${e.drops} rows lost their sensor values and the board logged retries ${e.retries} time${e.retries === 1 ? '' : 's'} in the same recording. Values vanishing together is the communication line, not the sensors.`,
+    fix:['Check the two-wire communication connections at both boards and the wire route past power conductors.']}),
+  absorb:[/rows with sensor dropouts/, /^Retry codes/]},
+ // ---- G. sizing ----
+ {id:'G1', fam:'unitary', cats:['minor', 'humid'], cause:['rps'], effect:['evap', 'sh'],
+  when:c => { if (c.cool.length < 10 || !isN(c.rpsMin) || D.runs.length < 2) return null; const floor = c.share(c.run.filter(i => D.mode[i] === 'cool'), i => isN(c.v('rps', i)) && c.v('rps', i) <= c.rpsMin + 2), runMed = D.runs.map(r => r.min).sort((a, b) => a - b)[Math.floor(D.runs.length / 2)], cph = D.runs.length / c.hrs;
+    return floor >= 0.6 && runMed < 12 && cph >= 3 ? {rows:c.span(c.run), floor, runMed, cph, oat:c.med(c.cool, 'oat')} : null; },
+  text:e => ({title:'Unit oversized for the load → runs at minimum speed and satisfies in minutes → coil never cold long enough to dry the air',
+    why:`The compressor sat at its minimum speed ${pct(e.floor, 1)}% of the cooling time, runs lasted ${f0(e.runMed)} min on average and the unit cycled ${e.cph.toFixed(1)} times an hour at ${f0(e.oat)}°F outside. An inverter that cannot turn down any further is behaving like a single-stage unit that is too big: temperature satisfied, humidity not.`,
+    fix:['Thermostat dehumidification settings (reduced airflow, overcool limit) first.', 'Confirm with a room dew point; the log has no humidity. If it holds across the season, the unit is oversized.']}),
+  absorb:[/^Shoulder-season humidity/, /^Short cycling/, /^Compressor at its floor/, /^Zone .* satisfies in/]},
+ {id:'G2', fam:'unitary', cats:['minor'], cause:['rps'], effect:['cap', 'demand'],
+  when:c => { if (!c.rpsMax) return null; for (const r of D.runs){ if (r.min < 45) continue; const rows = []; for (let i = r.start; i <= r.end; i++) rows.push(i); const pinned = c.share(rows, i => isN(c.v('rps', i)) && c.v('rps', i) >= 0.95 * c.rpsMax), dem = c.has('demand') ? c.med(rows, 'demand') : 100;
+      if (pinned >= 0.7 && dem >= 95){ const capm = c.med(rows, 'cap'), grade = D.capq ? rows.map(i => D.capq[i]).filter(Boolean) : []; return {rows:[[r.start, r.end]], min:r.min, pinned, capm, oat:c.med(rows, 'oat'), good:grade.filter(g => g === 'good' || g === 'disp').length / Math.max(1, grade.length)}; } } return null; },
+  text:e => ({title:`Full speed for ${f0(e.min)} min and still calling → capacity short for the load${isN(e.capm) ? ` (unit delivering about ${fmtBtu(e.capm).toLocaleString()} BTU/h, healthy by its own numbers)` : ''}`,
+    why:`The compressor ran at 95% or more of its maximum for ${pct(e.pinned, 1)}% of a ${f0(e.min)}-minute run at ${f0(e.oat)}°F outside with the thermostat at full demand${isN(e.capm) ? `, delivering about ${fmtBtu(e.capm).toLocaleString()} BTU/h by the refrigerant side${e.good >= 0.5 ? '' : ' (low-confidence rows)'}` : ''}. Nothing in the refrigerant readings is holding it back; the house is asking for more than it has. Undersized, a building envelope or duct problem, or an extreme day.`,
+    fix:['Compare the delivered capacity with the load calculation for the house; check duct losses with an air-side reading at the grilles.', 'If it happens only on design days, that is what a correctly sized inverter looks like.']}),
+  absorb:[/^Compressor pinned at its cap/, /^Pinned at max speed and not satisfying/, /^Ran continuously/, /^Max speed in mild weather/]},
+ // ---- H. multi-zone ----
+ {id:'H1', fam:'multi', cats:['crit'], cause:e => ['pev' + e.k], effect:e => ['rmgas' + e.k, 'disch', 'tderr'],
+  when:c => { if (c.cool.length < 10) return null; for (const k of c.zones){ const open = c.share(c.cool, i => c.v('pevp' + k, i) >= 90), psh = c.med(c.cool, 'psh' + k), td = c.med(c.cool, 'tderr'); if (open >= 0.7 && isN(psh) && psh <= 1 && isN(td) && td <= -10) return {rows:c.span(c.cool), k, open, psh, td}; } return null; },
+  text:(e, c) => ({title:`Port ${c.L(e.k)} EEV sitting wide open → that head flooded → discharge running cold for the whole system`,
+    why:`Port ${c.L(e.k)}'s valve stayed at 90% or more for ${pct(e.open, 1)}% of the cooling run while the head's gas pipe ran ${f1s(e.psh)}°F from its liquid pipe (no superheat: the coil is full of liquid), and the compressor's discharge sat ${f0(-e.td)}°F under its target. One head overfed drags the discharge down for all of them.`,
+    fix:['Check that port\'s EEV coil and connector at the outdoor unit; cycle power and listen for it stepping closed.', 'If the valve closes, the head\'s own thermistors are the next suspect.']}),
+  absorb:[/^Flooding: EEV stuck open/, /^Discharge ran .* below its target/]},
+ {id:'H2', fam:'multi', cats:['crit'], cause:e => ['pev' + e.k], effect:e => ['dd' + e.k, 'ra' + e.k],
+  when:c => { if (c.cool.length < 10) return null; for (const k of c.zones){ const callingShut = c.share(c.cool, i => isN(c.v('dd' + k, i)) && c.v('dd' + k, i) >= 4 && isN(c.v('pev' + k, i)) && c.v('pev' + k, i) <= 5); if (callingShut >= 0.5){ const others = c.zones.filter(j => j !== k && c.share(c.cool, i => isN(c.v('ra' + j, i)) && isN(c.v('sp' + j, i)) && c.v('ra' + j, i) < c.v('sp' + j, i) - 2) >= 0.3); return {rows:c.span(c.cool), k, callingShut, others}; } } return null; },
+  text:(e, c) => ({title:`Zone ${c.L(e.k)} calling with its port EEV shut → that room never cools${e.others.length ? ` → the capacity goes to zone${e.others.length > 1 ? 's' : ''} ${e.others.map(c.L).join(', ')}, over-cooling ${e.others.length > 1 ? 'them' : 'it'}` : ''}`,
+    why:`Zone ${c.L(e.k)} asked for cooling (ΔD 4°F or more) with its port valve at 5 pulses or under for ${pct(e.callingShut, 1)}% of the run.${e.others.length ? ` Meanwhile zone${e.others.length > 1 ? 's' : ''} ${e.others.map(c.L).join(', ')} ran below setpoint: the refrigerant that should have gone to ${c.L(e.k)} went there.` : ''}`,
+    fix:['Port EEV coil and connector for that zone; address setting of the head (it must match its port).', 'If the valve steps, the head\'s communication or thermistors.']}),
+  absorb:[/^Zone .*: keeps calling/]},
+ {id:'H3', fam:'multi', cats:['minor'], cause:[], effect:[],
+  when:c => { if (c.zones.length < 2) return null; const fight = c.share(c.run, i => { const ms = c.zones.map(k => c.sv('zmode' + k, i)).filter(Boolean); return ms.some(m => /heat/i.test(m)) && ms.some(m => /cool/i.test(m)); }); return fight >= 0.1 ? {rows:c.span(c.run), fight} : null; },
+  text:e => ({title:'Zones asking for heating and cooling at the same time → the outdoor unit can only serve one → the other waits, then they swap',
+    why:`For ${pct(e.fight, 1)}% of the run at least one head was set to heating while another was set to cooling. A multi serves one mode at a time; the odd one out sits idle and both rooms complain.`,
+    fix:['Set the heads to the same mode (or Auto with the same priority); check whether one remote was left in the other season\'s mode.']}),
+  absorb:[]},
+ {id:'H4', fam:'multi', cats:['humid', 'fan'], cause:e => e.ids, effect:[],
+  when:c => { if (c.cool.length < 10) return null; const ks = c.zones.filter(k => c.share(c.cool, i => isN(c.v('pev' + k, i)) && c.v('pev' + k, i) === 0 && isN(c.v('ifan' + k, i)) && c.v('ifan' + k, i) > 0 && isN(c.v('ihx' + k, i)) && isN(c.v('ra' + k, i)) && Math.abs(c.v('ihx' + k, i) - c.v('ra' + k, i)) <= 4) >= 0.4);
+    return ks.length ? {rows:c.span(c.cool), ks, ids:ks.map(k => 'ifan' + k)} : null; },
+  text:(e, c) => ({title:`Satisfied head${e.ks.length > 1 ? 's' : ''} ${e.ks.map(c.L).join(', ')} keep${e.ks.length > 1 ? '' : 's'} the fan running over a warm coil → water on the coil evaporates back into the room → humidity returns`,
+    why:`With ${e.ks.length > 1 ? 'their' : 'its'} port valve${e.ks.length > 1 ? 's' : ''} closed, ${e.ks.map(c.L).join(', ')} ran the indoor fan with the coil within 4°F of return air for 40% or more of the cooling run. A wet coil at room temperature is a humidifier. It is the fixed fan-speed setting doing it, not a failure.`,
+    fix:['Set the head\'s fan to Auto (it stops or drops to low when satisfied), and enable any dry / dehumidify mode the model offers.', 'Confirm with a room dew point.']}),
+  absorb:[/^Zone .*: satisfied .* with its fan still running/, /^Fan on high in humid weather/, /^Head fan running over a warm coil/]},
+ {id:'H6', fam:'multi', cats:['minor'], cause:e => ['rmgas' + e.k, 'rmliq' + e.k], effect:[],
+  when:c => { if (c.cool.length < 10) return null; for (const k of c.zones){ const open = c.cool.filter(i => isN(c.v('pev' + k, i)) && c.v('pev' + k, i) > 0); if (open.length < 10) continue; const psh = c.med(open, 'psh' + k), steady = c.share(open, i => isN(c.v('psh' + k, i)) && c.v('psh' + k, i) <= -6); if (isN(psh) && psh <= -8 && steady >= 0.8) return {rows:c.span(open), k, psh}; } return null; },
+  text:(e, c) => ({title:`Port ${c.L(e.k)} gas and liquid thermistors swapped → the port reads negative superheat while metering → that head's control is working backwards`,
+    why:`With its valve open, port ${c.L(e.k)}'s "gas" pipe read ${f1s(-e.psh)}°F colder than its "liquid" pipe. In cooling the liquid feeding a coil is always warmer than the gas leaving it; two sensors on the wrong pipes is the only way to read this steadily.`,
+    fix:['At the outdoor unit, check which pipe each of port ' + c.L(e.k) + '\'s thermistors is clipped to; swap them back.']}),
+  absorb:[/^Implausible reading: Port/]},
+ {id:'H7', fam:'multi', cats:['crit'], cause:e => ['pev' + e.j], effect:e => ['dd' + e.k],
+  when:c => { if (c.cool.length < 10 || c.zones.length < 2) return null; for (const k of c.zones) for (const j of c.zones){ if (j === k) continue; const mis = c.share(c.cool, i => isN(c.v('dd' + k, i)) && c.v('dd' + k, i) >= 4 && isN(c.v('pev' + k, i)) && c.v('pev' + k, i) === 0 && isN(c.v('pev' + j, i)) && c.v('pev' + j, i) > 50 && isN(c.v('dd' + j, i)) && c.v('dd' + j, i) <= 0); if (mis >= 0.5) return {rows:c.span(c.cool), k, j, mis}; } return null; },
+  text:(e, c) => ({title:`Zone ${c.L(e.k)} calls, port ${c.L(e.j)} opens → head address does not match its port → the wrong room gets the cooling`,
+    why:`For ${pct(e.mis, 1)}% of the run zone ${c.L(e.k)} was calling with its own port shut while port ${c.L(e.j)} ran open for a zone that was satisfied. The outdoor unit is feeding the port it believes belongs to the calling head.`,
+    fix:['Check each head\'s address setting against the port its line set is actually piped to; re-address or re-pipe.']}),
+  absorb:[/^Zone .*: keeps calling/]},
+ // ---- I. the recording itself ----
+ {id:'I1', fam:'any', cats:['minor'], cause:[], effect:[],
+  when:c => { const d = []; for (let i = 1; i < c.n; i++) d.push((D.t[i] - D.t[i-1]) / 1000); const s = d.slice().sort((a, b) => a - b), step = s[Math.floor(s.length / 2)]; if (!isN(step) || step <= 0) return null; let missing = 0; d.forEach(x => { const m = Math.round(x / step) - 1; if (m >= 1) missing += m; }); const frac = missing / (c.n + missing); return frac >= 0.1 ? {rows:[], missing, frac, total:c.n + missing} : null; },
+  text:e => ({title:`Recording gaps → ${Math.round(e.frac * 100)}% of the samples missing → cycle counts, settle times, slopes and energy totals cannot be trusted`,
+    why:`${e.missing} of ${e.total} samples never reached the phone (the app was paused, backgrounded or out of Bluetooth range). Findings that depend on continuity are unreliable in this log; the instantaneous readings on the rows that exist are fine.`,
+    fix:['Keep the D-Checker app on screen and within range for the whole recording, or use the PC app for long logs.']}),
+  absorb:[/^Recording has gaps/]},
+ {id:'I2', fam:'any', cats:['minor'], cause:[], effect:[],
+  when:() => { const n = (D.sensorFindings || []).filter(f => /^Implausible reading/.test(f.title || '')).length; return n >= 3 ? {rows:[], n} : null; },
+  text:e => ({title:`${e.n} readings impossible at once → the file's columns do not match their labels → judge nothing from this log until it is re-exported`,
+    why:`${e.n} separate pairs of sensors disagreed with physics at the same time. One bad sensor does not do that; a column shift in the export does. The app maps columns by their labels, but an export with labels that do not match its data cannot be rescued.`,
+    fix:['Re-export from D-Checker (or open the phone\'s .tgz directly) and compare.']}),
+  absorb:[/^Implausible reading/]},
+ {id:'I4', fam:'any', cats:['minor'], cause:[], effect:[],
+  when:() => D.runSec[0] >= 0 && D.runs.length && D.runs[0].start === 0 && D.runs[0].min >= 5 ? {rows:[], min:D.runs[0].min} : null,
+  text:e => ({title:'Recording started with the compressor already running → the first run\'s start, settle time and defrost history are unknown',
+    why:`Row 1 already had the compressor on; its first ${f0(e.min)} min are judged as if the run began at the recording, which may understate settle times and hide a defrost just before.`,
+    fix:['Start the recording a minute before the call when you can.']}),
+  absorb:[]},
+];
+function chainFindings(F0){
+  const out = []; CHAINS_ACTIVE = [];
+  if (!D) return out;
+  const c = chainCtx(); c.F = F0 || []; const fam = c.multi ? 'multi' : 'unitary', fired = new Set();
+  // chains that explain the same symptom: the first in the list wins (sensor faults before valve faults before charge)
+  const groups = {flood_cool:['C1', 'A2', 'B2', 'C2', 'C3', 'B6', 'B8', 'CC2', 'CC5', 'D10'], flood_heat:['A7', 'A8', 'B4', 'B5', 'C4', 'CC3'], derate:['A6', 'A11', 'A12', 'E4', 'F2', 'F3', 'B10'], defrost:['A9', 'D9', 'C6'], charge:['CC2', 'C4', 'CC3', 'CC4', 'CC5']};
+  const groupOf = id => Object.entries(groups).filter(([g, ids]) => ids.includes(id)).map(([g]) => g), taken = new Set();
+  for (const def of CHAIN_DEFS){
+    if (def.fam !== 'any' && def.fam !== fam) continue;
+    if (groupOf(def.id).some(g => taken.has(g))) continue;
+    let e = null; try { e = def.when(c); } catch(err){ console.warn('chain', def.id, err); }
+    if (!e) continue;
+    const t = def.text(e, c), cause = typeof def.cause === 'function' ? def.cause(e) : def.cause, effect = typeof def.effect === 'function' ? def.effect(e) : def.effect;
+    const conf = CHAIN_CONFIRMED[def.id] ? 'confirmed' : 'provisional';
+    out.push({chain:true, cid:def.id, st:def.st || (def.cats.includes('crit') ? 'alarm' : 'warn'), sev:def.cats.includes('crit') ? 'critical' : 'moderate', cats:def.cats, title:t.title, why:t.why, fix:t.fix, absorb:def.absorb || [], conf, confNote:CHAIN_CONFIRMED[def.id] || null});
+    CHAINS_ACTIVE.push({id:def.id, cause:(cause || []).filter(Boolean), effect:(effect || []).filter(Boolean), rows:e.rows || []});
+    fired.add(def.id); groupOf(def.id).forEach(g => taken.add(g));
   }
   return out;
 }
@@ -3061,7 +3477,7 @@ function synopsisFindings(){
   if (!F.length) F.push({st:'ok', title:'Nothing stood out in this recording', why:`${f0(runMin)} min of run time, ${steadyRows.length ? f0(steadyRows.length * dt) + ' min steady' : 'never reached steady state'}`, do:'If there is a complaint, record longer, through a full cycle, or in the complaint conditions.'});
   try { for (const r of rulebookFindings()) F.push(r); } catch(e){ console.warn('rulebook findings', e); }
   for (const r of (D.sensorFindings || [])) F.push(r); for (const r of (D.evFindings || [])) F.push(r);
-  { const chains = chainFindings(); if (chains.length){ const absorbed = chains.flatMap(c => c.absorb || []); for (let k = F.length - 1; k >= 0; k--) if (absorbed.some(re => re.test(F[k].title || ''))) F.splice(k, 1); F.unshift(...chains); } }
+  { const chains = chainFindings(F); if (chains.length){ const absorbed = chains.flatMap(c => c.absorb || []); for (let k = F.length - 1; k >= 0; k--) if (absorbed.some(re => re.test(F[k].title || ''))) F.splice(k, 1); F.unshift(...chains); } }
   const order = {alarm:0, warn:1, sig:2, info:3, ok:4}; F.sort((a, b) => order[a.st] - order[b.st] || (b.chain ? 1 : 0) - (a.chain ? 1 : 0));
   return F;
 }
@@ -3144,7 +3560,7 @@ function buildSynopsis(){
   $('#synhead').textContent = `This ${unit} ran ${f0(runMin)} min in ${modes} over ${f0(n * dt)} min of recording and ${verdict}.`;
   const facts = [`<span><b>${D.runs.length}</b> run${D.runs.length === 1 ? '' : 's'}</span>`, `<span><b>${f0(steadyMin)}</b> min steady</span>`, D.range.oat ? `<span>outdoor <b>${f0(D.range.oat.min)}–${f0(D.range.oat.max)}°F</b></span>` : '', D.range.rps ? `<span>comp <b>${f0(D.range.rps.min)}–${f0(D.range.rps.max)} rps</b></span>` : '', D.range.disch ? `<span>discharge <b>${f0(D.range.disch.min)}–${f0(D.range.disch.max)}°F</b></span>` : '', D.range.hp ? `<span>HP <b>${f0(D.range.hp.min)}–${f0(D.range.hp.max)}</b> · LP <b>${f0(D.range.lp.min)}–${f0(D.range.lp.max)} psi</b></span>` : ''];
   $('#synfacts').innerHTML = facts.filter(Boolean).join('');
-  const card = f => { const cats = catsOf(f); return `<div class="syn ${f.st}${f.chain ? ' chain' : ''}" data-cats="${cats.join(' ')}" style="${tintStyle(cats)}"><h3>${synEsc(f.title)}</h3><p class="why">${synEsc(f.why)}</p>${Array.isArray(f.fix) ? '<ol>' + f.fix.map(x => '<li>' + synEsc(x) + '</li>').join('') + '</ol>' : '<p class="do">' + synEsc(f.do || '') + '</p>'}</div>`; };
+  const card = f => { const cats = catsOf(f); return `<div class="syn ${f.st}${f.chain ? ' chain' : ''}" data-cats="${cats.join(' ')}" style="${tintStyle(cats)}"><h3>${synEsc(f.title)}</h3>${f.chain ? `<p class="conf ${f.conf}">${f.conf === 'confirmed' ? 'Confirmed on a real repair: ' + synEsc(f.confNote) : 'Provisional: this pattern is written from the physics and has not yet been confirmed on a repair. Tell the app with 👍 / 👎 below.'}</p>` : ''}<p class="why">${synEsc(f.why)}</p>${Array.isArray(f.fix) ? '<ol>' + f.fix.map(x => '<li>' + synEsc(x) + '</li>').join('') + '</ol>' : '<p class="do">' + synEsc(f.do || '') + '</p>'}</div>`; };
   const main = F.filter(f => f.st !== 'info' && f.st !== 'ok'), notes = F.filter(f => f.st === 'info' || f.st === 'ok');
   $('#synlist').innerHTML = main.map(card).join('') + (main.length ? '' : '<div class="syn ok"><h3>Nothing out of line in this recording</h3></div>')
     + (notes.length ? `<details class="synnotes"><summary>Also noted · ${notes.length}</summary>${notes.map(card).join('')}</details>` : '')
@@ -3632,7 +4048,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v75';
+const APP_VERSION = 'v76';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
