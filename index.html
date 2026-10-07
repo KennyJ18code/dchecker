@@ -141,6 +141,7 @@ body.no-narr .nowline{display:none}
 .syn .conf{font-size:11.5px;color:var(--muted);margin:0 0 6px}.syn .conf.confirmed{color:var(--ok)}.syn.chain h3{font-size:15px;line-height:1.3}.syn.chain{border-left-width:7px}
 .synnotes{margin-top:6px}.synnotes summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:6px 2px}.synnotes .syn{margin-top:8px}
 .synkey{font-size:12px;color:var(--muted);margin:10px 2px 0}.synkey i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid var(--line)}.synkey i.crit{background:var(--tint-crit)}.synkey i.minor{background:var(--tint-minor)}.synkey i.fan{background:var(--tint-fan)}.synkey i.humid{background:var(--tint-humid)}.synkey i:first-child{margin-left:0}
+.callcard{margin:0 14px 12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2)}.callcard.off{display:none}.callrow{margin:0 0 10px}.callrow:last-child{margin:0}.callrow b{display:block;font-size:13px;margin:0 0 6px}.callrow label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}.callrow input,.callrow textarea{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:14px;width:100%;max-width:100%;font-family:var(--sans);resize:vertical}.callrow label input{flex:1;min-width:0}.callrow textarea{display:block;margin:6px 0 0}.callchips{display:flex;flex-wrap:wrap;gap:6px}.callchips button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700}.callchips button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .syn h3{margin:0 0 4px;font-size:14px}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
 .syn .do::before{content:"Do: ";font-weight:800;color:var(--accent)}.syn .why::before{content:"Evidence: ";font-weight:800;color:var(--muted)}
 .syntime{margin:0;padding:0 14px 12px 14px;list-style:none;display:flex;flex-direction:column;gap:2px;max-height:420px;overflow:auto}
@@ -651,6 +652,7 @@ body.no-cabinet #indoor-var .cab{display:none}
   <!-- SYNOPSIS -->
   <section class="panel card" id="panel-synopsis" hidden>
     <h2>What this recording says <button class="btn small" type="button" id="syncopy" style="float:right">Copy as text</button></h2>
+    <div class="callcard off" id="callcard"></div>
     <div class="synhead" id="synhead"></div>
     <div class="synfacts" id="synfacts"></div>
     <div class="synlist" id="synlist"></div>
@@ -689,7 +691,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     </div>
     <p class="note" style="padding:0 14px 6px">Tap <b>Open</b> to view a recording here with no download; <b>CSV</b> saves the plain file; the zip holds every recording not yet opened on this device. Files are stored as plain CSV under <code>library/year/month/</code>, named date_model_tech_id.</p>
     <div class="fb" id="fbthis" hidden><span>This recording — was the app's read useful?</span><button class="btn small" data-v="right" type="button">👍 Right</button><button class="btn small" data-v="wrong" type="button">👎 Wrong</button><button class="btn small" data-v="unclear" type="button">Unclear</button><input id="fbnote" placeholder="note (optional)"></div>
-    <div class="tablewrap"><table id="fleettable"><thead><tr><th></th><th>Recorded</th><th>System</th><th>Tech</th><th>Size</th><th>Rows</th><th>Mode</th><th>Top finding</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="tablewrap"><table id="fleettable"><thead><tr><th></th><th>Recorded</th><th>System</th><th>Tech</th><th>Size</th><th>Rows</th><th>Mode</th><th>Complaint</th><th>Top finding</th><th>Found / fix</th><th></th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <!-- DATA -->
@@ -4196,7 +4198,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v82';
+const APP_VERSION = 'v83';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -4287,7 +4289,7 @@ async function queueUpload(meta){
     const clean = v => String(v || '').replace(/^INV_Unitary_/i, '').replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
     const day = D.t[0] ? D.t[0].toISOString().slice(0, 10) : 'undated';
     const base = [day, clean(meta.model || D.model || modelFamily() || 'log'), clean(meta.tech_name) || null, sha.slice(0, 8)].filter(Boolean).join('_');
-    await qPut({sha, name:base + '.' + ext, type:blob.type, blob, meta:{file_name:meta.file_name || D.name, tech_name:meta.tech_name || null, company:meta.company || null, model:meta.model || D.model || null,
+    await qPut({sha, name:base + '.' + ext, type:blob.type, blob, meta:{file_name:meta.file_name || D.name, tech_name:meta.tech_name || loadJSON('dchk.techname', '') || null, company:meta.company || null, model:meta.model || D.model || null,
       row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, auto:EQ.auto}, summary:recordingSummary(),
       app_version:APP_VERSION, refrigerant:REF.ref, unit_size:SIZE || null, capacity:capacitySummary(), device_id:DEVICE}});
     flushQueue();
@@ -4342,7 +4344,7 @@ async function sendCalibration(key, fit){
 }
 // --- Library tab: every recording the shop has opened, for a signed-in reader (Kenny, Andy). Open any one in the viewer, download one, or
 //     download everything new as one zip; what has been looked at on this device is remembered. ---
-let LIB_ROWS = [], SEEN = new Set(loadJSON('dchk.seen', []));
+let LIB_ROWS = [], LIB_CALLS = {}, SEEN = new Set(loadJSON('dchk.seen', []));
 const seenSave = () => saveJSON('dchk.seen', [...SEEN].slice(-5000));
 async function libFetchFile(r){   // the plain CSV for a row, whatever the stored form
   let blob = await sbFetch('/storage/v1/object/authenticated/recordings/' + r.file_path).then(x => x.blob()); let name = r.file_path.split('/').pop();
@@ -4373,7 +4375,7 @@ function libTopFinding(r){
 }
 function libRender(){
   const q = ($('#libfilter').value || '').trim().toLowerCase(), tb = $('#fleettable tbody'); tb.innerHTML = '';
-  const rows = LIB_ROWS.filter(r => !q || JSON.stringify([r.model, r.tech_name, r.company, r.file_name, r.unit_size, libTopFinding(r), r.summary && r.summary.modes]).toLowerCase().includes(q));
+  const rows = LIB_ROWS.filter(r => !q || JSON.stringify([r.model, r.tech_name, r.company, r.file_name, r.unit_size, libTopFinding(r), r.summary && r.summary.modes, LIB_CALLS[r.sha256]]).toLowerCase().includes(q));
   const unseen = rows.filter(r => !SEEN.has(r.id)).length;
   $('#fleetstatus').textContent = `${rows.length} recording${rows.length === 1 ? '' : 's'}${q ? ' matching' : ''} · ${unseen} new`;
   $('#libzip').disabled = !unseen; $('#libzip').textContent = unseen ? `Download ${unseen} new as zip` : 'Nothing new to download';
@@ -4382,7 +4384,7 @@ function libRender(){
     const cap = r.capacity || {}, en = cap.energy || {}, mins = r.started_at && r.ended_at ? Math.round((new Date(r.ended_at) - new Date(r.started_at)) / 60000) : null;
     const modes = (r.summary && r.summary.modes || []).filter(m => m !== 'other').map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ');
     const kind = r.equipment ? (r.equipment.out === 'ac' ? 'AC' : 'Heat pump') : '';
-    tr.innerHTML = `<td>${SEEN.has(r.id) ? '' : '<span class="newdot" title="not opened on this device yet">●</span>'}</td><td>${r.started_at ? new Date(r.started_at).toLocaleDateString() : ''}<br><small>${r.started_at ? new Date(r.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td><td>${kind}${r.model ? '<br><small>' + synEsc(String(r.model).replace(/^INV_Unitary_/i, '')) + '</small>' : ''}${r.refrigerant ? '<br><small>' + (REFNAME[r.refrigerant] || r.refrigerant) + '</small>' : ''}</td><td>${synEsc(r.tech_name || '')}${r.company ? '<br><small>' + synEsc(r.company) + '</small>' : ''}</td><td>${r.unit_size ? r.unit_size.replace('E', ' E') + (/\d/.test(r.unit_size) ? '' : '') : ''}</td><td>${r.row_count || ''}${mins != null ? '<br><small>' + mins + ' min</small>' : ''}</td><td>${modes}${isN(en.kwh) ? '<br><small>' + en.kwh.toFixed(1) + ' kWh</small>' : ''}</td><td class="sigs">${synEsc(libTopFinding(r))}</td><td class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="csv">CSV</button></td>`;
+    tr.innerHTML = `<td>${SEEN.has(r.id) ? '' : '<span class="newdot" title="not opened on this device yet">●</span>'}</td><td>${r.started_at ? new Date(r.started_at).toLocaleDateString() : ''}<br><small>${r.started_at ? new Date(r.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td><td>${kind}${r.model ? '<br><small>' + synEsc(String(r.model).replace(/^INV_Unitary_/i, '')) + '</small>' : ''}${r.refrigerant ? '<br><small>' + (REFNAME[r.refrigerant] || r.refrigerant) + '</small>' : ''}</td><td>${synEsc(r.tech_name || '')}${r.company ? '<br><small>' + synEsc(r.company) + '</small>' : ''}</td><td>${r.unit_size ? r.unit_size.replace('E', ' E') + (/\d/.test(r.unit_size) ? '' : '') : ''}</td><td>${r.row_count || ''}${mins != null ? '<br><small>' + mins + ' min</small>' : ''}</td><td>${modes}${isN(en.kwh) ? '<br><small>' + en.kwh.toFixed(1) + ' kWh</small>' : ''}</td><td class="sigs">${(() => { const c = LIB_CALLS[r.sha256]; return c ? synEsc([...(c.complaint_cats || []), c.complaint].filter(Boolean).join(' · ')) : ''; })()}</td><td class="sigs">${synEsc(libTopFinding(r))}</td><td class="sigs">${(() => { const c = LIB_CALLS[r.sha256]; return c ? synEsc([c.found, c.fix, c.outcome].filter(Boolean).join(' · ')) : ''; })()}</td><td class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="csv">CSV</button></td>`;
     tr.querySelector('[data-act=open]').addEventListener('click', async () => { try { toast('Opening…'); const {blob, name} = await libFetchFile(r); await openFiles([new File([blob], name)]); SEEN.add(r.id); seenSave(); libRender(); CURRENT_REC = {sha:r.sha256, id:r.id}; showFeedback(); $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
     tr.querySelector('[data-act=csv]').addEventListener('click', async () => { try { const {blob, name} = await libFetchFile(r); saveBlob(blob, name); SEEN.add(r.id); seenSave(); libRender(); } catch(e){ toast('Could not download: ' + e.message); } });
     tb.appendChild(tr);
@@ -4393,6 +4395,7 @@ async function fleetRefresh(){
   const st = $('#fleetstatus'); st.textContent = 'loading…';
   try {
     LIB_ROWS = await sbFetch('/rest/v1/recordings?select=id,created_at,tech_name,company,model,refrigerant,unit_size,started_at,ended_at,row_count,interval_s,equipment,summary,capacity,file_name,file_path,sha256&order=started_at.desc.nullslast&limit=500').then(r => r.json());
+    LIB_CALLS = {}; try { for (const c of await sbFetch('/rest/v1/calls?select=sha256,tech_name,complaint,complaint_cats,found,fix,outcome,created_at&order=created_at.desc&limit=2000').then(r => r.json())) if (!LIB_CALLS[c.sha256]) LIB_CALLS[c.sha256] = c; } catch(e){}
     libRender();
     try { $('#libtidy').hidden = !(LIB_ROWS.some(r => /^anon\//.test(r.file_path || '')) || (await libList('anon')).length); } catch(e){ $('#libtidy').hidden = true; }
   } catch(e){ st.textContent = 'could not load: ' + e.message; }
@@ -4437,6 +4440,44 @@ async function libTidy(){
   b.textContent = 'Tidy old files'; b.disabled = false; fleetRefresh();
 }
 $('#libtidy').addEventListener('click', libTidy);
+// --- Call notes: why the customer called, what was found, what fixed it. No sign-in: the tech's name is a label kept on the phone,
+//     the notes are kept per recording on the phone and sent to the library as they are typed, so complaints can be matched to fixes. ---
+const CALL_CATS = ['No cooling', 'No heat', 'Not keeping up', 'Humid / sticky', 'Icing', 'Noise', 'Water / leak', 'High bill', 'Error code', 'Short cycling', 'Maintenance', 'Other'];
+const CALL_OUT = ['Fixed', 'Parts ordered', 'Monitoring', 'No fault found', 'Referred'];
+let CALL = null, callT = null, callSent = '';
+const callKey = () => D && D.sha ? 'dchk.call.' + D.sha : null;
+function callCardBuild(){
+  const host = $('#callcard'); if (!host) return;
+  host.innerHTML = `<div class="callrow"><label>Your name <input id="call-name" placeholder="kept on this phone" autocomplete="off" value="${synEsc(loadJSON('dchk.techname', ''))}"></label></div>
+    <div class="callrow"><b>Why the customer called</b><div class="callchips" id="call-cats">${CALL_CATS.map(c => `<button type="button" data-cat="${c}">${c}</button>`).join('')}</div>
+    <textarea id="call-complaint" rows="2" placeholder="In the customer's words, e.g. “upstairs never gets below 76 in the afternoon”"></textarea></div>
+    <div class="callrow"><b>What you found and what fixed it</b><textarea id="call-found" rows="2" placeholder="What was wrong"></textarea><textarea id="call-fix" rows="2" placeholder="What you did about it"></textarea>
+    <div class="callchips" id="call-out">${CALL_OUT.map(c => `<button type="button" data-out="${c}">${c}</button>`).join('')}</div></div>
+    <div class="note" id="call-status"></div>`;
+  host.querySelector('#call-name').addEventListener('input', e => { saveJSON('dchk.techname', e.target.value.trim()); callChanged(); });
+  host.querySelector('#call-cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b || !CALL) return; const c = b.dataset.cat; CALL.cats = CALL.cats.includes(c) ? CALL.cats.filter(x => x !== c) : [...CALL.cats, c]; callRender(); callChanged(); });
+  host.querySelector('#call-out').addEventListener('click', e => { const b = e.target.closest('[data-out]'); if (!b || !CALL) return; CALL.outcome = CALL.outcome === b.dataset.out ? '' : b.dataset.out; callRender(); callChanged(); });
+  for (const [id, k] of [['call-complaint', 'complaint'], ['call-found', 'found'], ['call-fix', 'fix']]) host.querySelector('#' + id).addEventListener('input', e => { if (!CALL) return; CALL[k] = e.target.value; callChanged(); });
+}
+function callRender(){
+  const host = $('#callcard'); if (!host) return;
+  const on = !!(D && D.sha); host.classList.toggle('off', !on); if (!on){ $('#call-status').textContent = ''; return; }
+  CALL = CALL || {cats:[], complaint:'', found:'', fix:'', outcome:''};
+  host.querySelectorAll('#call-cats [data-cat]').forEach(b => b.classList.toggle('on', CALL.cats.includes(b.dataset.cat)));
+  host.querySelectorAll('#call-out [data-out]').forEach(b => b.classList.toggle('on', CALL.outcome === b.dataset.out));
+  for (const [id, k] of [['call-complaint', 'complaint'], ['call-found', 'found'], ['call-fix', 'fix']]){ const el = host.querySelector('#' + id); if (el.value !== (CALL[k] || '')) el.value = CALL[k] || ''; }
+  $('#call-status').textContent = CALL.sentAt ? `Saved to the library ${CALL.sentAt}` : (shareOn() || SB ? 'Saved on this phone as you type; sent to the library a few seconds after you stop.' : 'Saved on this phone.');
+}
+function callCardLoad(){ const k = callKey(); CALL = k ? Object.assign({cats:[], complaint:'', found:'', fix:'', outcome:''}, loadJSON(k, {})) : null; callRender(); }
+function callChanged(){ const k = callKey(); if (!k || !CALL) return; saveJSON(k, CALL); clearTimeout(callT); callT = setTimeout(callSend, 5000); callRender(); }
+async function callSend(){
+  if (!D || !D.sha || !CALL || !(shareOn() || SB)) return;
+  const row = {device_id:DEVICE, sha256:D.sha, tech_name:loadJSON('dchk.techname', '') || null, complaint:CALL.complaint.trim() || null, complaint_cats:CALL.cats, found:CALL.found.trim() || null, fix:CALL.fix.trim() || null, outcome:CALL.outcome || null, model:D.model || modelFamily() || null, app_version:APP_VERSION};
+  if (!row.complaint && !row.complaint_cats.length && !row.found && !row.fix && !row.outcome) return;
+  const key = JSON.stringify(row); if (key === callSent) return;
+  try { await sbPost('calls', row); callSent = key; CALL.sentAt = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); saveJSON(callKey(), CALL); callRender(); logEvent('call_notes', {cats:row.complaint_cats, outcome:row.outcome}); } catch(e){ console.warn('call', e); }
+}
+callCardBuild();
 // feedback lives at the foot of the synopsis, where the app's read is
 { const fb = $('#fbthis'), syn = $('#panel-synopsis'); if (fb && syn) syn.appendChild(fb); }
 document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('click', async () => {
@@ -5127,6 +5168,7 @@ function setMode3D(on){ MODE3D = !!on; saveJSON('dchk3.mode3d', MODE3D); logEven
 /* ---------- load ---------- */
 function load(text, name, model){
   try { D = buildDataset(text, name); D._text = text; D.model = model || null; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
+  { const dd = D; sha256(new TextEncoder().encode(text)).then(h => { if (D === dd){ D.sha = h; callCardLoad(); } }).catch(() => {}); }
   { const v = loadJSON('dchk.zvis.' + name, null); ZVIS = Array.isArray(v) && v.length ? new Set(v.filter(k => D.zones.includes(k))) : null; if (ZVIS && !ZVIS.size) ZVIS = null; }
   if (playing) togglePlay();
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
