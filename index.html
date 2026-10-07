@@ -561,10 +561,10 @@ body.no-cabinet #indoor-var .cab{display:none}
         <button class="btn small" id="settingsbtn" type="button">⚙ Settings</button>
         <label class="eqtog">Equipment <select id="eqsel">
           <option value="auto">Auto-detect</option>
-          <option value="hp">Heat pump (DZ / DH)</option>
-          <option value="ac">Air conditioner (DX / DC)</option>
-          <option value="hp-multi">Mini split · heat pump (2–5 zones)</option>
-          <option value="ac-multi">Mini split · AC (2–5 zones)</option>
+          <option value="hp">Heat pump</option>
+          <option value="ac">Air conditioner</option>
+          <option value="hp-multi">Multi split · heat pump (2–5 zones)</option>
+          <option value="ac-multi">Multi split · AC (2–5 zones)</option>
         </select></label>
         <label class="eqtog">Refrigerant <select id="refsel"><option value="auto">Auto</option><option value="R410A">R-410A</option><option value="R32">R-32</option></select></label>
         <label class="eqtog" hidden>Unit <select id="sizesel" title="Unit size: for the nameplate comparison and to keep what the app learns about this compressor"></select></label>
@@ -1543,8 +1543,8 @@ let FAM = 'unitary';   // 'unitary' (one head) or 'multi' (2–5 heads on ports 
 function detectEquipment(){
   // 1) model file named in the phone recording's header.txt (INV_Unitary_DZ6VS → DZ = heat pump)
   const mdl = (D.model || '').replace(/^INV_Unitary_/i, '');
-  const mm = /^([DGA])([XCZH])/i.exec(mdl);
-  if (mm){ const hp = /[ZH]/i.test(mm[2]); return {out: hp ? 'hp' : 'ac', why: `model ${mdl}`}; }
+  const mm = /^(?:D([XCZH])|[GA]S?([XZ]))/i.exec(mdl);
+  if (mm){ const hp = /[ZH]/i.test(mm[1] || mm[2]); return {out: hp ? 'hp' : 'ac', why: `model ${mdl}`}; }
   // 2) otherwise the data: a live 4-way valve column or heating rows mean a heat pump
   const fw = STAT.find(x => x.id === 'fourway');
   const hp = (fw && fw.present && D.str.fourway.some(v => v != null)) || D.mode.some(m => m === 'heat') || (D.fam === 'multi' && D.str.fwmode.some(v => v != null));
@@ -1559,8 +1559,8 @@ function applyEquipment(){
   else { EQ = {out:saved.split('-')[0], auto:false, guess:''}; FAM = /-multi$/.test(saved) ? 'multi' : 'unitary'; }
   $('#eqsel').value = saved;
   const names = {hp:'Heat pump', ac:'Air conditioner'};
-  const famTxt = detFam === 'multi' ? `Mini split ${det.out === 'hp' ? 'heat pump' : 'AC'} · ${D.zones.length} zone${D.zones.length === 1 ? '' : 's'}` : names[det.out];
-  $('#eqsel').options[0].textContent = D ? `Auto: ${famTxt}${det.why.startsWith('model') ? ' · ' + det.why.slice(6) : ''}` : 'Auto-detect';
+  const famTxt = detFam === 'multi' ? `Multi split ${det.out === 'hp' ? 'heat pump' : 'AC'} · ${D.zones.length} zone${D.zones.length === 1 ? '' : 's'}` : names[det.out];
+  $('#eqsel').options[0].textContent = D ? `Auto: ${famTxt}` : 'Auto-detect';
   $('#eqsel').title = EQ.auto ? EQ.guess : 'set by hand';
   buildZoneBar();
   setLayout();
@@ -1695,7 +1695,7 @@ function buildSizeSel(){
   const sel = $('#sizesel'); if (!sel) return;
   const fam = modelFamily(), tbl = RATED[fam];
   let h = '<option value="">Size: not set</option>';
-  if (tbl) for (const [k, r] of Object.entries(tbl)) h += `<option value="${k}">${fam} ${r.t} ton${r.e ? ' · enhanced' : ''} · ${r.cool.toLocaleString()} / ${r.heat.toLocaleString()}</option>`;
+  if (tbl) for (const [k, r] of Object.entries(tbl)) h += `<option value="${k}">${r.t} ton${r.e ? ' · enhanced' : ''} · ${r.cool.toLocaleString()} / ${r.heat.toLocaleString()} AHRI</option>`;
   else for (const k of GENERIC_SIZES) h += `<option value="${k}">${+k / 12} ton · nominal</option>`;
   sel.innerHTML = h; sel.parentElement.hidden = !D || D.fam === 'multi';
   SIZE = D ? loadJSON('dchk.size.' + D.name, '') : ''; if (![...sel.options].some(o => o.value === SIZE)) SIZE = ''; sel.value = SIZE;
@@ -1854,7 +1854,7 @@ function buildCapCard(){
     const c = inf.cal || {}, offs = Object.entries(c.off || {}).map(([id, o]) => `${chById[id].short} ${o >= 0 ? '+' : '−'}${Math.abs(o).toFixed(1)}`);
     method += `<p class="note">Corrections in use: ${c.applied ? `at-rest thermistor offsets applied (${offs.join(', ')} °F against outdoor air, measured over ${Math.round(c.min)} min once the compressor had been off ${RT.atRestMin}+ min${isN(c.pdiff) ? `; the two transducers ${Math.abs(c.pdiff) <= 5 ? 'agree within' : 'disagree by'} ${Math.abs(c.pdiff).toFixed(0)} psi at rest` : ''})` : `no rest period of ${RT.atRestMin}+ min, so thermistor offsets could not be measured`} · ${inf.coilP ? 'coil-outlet enthalpy at the indoor pressure sensor' : 'coil-outlet enthalpy at outdoor LP (no indoor pressure sensor)'} · 2 % oil in the flow · 5-minute trailing average${inf.avgRows ? ` (up to ${inf.avgRows} rows)` : ''}.</p>`;
   }
-  const plate = si ? `<p class="note">Nameplate (AHRI): <b>${si.fam} ${si.t} ton</b> · ${si.cool.toLocaleString()} BTU/h cooling at 95 °F · ${si.heat.toLocaleString()} heating at 47 °F${si.heat5 ? ` · ${si.heat5.toLocaleString()} at 5 °F` : ''}${si.generic ? ' (nominal 12,000 per ton; family not in the table)' : ''}${famGuessed() ? ' — family read off the log, since a plain CSV names no model' : ''}. Those are full-speed figures at rating conditions; at part speed or other temperatures the unit is meant to deliver less.</p>` :
+  const plate = si ? `<p class="note">Nameplate (AHRI): <b>${si.t} ton</b> · ${si.cool.toLocaleString()} BTU/h cooling at 95 °F · ${si.heat.toLocaleString()} heating at 47 °F${si.heat5 ? ` · ${si.heat5.toLocaleString()} at 5 °F` : ''}${si.generic ? ' (nominal 12,000 per ton; family not in the table)' : ''}${famGuessed() ? ' — family read off the log, since a plain CSV names no model' : ''}. Those are full-speed figures at rating conditions; at part speed or other temperatures the unit is meant to deliver less.</p>` :
     (D && D.fam !== 'multi' ? '<p class="note">Pick the unit size in the header bar to compare against its nameplate and to keep what the app learns about its compressor.</p>' : '');
   const a = AIRIN;
   const inp = (k, ph) => `<input type="number" step="0.1" data-air="${k}" placeholder="${ph}" value="${isN(a[k]) ? a[k] : ''}" inputmode="decimal">`;
@@ -4186,7 +4186,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v79';
+const APP_VERSION = 'v80';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
