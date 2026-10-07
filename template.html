@@ -452,7 +452,9 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 
 /* data table */
 .fleetbar{display:flex;align-items:center;gap:10px;padding:8px 14px}
-.fleetbar .grow{flex:1}
+.fleetbar .grow{flex:1}.fleetbar{flex-wrap:wrap}.libfilter{flex:1 1 180px;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px}
+#fleettable tr.new td{background:var(--accent-soft, rgba(37,99,235,.07))}#fleettable .newdot{color:var(--accent);font-size:14px}#fleettable td small{color:var(--muted);font-size:11px}#fleettable td.acts{white-space:nowrap}#fleettable td.acts .btn{margin-left:4px}
+.sbsign{padding:10px 0;border-top:1px solid var(--line);margin-top:4px}.sbsign b{display:block;font-weight:600}.sbsign small{display:block;font-size:12px;color:var(--muted);line-height:1.3;margin:2px 0 8px}.sbsign .row{display:flex;flex-wrap:wrap;gap:6px}.sbsign input{flex:1 1 140px;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px}
 .fb{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;font-size:13px}
 .fb input{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 8px;font-size:12px;flex:1;min-width:14ch}
 #fleettable td.sigs{white-space:normal;max-width:30ch;font-size:12px}
@@ -542,7 +544,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     <button role="tab" aria-selected="false" data-tab="rules" id="tab-rules" hidden>Rules</button>
     <button role="tab" aria-selected="false" data-tab="runs" id="tab-runs" hidden>Runs</button>
     <button role="tab" aria-selected="false" data-tab="data" id="tab-data">Data</button>
-    <button role="tab" aria-selected="false" data-tab="fleet" id="tab-fleet" hidden>Fleet</button>
+    <button role="tab" aria-selected="false" data-tab="fleet" id="tab-fleet" hidden>Library</button>
   </div>
 </div></header>
 
@@ -675,14 +677,18 @@ body.no-cabinet #indoor-var .cab{display:none}
 
   <!-- FLEET (recordings synced to Supabase) -->
   <section class="panel card" id="panel-fleet" hidden>
-    <h2>Fleet · recordings opened by the shop</h2>
+    <h2>Library · every recording the shop has opened</h2>
     <div class="fleetbar">
+      <input class="libfilter" id="libfilter" placeholder="Filter: model, tech, company, finding…" aria-label="Filter the library">
       <span class="note" id="fleetstatus"></span>
       <span class="grow"></span>
+      <button class="btn small primary" id="libzip" type="button">Download new as zip</button>
+      <button class="btn small" id="libseen" type="button" title="Mark everything as seen on this device">All seen</button>
       <button class="btn small" id="fleetrefresh" type="button">Refresh</button>
     </div>
+    <p class="note" style="padding:0 14px 6px">Tap <b>Open</b> to view a recording here with no download; <b>CSV</b> saves the plain file; the zip holds every recording not yet opened on this device. Files are stored as plain CSV under <code>library/year/month/</code>, named date_model_tech_id.</p>
     <div class="fb" id="fbthis" hidden><span>This recording — was the app's read useful?</span><button class="btn small" data-v="right" type="button">👍 Right</button><button class="btn small" data-v="wrong" type="button">👎 Wrong</button><button class="btn small" data-v="unclear" type="button">Unclear</button><input id="fbnote" placeholder="note (optional)"></div>
-    <div class="tablewrap"><table id="fleettable"><thead><tr><th>When</th><th>Site</th><th>Tech</th><th>Model</th><th>Start</th><th>Rows</th><th>Equipment</th><th>Runs</th><th>Signatures</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="tablewrap"><table id="fleettable"><thead><tr><th></th><th>Recorded</th><th>System</th><th>Tech</th><th>Size</th><th>Rows</th><th>Mode</th><th>Top finding</th><th></th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <!-- DATA -->
@@ -747,6 +753,9 @@ body.no-cabinet #indoor-var .cab{display:none}
     <section class="sgroup"><h3>Shop library</h3>
       <label class="srow"><span class="t"><b>Save what this app analyzes</b><small>Every recording opened here is kept in the shop library to teach the software: the decoded log, the model, tech name, the app's findings and any grille readings you type. Customer name and address never leave the phone.</small></span><input type="checkbox" class="sw" data-s="share"></label>
       <div class="note" id="sharestatus"></div>
+      <div class="sbsign"><b>Read the library</b><small>For the shop's own reader accounts; techs do not need this. Signing in adds a Library tab.</small>
+        <div class="row"><input id="sb-email" type="email" placeholder="email" autocomplete="username"><input id="sb-pass" type="password" placeholder="password" autocomplete="current-password"><button class="btn small primary" id="sb-signin" type="button">Sign in</button><button class="btn small" id="sb-signout" type="button" hidden>Sign out</button></div>
+        <div class="note" id="sb-status"></div></div>
     </section>
     <section class="sgroup wide"><h3>Custom tags</h3>
         <div class="note">Build your own reading from the ones on screen. It appears as an orange tag you can drag anywhere on the diagram; tap it to pin its trend.</div>
@@ -4048,7 +4057,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v80';
+const APP_VERSION = 'v81';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -4135,8 +4144,7 @@ async function queueUpload(meta){
   try {
     const text = D._text; const buf = new TextEncoder().encode(text); const sha = await sha256(buf);
     CURRENT_REC = {sha, id:null}; showFeedback();
-    let blob = new Blob([buf], {type:'text/csv'}), ext = 'csv';
-    if (typeof CompressionStream === 'function'){ try { const gz = await new Response(new Blob([buf]).stream().pipeThrough(new CompressionStream('gzip'))).blob(); blob = new Blob([gz], {type:'application/gzip'}); ext = 'csv.gz'; } catch(e){} }
+    const blob = new Blob([buf], {type:'text/csv'}), ext = 'csv';   // plain CSV: opens straight from a download, no extracting
     const clean = v => String(v || '').replace(/^INV_Unitary_/i, '').replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
     const day = D.t[0] ? D.t[0].toISOString().slice(0, 10) : 'undated';
     const base = [day, clean(meta.model || D.model || modelFamily() || 'log'), clean(meta.tech_name) || null, sha.slice(0, 8)].filter(Boolean).join('_');
@@ -4158,13 +4166,13 @@ async function flushQueue(){
           const exists = await sbFetch(`/rest/v1/recordings?select=id&sha256=eq.${it.sha}`).then(r => r.json());
           let row = exists[0];
           if (!row){
-            const path = `${uid}/${it.name}`;
+            const path = `library/${(it.meta.started_at || new Date().toISOString()).slice(0, 7).replace('-', '/')}/${it.name}`;
             await sbFetch('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type, 'x-upsert':'true'}, body:it.blob});
             row = (await sbInsert('recordings', Object.assign({file_path:path, sha256:it.sha, tech_email:SB.user.email}, it.meta)))[0];
           }
           if (CURRENT_REC && CURRENT_REC.sha === it.sha) CURRENT_REC.id = row.id;
         } else {
-          const path = `anon/${DEVICE}/${it.name}`;
+          const path = `library/${(it.meta.started_at || new Date().toISOString()).slice(0, 7).replace('-', '/')}/${it.name}`;
           await sbAnon('/storage/v1/object/recordings/' + path, {method:'POST', headers:{'Content-Type':it.type}, body:it.blob});
           await sbAnon('/rest/v1/recordings', {method:'POST', headers:{'Content-Type':'application/json', Prefer:'return=minimal'}, body:JSON.stringify(Object.assign({file_name:it.name, file_path:path, sha256:it.sha}, it.meta))});
         }
@@ -4193,25 +4201,75 @@ async function sendCalibration(key, fit){
   if (!(shareOn() || SB)) return;
   try { await sbPost('calibrations', {device_id:DEVICE, model_key:key, e0:fit.e0, e1:fit.e1, n:fit.n, pr_lo:fit.prLo, pr_hi:fit.prHi, fitted:!!fit.fitted, sha256:CURRENT_REC && CURRENT_REC.sha, app_version:APP_VERSION}); } catch(e){ console.warn('calibration', e); }
 }
-// --- fleet list (a device signed in from before) ---
+// --- Library tab: every recording the shop has opened, for a signed-in reader (Kenny, Andy). Open any one in the viewer, download one, or
+//     download everything new as one zip; what has been looked at on this device is remembered. ---
+let LIB_ROWS = [], SEEN = new Set(loadJSON('dchk.seen', []));
+const seenSave = () => saveJSON('dchk.seen', [...SEEN].slice(-5000));
+async function libFetchFile(r){   // the plain CSV for a row, whatever the stored form
+  let blob = await sbFetch('/storage/v1/object/authenticated/recordings/' + r.file_path).then(x => x.blob()); let name = r.file_path.split('/').pop();
+  if (/\.gz$/i.test(name)){ if (typeof DecompressionStream === 'function') blob = await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).blob(); name = name.replace(/\.gz$/i, ''); }
+  return {blob, name};
+}
+function saveBlob(blob, name){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); }
+// store-only zip (no compression: the CSVs are small and open anywhere)
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files){   // [{name, data:Uint8Array}]
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const now = new Date(), dosT = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF, dosD = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+  const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  for (const f of files){
+    const nm = enc.encode(f.name), crc = crc32(f.data), n = f.data.length;
+    const local = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(dosT), ...u16(dosD), ...u32(crc), ...u32(n), ...u32(n), ...u16(nm.length), ...u16(0), ...nm]);
+    parts.push(local, f.data);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(dosT), ...u16(dosD), ...u32(crc), ...u32(n), ...u32(n), ...u16(nm.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off), ...nm]));
+    off += local.length + n;
+  }
+  const cdSize = central.reduce((a, c) => a + c.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(off), ...u16(0)]);
+  return new Blob([...parts, ...central, end], {type:'application/zip'});
+}
+function libTopFinding(r){
+  const f = (r.summary && r.summary.findings) || []; const t = f.find(x => /→/.test(x)) || f[0] || ''; return t.replace(/^(alarm|warn|sig|info|ok): /, '');
+}
+function libRender(){
+  const q = ($('#libfilter').value || '').trim().toLowerCase(), tb = $('#fleettable tbody'); tb.innerHTML = '';
+  const rows = LIB_ROWS.filter(r => !q || JSON.stringify([r.model, r.tech_name, r.company, r.file_name, r.unit_size, libTopFinding(r), r.summary && r.summary.modes]).toLowerCase().includes(q));
+  const unseen = rows.filter(r => !SEEN.has(r.id)).length;
+  $('#fleetstatus').textContent = `${rows.length} recording${rows.length === 1 ? '' : 's'}${q ? ' matching' : ''} · ${unseen} new`;
+  $('#libzip').disabled = !unseen; $('#libzip').textContent = unseen ? `Download ${unseen} new as zip` : 'Nothing new to download';
+  for (const r of rows){
+    const tr = document.createElement('tr'); if (!SEEN.has(r.id)) tr.className = 'new';
+    const cap = r.capacity || {}, en = cap.energy || {}, mins = r.started_at && r.ended_at ? Math.round((new Date(r.ended_at) - new Date(r.started_at)) / 60000) : null;
+    const modes = (r.summary && r.summary.modes || []).filter(m => m !== 'other').map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ');
+    const kind = r.equipment ? (r.equipment.out === 'ac' ? 'AC' : 'Heat pump') : '';
+    tr.innerHTML = `<td>${SEEN.has(r.id) ? '' : '<span class="newdot" title="not opened on this device yet">●</span>'}</td><td>${r.started_at ? new Date(r.started_at).toLocaleDateString() : ''}<br><small>${r.started_at ? new Date(r.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td><td>${kind}${r.model ? '<br><small>' + synEsc(String(r.model).replace(/^INV_Unitary_/i, '')) + '</small>' : ''}${r.refrigerant ? '<br><small>' + (REFNAME[r.refrigerant] || r.refrigerant) + '</small>' : ''}</td><td>${synEsc(r.tech_name || '')}${r.company ? '<br><small>' + synEsc(r.company) + '</small>' : ''}</td><td>${r.unit_size ? r.unit_size.replace('E', ' E') + (/\d/.test(r.unit_size) ? '' : '') : ''}</td><td>${r.row_count || ''}${mins != null ? '<br><small>' + mins + ' min</small>' : ''}</td><td>${modes}${isN(en.kwh) ? '<br><small>' + en.kwh.toFixed(1) + ' kWh</small>' : ''}</td><td class="sigs">${synEsc(libTopFinding(r))}</td><td class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="csv">CSV</button></td>`;
+    tr.querySelector('[data-act=open]').addEventListener('click', async () => { try { toast('Opening…'); const {blob, name} = await libFetchFile(r); await openFiles([new File([blob], name)]); SEEN.add(r.id); seenSave(); libRender(); CURRENT_REC = {sha:r.sha256, id:r.id}; showFeedback(); $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
+    tr.querySelector('[data-act=csv]').addEventListener('click', async () => { try { const {blob, name} = await libFetchFile(r); saveBlob(blob, name); SEEN.add(r.id); seenSave(); libRender(); } catch(e){ toast('Could not download: ' + e.message); } });
+    tb.appendChild(tr);
+  }
+}
 async function fleetRefresh(){
   if (!SB || !sbReady()) return;
   const st = $('#fleetstatus'); st.textContent = 'loading…';
   try {
-    const rows = await sbFetch('/rest/v1/recordings?select=id,created_at,site,customer,tech_name,tech_email,company,model,started_at,row_count,equipment,summary,file_name,file_path&order=created_at.desc&limit=200').then(r => r.json());
-    const tb = $('#fleettable tbody'); tb.innerHTML = '';
-    for (const r of rows){
-      const tr = document.createElement('tr');
-      const sg = r.summary && r.summary.signatures ? Object.entries(r.summary.signatures).map(([k, v]) => `${k} (${v})`).join('; ') : '';
-      const eq = r.equipment ? (r.equipment.out === 'ac' ? 'AC' : 'HP') + (r.equipment.auto ? ' (auto)' : '') : '';
-      tr.innerHTML = `<td>${new Date(r.created_at).toLocaleString()}</td><td>${r.site || r.company || ''}${r.customer ? ' · ' + r.customer : ''}</td><td>${r.tech_name || (r.tech_email || '').split('@')[0]}</td><td>${r.model || ''}</td><td>${r.started_at ? new Date(r.started_at).toLocaleString() : ''}</td><td>${r.row_count || ''}</td><td>${eq}</td><td>${r.summary ? r.summary.runs : ''}</td><td class="sigs">${sg || '—'}</td><td><button class="btn small" type="button">Open</button></td>`;
-      tr.querySelector('button').addEventListener('click', async () => { try { toast('Downloading…'); let blob = await sbFetch('/storage/v1/object/authenticated/recordings/' + r.file_path).then(x => x.blob()); let name = r.file_path.split('/').pop(); if (/\.gz$/i.test(name) && typeof DecompressionStream === 'function'){ blob = await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).blob(); name = name.replace(/\.gz$/i, ''); } await openFiles([new File([blob], name)]); CURRENT_REC = {sha:null, id:r.id}; showFeedback(); $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
-      tb.appendChild(tr);
-    }
-    st.textContent = `${rows.length} recording${rows.length === 1 ? '' : 's'}`;
+    LIB_ROWS = await sbFetch('/rest/v1/recordings?select=id,created_at,tech_name,company,model,refrigerant,unit_size,started_at,ended_at,row_count,interval_s,equipment,summary,capacity,file_name,file_path,sha256&order=started_at.desc.nullslast&limit=500').then(r => r.json());
+    libRender();
   } catch(e){ st.textContent = 'could not load: ' + e.message; }
 }
 $('#fleetrefresh').addEventListener('click', fleetRefresh);
+$('#libfilter').addEventListener('input', libRender);
+$('#libseen').addEventListener('click', () => { LIB_ROWS.forEach(r => SEEN.add(r.id)); seenSave(); libRender(); });
+$('#libzip').addEventListener('click', async () => {
+  const todo = LIB_ROWS.filter(r => !SEEN.has(r.id)); if (!todo.length) return;
+  const b = $('#libzip'); b.disabled = true; const files = []; let k = 0;
+  try {
+    for (const r of todo){ b.textContent = `Fetching ${++k} of ${todo.length}…`; const {blob, name} = await libFetchFile(r); files.push({name, data:new Uint8Array(await blob.arrayBuffer())}); }
+    saveBlob(makeZip(files), `dchecker-library-${new Date().toISOString().slice(0, 10)}.zip`);
+    todo.forEach(r => SEEN.add(r.id)); seenSave(); toast(`${files.length} recordings in one zip`);
+  } catch(e){ toast('Download stopped: ' + e.message); }
+  libRender();
+});
 // feedback lives at the foot of the synopsis, where the app's read is
 { const fb = $('#fbthis'), syn = $('#panel-synopsis'); if (fb && syn) syn.appendChild(fb); }
 document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('click', async () => {

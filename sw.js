@@ -1,11 +1,12 @@
 // D-Checker Cycle Viewer service worker: cache the app shell so it opens offline
-const CACHE = 'dchecker-v80';
+const CACHE = 'dchecker-v81';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/dchk-v2-192.png', './icons/dchk-v2-512.png', './icons/dchk-v2-maskable-512.png', './icons/dchk-v2-apple.png', './icons/dchk-v2-64.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 // network first (so updates land), cache fallback (so it still opens with no signal)
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;   // the library (Supabase) and fonts are not the app shell: never cache or substitute them
   // the app shell is fetched past the browser's HTTP cache (GitHub Pages says keep files 10 min), so a new release lands on the next open
   const fresh = e.request.mode === 'navigate' || /\/(index\.html|sw\.js)?(\?.*)?$/.test(new URL(e.request.url).pathname + '');
   e.respondWith((fresh ? fetch(e.request.url, {cache:'no-cache', credentials:'same-origin'}) : fetch(e.request)).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; }).catch(() => caches.match(e.request).then(m => m || caches.match('./index.html'))));
