@@ -453,7 +453,8 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 
 /* data table */
 .fleetbar{display:flex;align-items:center;gap:10px;padding:8px 14px}
-.fleetbar .grow{flex:1}.fleetbar{flex-wrap:wrap}.libfilter{flex:1 1 180px;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px}
+.fleetbar .grow{flex:1}
+.minelist{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}.minerow{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel);display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start;font-size:13px}.minerow .t{grid-column:1}.minerow .t small{color:var(--muted);font-size:11.5px}.minerow .c{grid-column:1;color:var(--ink2)}.minerow .f{grid-column:1;display:flex;flex-wrap:wrap;gap:4px}.minerow .f span{background:var(--panel2);border-radius:6px;padding:2px 7px;font-size:12px;color:var(--ink2)}.minerow .acts{grid-column:2;grid-row:1 / span 3;display:flex;flex-direction:column;gap:6px}@media (max-width:600px){.minerow{grid-template-columns:1fr}.minerow .acts{grid-column:1;grid-row:auto;flex-direction:row}}.fleetbar{flex-wrap:wrap}.libfilter{flex:1 1 180px;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px}
 #fleettable tr.new td{background:var(--accent-soft, rgba(37,99,235,.07))}#fleettable .newdot{color:var(--accent);font-size:14px}#fleettable td small{color:var(--muted);font-size:11px}#fleettable td.acts{white-space:nowrap}#fleettable td.acts .btn{margin-left:4px}
 .sbsign{padding:10px 0;border-top:1px solid var(--line);margin-top:4px}.sbsign b{display:block;font-weight:600}.sbsign small{display:block;font-size:12px;color:var(--muted);line-height:1.3;margin:2px 0 8px}.sbsign .row{display:flex;flex-wrap:wrap;gap:6px}.sbsign input{flex:1 1 140px;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px}
 .fb{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;font-size:13px}
@@ -545,6 +546,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     <button role="tab" aria-selected="false" data-tab="rules" id="tab-rules" hidden>Rules</button>
     <button role="tab" aria-selected="false" data-tab="runs" id="tab-runs" hidden>Runs</button>
     <button role="tab" aria-selected="false" data-tab="data" id="tab-data">Data</button>
+    <button role="tab" aria-selected="false" data-tab="mine" id="tab-mine">My logs</button>
     <button role="tab" aria-selected="false" data-tab="fleet" id="tab-fleet" hidden>Library</button>
   </div>
 </div></header>
@@ -678,6 +680,12 @@ body.no-cabinet #indoor-var .cab{display:none}
   </section>
 
   <!-- FLEET (recordings synced to Supabase) -->
+  <section class="panel card" id="panel-mine" hidden>
+    <h2>My logs · every recording opened on this device</h2>
+    <div class="fleetbar"><input class="libfilter" id="minefilter" placeholder="Filter: model, complaint, finding…" aria-label="Filter my logs"><span class="note" id="minestatus"></span><span class="grow"></span><button class="btn small" id="mineclear" type="button" title="Remove every recording from this device">Clear</button></div>
+    <p class="note" style="padding:0 14px 6px">Kept on this phone so you can come back to a job. Your call notes stay attached. Up to 150 recordings; the oldest drop off.</p>
+    <div class="minelist" id="minelist"></div>
+  </section>
   <section class="panel card" id="panel-fleet" hidden>
     <h2>Library · every recording the shop has opened</h2>
     <div class="fleetbar">
@@ -4040,16 +4048,16 @@ async function openFiles(files){
       const hdr = members.find(m => /header\.txt$/i.test(m.name)); const hf = hdr ? td.decode(hdr.data).split(',') : []; const cf = cust ? td.decode(cust.data).split(',') : [];
       const model = (hf[2] || '').replace(/\.txt$/i, '') || null;
       load(csv, arch.name + (who ? ' — ' + who : ''), model); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname);
-      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D) queueUpload({file_name:arch.name, tech_name:cf[7] || null, company:cf[8] || null, model}); return;
+      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D){ queueUpload({file_name:arch.name, tech_name:cf[7] || null, company:cf[8] || null, model}); mineSave(arch.name, model); } return;
     }
     const log = files.find(f => /\.log$/i.test(f.name)), lab = byName('datalabel\\.txt');
     if (log){
       if (!lab) throw new Error('pick datalabel.txt together with the .log (both are in the recording folder)');
       const csv = dlToCsv(dlParseLabels(await lab.text()), dlSplit(new Uint8Array(await log.arrayBuffer())));
-      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); logEvent('open_log', {source:'log', rows:D && D.n}); if (D) queueUpload({file_name:log.name}); return;
+      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); logEvent('open_log', {source:'log', rows:D && D.n}); if (D){ queueUpload({file_name:log.name}); mineSave(log.name, null); } return;
     }
     const csvf = files.find(f => /\.csv$/i.test(f.name)) || files[0];
-    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true; logEvent('open_log', {source:'csv', rows:D && D.n}); if (D) queueUpload({file_name:csvf.name});
+    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true; logEvent('open_log', {source:'csv', rows:D && D.n}); if (D){ queueUpload({file_name:csvf.name}); mineSave(csvf.name, null); }
   } catch(e){ toast('Could not open: ' + e.message); }
 }
 window.dchkOpen = openFiles;
@@ -4060,7 +4068,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v83';
+const APP_VERSION = 'v84';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -4123,7 +4131,7 @@ async function flushEvents(){
 setInterval(flushEvents, 30000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushEvents(); syncAnim(); });
 // --- recording uploads with an offline queue in IndexedDB ---
-function idb(){ return new Promise((res, rej) => { const q = indexedDB.open('dchk', 1); q.onupgradeneeded = () => q.result.createObjectStore('queue', {keyPath:'sha'}); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+function idb(){ return new Promise((res, rej) => { const q = indexedDB.open('dchk', 2); q.onupgradeneeded = () => { const db = q.result; if (!db.objectStoreNames.contains('queue')) db.createObjectStore('queue', {keyPath:'sha'}); if (!db.objectStoreNames.contains('mine')) db.createObjectStore('mine', {keyPath:'sha'}); }; q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
 async function qPut(item){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('queue', 'readwrite'); t.objectStore('queue').put(item); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
 async function qAll(){ const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('queue').objectStore('queue').getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 async function qDel(sha){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('queue', 'readwrite'); t.objectStore('queue').delete(sha); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
@@ -4340,6 +4348,44 @@ async function callSend(){
   try { await sbPost('calls', row); callSent = key; CALL.sentAt = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); saveJSON(callKey(), CALL); callRender(); logEvent('call_notes', {cats:row.complaint_cats, outcome:row.outcome}); } catch(e){ console.warn('call', e); }
 }
 callCardBuild();
+// --- My logs: every recording this device has opened, kept on the device (IndexedDB) so a tech can come back to last week's job.
+//     Nothing is read from the server; the shop library stays behind the reader accounts. ---
+const MINE_MAX = 150;
+async function mineAll(){ const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('mine').objectStore('mine').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
+async function minePut(it){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('mine', 'readwrite'); t.objectStore('mine').put(it); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function mineDel(sha){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('mine', 'readwrite'); t.objectStore('mine').delete(sha); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function mineSave(fileName, model){
+  if (!D || !D._text) return;
+  try {
+    const sha = D.sha || await sha256(new TextEncoder().encode(D._text)); D.sha = sha;
+    let findings = []; try { findings = synopsisFindings().filter(f => f.st !== 'ok' && f.st !== 'info').slice(0, 3).map(f => f.title); } catch(e){}
+    const old = (await mineAll()).find(x => x.sha === sha);
+    await minePut({sha, fileName:fileName || D.name, model:model || D.model || null, fam:D.fam, eq:EQ.out, started:D.t[0] ? D.t[0].toISOString() : null, ended:D.t[D.n-1] ? D.t[D.n-1].toISOString() : null, n:D.n, modes:[...new Set(D.mode.filter(m => m !== 'other'))], findings, text:D._text, first:old ? old.first : Date.now(), at:Date.now()});
+    const all = (await mineAll()).sort((a, b) => b.at - a.at); for (const x of all.slice(MINE_MAX)) await mineDel(x.sha);
+  } catch(e){ console.warn('mine', e); }
+  if (!$('#panel-mine').hidden) mineRender();
+}
+async function mineRender(){
+  const host = $('#minelist'), q = ($('#minefilter').value || '').trim().toLowerCase(); if (!host) return;
+  let all = []; try { all = (await mineAll()).sort((a, b) => b.at - a.at); } catch(e){}
+  const rows = all.filter(x => { if (!q) return true; const call = loadJSON('dchk.call.' + x.sha, {}); return JSON.stringify([x.fileName, x.model, x.findings, x.modes, call.complaint, call.cats, call.found, call.fix]).toLowerCase().includes(q); });
+  $('#minestatus').textContent = all.length ? `${rows.length} of ${all.length} recording${all.length === 1 ? '' : 's'} on this device` : 'Nothing yet: every log you open here will be listed, so you can come back to it.';
+  host.innerHTML = '';
+  for (const x of rows){
+    const call = loadJSON('dchk.call.' + x.sha, {}), mins = x.started && x.ended ? Math.round((new Date(x.ended) - new Date(x.started)) / 60000) : null;
+    const kind = x.fam === 'multi' ? 'Multi split' : (x.eq === 'ac' ? 'Air conditioner' : 'Heat pump'), modes = (x.modes || []).map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ');
+    const el = document.createElement('div'); el.className = 'minerow';
+    el.innerHTML = `<div class="t"><b>${x.started ? new Date(x.started).toLocaleDateString() + ' ' + new Date(x.started).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—'}</b> · ${kind}${x.model ? ' · ' + synEsc(String(x.model).replace(/^INV_Unitary_/i, '')) : ''} · ${x.n} rows${mins != null ? ' · ' + mins + ' min' : ''}${modes ? ' · ' + modes : ''}<br><small>${synEsc(x.fileName || '')} · opened ${new Date(x.at).toLocaleDateString()}</small></div>
+      ${call.complaint || (call.cats && call.cats.length) ? `<div class="c"><b>Call:</b> ${synEsc([...(call.cats || []), call.complaint].filter(Boolean).join(' · '))}${call.fix || call.found || call.outcome ? `<br><b>Found / fix:</b> ${synEsc([call.found, call.fix, call.outcome].filter(Boolean).join(' · '))}` : ''}</div>` : ''}
+      ${x.findings && x.findings.length ? `<div class="f">${x.findings.map(f => '<span>' + synEsc(f) + '</span>').join('')}</div>` : ''}
+      <div class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="del" title="Remove from this device (the shop library keeps its copy)">Remove</button></div>`;
+    el.querySelector('[data-act=open]').addEventListener('click', () => { load(x.text, x.fileName || 'recording.csv', x.model); if (D){ D.sha = x.sha; callCardLoad(); $('#savecsv').hidden = true; $('#tab-cycle').click(); } });
+    el.querySelector('[data-act=del]').addEventListener('click', async () => { await mineDel(x.sha); mineRender(); });
+    host.appendChild(el);
+  }
+}
+$('#minefilter').addEventListener('input', mineRender);
+$('#mineclear').addEventListener('click', async () => { for (const x of await mineAll()) await mineDel(x.sha); mineRender(); });
 // feedback lives at the foot of the synopsis, where the app's read is
 { const fb = $('#fbthis'), syn = $('#panel-synopsis'); if (fb && syn) syn.appendChild(fb); }
 document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('click', async () => {
@@ -5070,6 +5116,7 @@ $('#tabs').addEventListener('click', e => {
   if (b.dataset.tab === 'trends') drawAllStrips();
   if (b.dataset.tab === 'data'){ highlightRow(); if (D){ renderPtNow(cur); renderCapNow(cur); } }
   if (b.dataset.tab === 'fleet') fleetRefresh();
+  if (b.dataset.tab === 'mine') mineRender();
   if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
   syncAnim();
 });
