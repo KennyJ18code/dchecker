@@ -3151,13 +3151,15 @@ const CHAIN_DEFS = [
     why:`Pulse moves on the outdoor EEV changed nothing while the valve sat at ${f0(e.evp)}% and superheat ran ${f1s(e.sh)}°F; the coil evaporated ${f1s(e.appr)}°F below outdoor air at ${f0(e.lp)} psi. The board wants more flow and the valve is not giving it.`,
     fix:['EEV coil and connector; strainer ahead of the valve.', 'Watch for defrosts stacking up as the coil runs cold.']}),
   absorb:[/^Outdoor EV not responding/, /^Suction superheat high/, /^Starved compressor/]},
- {id:'B6', fam:'unitary', cats:['crit'], cause:['suct'], effect:['dsh', 'disch', 'isod', 'cap'],
-  when:c => { if (c.cool.length < 10 || !c.has('igas')) return null; const dsh = c.med(c.cool, 'dsh'), sh = c.med(c.cool, 'sh'), iso = c.med(c.cool, 'isod'), pick = c.med(c.cool, i => isN(c.v('suct', i)) && isN(c.v('igas', i)) ? c.v('suct', i) - c.v('igas', i) : null), sv = c.hasS('svhot') ? c.on(c.cool, 'svhot') : 0;
-    return isN(dsh) && dsh < 20 && isN(sh) && sh >= 8 && isN(iso) && iso < 5 && isN(pick) && pick >= 12 && sv <= 0.1 ? {rows:c.span(c.cool), dsh, sh, iso, pick} : null; },
-  text:e => ({title:'4-way valve bleeding hot gas to suction → suction warmed, discharge cooled → low discharge superheat with a normal coil, capacity down',
-    why:`The coil itself was dry (coil superheat ${f1s(e.sh)}°F) yet the gas arriving at the compressor was ${f1s(e.pick)}°F warmer than it left the coil, and the discharge ran only ${f1s(e.dsh)}°F over condensing (${f1s(e.iso)}°F from the ideal line, where a healthy compressor sits 15–40°F above it). Hot gas is leaking straight from the discharge side to the suction side inside the reversing valve, with the hot-gas bypass closed. It looks like floodback from the outdoor unit but the indoor coil says otherwise.`,
-    fix:['Feel the four lines at the reversing valve: the suction line should be cold and the line from the indoor coil only slightly warmer; a suction tube warm near the valve body is the leak.', 'A temperature difference under 3°F between the two low-side tubes at the valve confirms it; the valve is replaced, not repaired.']}),
-  absorb:[/^Discharge superheat under/, /^Liquid returning to the compressor/]},
+ {id:'B6', fam:'unitary', cats:['crit'], cause:['suct'], effect:['dsh', 'disch', 'evap', 'cap'],
+  when:c => { if (c.cool.length < 10 || !c.has('igas')) return null;
+    const dsh = c.med(c.cool, 'dsh'), cdt = c.med(c.cool, 'coildt'), lift = c.med(c.cool, 'lift'), appr = c.med(c.cool, 'appr'), pick = c.med(c.cool, i => isN(c.v('suct', i)) && isN(c.v('igas', i)) ? c.v('suct', i) - c.v('igas', i) : null), sv = c.hasS('svhot') ? c.on(c.cool, 'svhot') : 0;
+    // hot gas leaking into the suction port: the compressor takes in gas far warmer than the coil sent, so discharge runs hot while the coil itself is normal
+    return isN(pick) && pick >= 15 && isN(dsh) && dsh >= 80 && isN(cdt) && cdt < 15 && sv <= 0.1 ? {rows:c.span(c.cool), dsh, cdt, pick, lift, appr} : null; },
+  text:e => ({title:'4-way valve leaking hot gas into the suction → compressor takes in hot gas → discharge superheat high with a normal coil, capacity down',
+    why:`The indoor coil was working normally (coil superheat ${f1s(e.cdt)}°F), yet the gas reaching the compressor was ${f1s(e.pick)}°F warmer than it left the coil, and discharge superheat ran ${f0(e.dsh)}°F, above the normal band. Hot discharge gas is crossing inside the reversing valve straight into the suction port: the compressor re-compresses its own hot gas, overheats, and moves less refrigerant${isN(e.lift) ? ` (lift only ${f0(e.lift)}°F)` : ''}. Suction superheat measured before the valve can look normal; the discharge side gives it away.`,
+    fix:['Clamp or feel the tubes at the reversing valve: the tube to the compressor suction should be within a few degrees of the line coming from the indoor coil. Much warmer means the slide is leaking.', 'Rule out the hot-gas bypass valve first (it should be closed and its line cool); then the reversing valve is replaced, not repaired.']}),
+  absorb:[/^Discharge peaked/, /^Discharge superheat high/, /^Suction superheat high/]},
  {id:'B7', fam:'unitary', cats:['crit'], cause:['igas', 'iliq'], effect:['hp', 'lp', 'disch'],
   when:c => { if (!c.has('igas') || !c.has('iliq')) return null; const r = c.run.filter(i => D.runSec[i] >= 180);
     const h = r.filter(i => D.mode[i] === 'heat' && isN(c.v('igas', i)) && isN(c.v('iliq', i)) && c.v('igas', i) < 60 && c.v('iliq', i) < 60 && c.v('cond', i) > 90);
@@ -3477,7 +3479,7 @@ function chainFindings(F0){
   if (!D) return out;
   const c = chainCtx(); c.F = F0 || []; const fam = c.multi ? 'multi' : 'unitary', fired = new Set();
   // chains that explain the same symptom: the first in the list wins (sensor faults before valve faults before charge)
-  const groups = {flood_cool:['C1', 'A2', 'B2', 'C2', 'C3', 'B6', 'B8', 'CC2', 'CC5', 'D10'], flood_heat:['A7', 'A8', 'B4', 'B5', 'C4', 'CC3'], derate:['A6', 'A11', 'A12', 'E4', 'F2', 'F3', 'B10'], defrost:['A9', 'D9', 'C6'], charge:['CC2', 'C4', 'CC3', 'CC4', 'CC5']};
+  const groups = {flood_cool:['C1', 'A2', 'B2', 'C2', 'C3', 'B8', 'CC2', 'CC5', 'D10'], flood_heat:['A7', 'A8', 'B4', 'B5', 'C4', 'CC3'], derate:['A6', 'A11', 'A12', 'E4', 'F2', 'F3', 'B10'], defrost:['A9', 'D9', 'C6'], charge:['CC2', 'C4', 'CC3', 'CC4', 'CC5']};
   const groupOf = id => Object.entries(groups).filter(([g, ids]) => ids.includes(id)).map(([g]) => g), taken = new Set();
   for (const def of CHAIN_DEFS){
     if (def.fam !== 'any' && def.fam !== fam) continue;
@@ -4159,7 +4161,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v91';
+const APP_VERSION = 'v92';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
