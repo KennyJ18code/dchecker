@@ -477,7 +477,9 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .datawrap td.alarm{color:var(--alarm);font-weight:700}
 .datawrap tr{cursor:pointer}
 .panel[hidden]{display:none}
-.settings{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow:auto}
+.settings{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow:auto;overscroll-behavior:contain}
+body.modal{overflow:hidden}
+.sfoot{display:none}
 .settings[hidden]{display:none}
 .spanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(980px,100%);padding:12px 20px 22px}
 .sbody{display:grid;grid-template-columns:1fr;gap:0 36px}
@@ -496,14 +498,16 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
 .sw:checked{background:var(--accent)}.sw:checked::after{left:21px}
 .sgroup.wide{border-top:1px solid var(--line);margin-top:16px}
-@media (max-width:600px){.settings{padding:0;align-items:stretch}.spanel{width:100%;min-height:100%;border-radius:0;border:0;padding:8px 14px calc(24px + env(safe-area-inset-bottom,0px))}.shead{top:-8px}}
+@media (max-width:600px){.settings{padding:0;align-items:stretch;background:var(--bg)}.spanel{width:100%;min-height:100%;border-radius:0;border:0;box-shadow:none;padding:calc(8px + env(safe-area-inset-top,0px)) 14px calc(84px + env(safe-area-inset-bottom,0px))}.shead{top:calc(-8px - env(safe-area-inset-top,0px));padding-top:calc(8px + env(safe-area-inset-top,0px))}
+  .sfoot{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:72;background:var(--panel);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}.sfoot .btn{flex:1;padding:12px;font-size:15px}}
 .cmode{display:flex;gap:4px;margin:8px 0 6px}
 .cmode .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .cbuild{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
 .cbuild select,.cbuild input{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;font-size:13px}
 .cbuild select.op{font-family:var(--mono);font-weight:700;width:5.5ch;text-align:center}
 .cbuild input.const{width:9ch;font-family:var(--mono)}
-.cbuild .step{display:inline-flex;gap:4px;align-items:center}
+.cbuild .step{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:100%}.cbuild select.chan{max-width:min(100%,260px)}
+.sbody,.sgroup,.spanel{min-width:0}@media (max-width:600px){.settings{overflow-x:hidden}}
 .cbuild .x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px}
 .acwrap{position:relative;margin:6px 0}
 .acwrap input{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 10px;font:13px var(--mono)}
@@ -732,6 +736,7 @@ body.no-cabinet #indoor-var .cab{display:none}
 </div></div>
 <div class="settings" id="settings" hidden>
   <div class="spanel">
+    <div class="sfoot"><button class="btn primary" id="settingsclose2" type="button">Done</button></div>
     <div class="shead"><b>Settings</b><span class="note">Saved on this device · <span id="appver"></span></span><button class="btn small" id="settingsreset" type="button">Defaults</button><button class="btn small primary" id="settingsclose" type="button">Done</button></div>
     <div class="sbody">
     <section class="sgroup"><h3>Diagram</h3>
@@ -4068,7 +4073,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v84';
+const APP_VERSION = 'v85';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -5156,9 +5161,11 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/cla
   setInterval(() => { if (document.body.classList.contains('anim-off')) return; const paths = document.querySelectorAll('.air path'); if (!paths.length) return; const off = -(((Date.now() - t0) / 900) * 14 % 14).toFixed(2) + 'px'; for (const p of paths) p.style.strokeDashoffset = off; }, 120);
 })();
 // settings panel wiring
-$('#settingsbtn').addEventListener('click', () => { $('#settings').hidden = false; });
-$('#settingsclose').addEventListener('click', () => { $('#settings').hidden = true; });
-$('#settings').addEventListener('click', e => { if (e.target === e.currentTarget) $('#settings').hidden = true; });
+function openSettings(on){ $('#settings').hidden = !on; document.body.classList.toggle('modal', on); if (on) $('#settings').scrollTop = 0; }
+$('#settingsbtn').addEventListener('click', () => openSettings(true));
+$('#settingsclose').addEventListener('click', () => openSettings(false));
+$('#settingsclose2').addEventListener('click', () => openSettings(false));
+$('#settings').addEventListener('click', e => { if (e.target === e.currentTarget) openSettings(false); });
 $('#settingsreset').addEventListener('click', () => { S = Object.assign({}, S_DEF); applySettings(); setLayout(); });
 document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListener('input', () => {
   const k = inp.dataset.s; S[k] = inp.type === 'checkbox' ? inp.checked : (inp.type === 'range' ? +inp.value : inp.value);
