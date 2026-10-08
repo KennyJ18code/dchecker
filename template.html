@@ -3676,9 +3676,11 @@ function drawTicks(){
   g.fillStyle = cssVar('--ok'); for (let i = 0; i < D.n; i++) if (D.steady[i]) g.fillRect(i*w, 0, Math.max(w,1), 2);
   g.fillStyle = cssVar('--ink'); g.fillRect(cur*w + w/2 - 1, 0, 2, H);
 }
+let lastT = null;
+function rememberPlace(){ if (!D || !D.sha) return; clearTimeout(lastT); lastT = setTimeout(() => { const t = document.querySelector('#tabs [aria-selected="true"]'); saveJSON('dchk.last', {sha:D.sha, cur, tab:t ? t.dataset.tab : 'cycle'}); }, 400); }
 function setCur(i){
   if (!D) return;
-  cur = Math.max(0, Math.min(D.n-1, i|0));
+  cur = Math.max(0, Math.min(D.n-1, i|0)); rememberPlace();
   renderNow(cur); renderCycle(cur); drawTicks(); drawAllStrips(); highlightRow();
 }
 function step(d){ setCur(cur + d); }
@@ -4145,7 +4147,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v87';
+const APP_VERSION = 'v88';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -4437,6 +4439,7 @@ async function mineSave(fileName, model){
     const sha = D.sha || await sha256(new TextEncoder().encode(D._text)); D.sha = sha;
     let findings = []; try { findings = synopsisFindings().filter(f => f.st !== 'ok' && f.st !== 'info').slice(0, 3).map(f => f.title); } catch(e){}
     const old = (await mineAll()).find(x => x.sha === sha);
+    saveJSON('dchk.last', {sha, cur:0, tab:'cycle'});
     await minePut({sha, fileName:fileName || D.name, model:model || D.model || null, fam:D.fam, eq:EQ.out, started:D.t[0] ? D.t[0].toISOString() : null, ended:D.t[D.n-1] ? D.t[D.n-1].toISOString() : null, n:D.n, modes:[...new Set(D.mode.filter(m => m !== 'other'))], findings, text:D._text, first:old ? old.first : Date.now(), at:Date.now()});
     const all = (await mineAll()).sort((a, b) => b.at - a.at); for (const x of all.slice(MINE_MAX)) await mineDel(x.sha);
   } catch(e){ console.warn('mine', e); }
@@ -4456,7 +4459,7 @@ async function mineRender(){
       ${call.complaint || (call.cats && call.cats.length) ? `<div class="c"><b>Call:</b> ${synEsc([...(call.cats || []), call.complaint].filter(Boolean).join(' · '))}${call.fix || call.found || call.outcome ? `<br><b>Found / fix:</b> ${synEsc([call.found, call.fix, call.outcome].filter(Boolean).join(' · '))}` : ''}</div>` : ''}
       ${x.findings && x.findings.length ? `<div class="f">${x.findings.map(f => '<span>' + synEsc(f) + '</span>').join('')}</div>` : ''}
       <div class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="del" title="Remove from this device (the shop library keeps its copy)">Remove</button></div>`;
-    el.querySelector('[data-act=open]').addEventListener('click', () => { load(x.text, x.fileName || 'recording.csv', x.model); if (D){ D.sha = x.sha; callCardLoad(); $('#savecsv').hidden = true; $('#tab-cycle').click(); } });
+    el.querySelector('[data-act=open]').addEventListener('click', () => { load(x.text, x.fileName || 'recording.csv', x.model); if (D){ D.sha = x.sha; saveJSON('dchk.last', {sha:x.sha, cur:0, tab:'cycle'}); callCardLoad(); $('#savecsv').hidden = true; $('#tab-cycle').click(); } });
     el.querySelector('[data-act=del]').addEventListener('click', async () => { await mineDel(x.sha); mineRender(); });
     host.appendChild(el);
   }
@@ -5233,6 +5236,7 @@ $('#tabs').addEventListener('click', e => {
   if (b.dataset.tab === 'data'){ highlightRow(); if (D){ renderPtNow(cur); renderCapNow(cur); } }
   if (b.dataset.tab === 'fleet') fleetRefresh();
   if (b.dataset.tab === 'mine') mineRender();
+  rememberPlace();
   if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
   syncAnim();
 });
@@ -5295,6 +5299,11 @@ sbUi(); logEvent('session_start', {layout:LAY === LAYOUTS.land ? 'land' : 'port'
 
 $('#cmp').addEventListener('click', () => togglePin('rps'));
 const sample = $('#sample-csv').textContent;
-if (sample && sample.length > 100) load(sample, '(REC only)_20251126-090117.csv');
+(async () => {
+  const last = loadJSON('dchk.last', null); let x = null;
+  if (last && last.sha){ try { x = (await mineAll()).find(r => r.sha === last.sha); } catch(e){} }
+  if (x){ load(x.text, x.fileName || 'recording.csv', x.model); if (D){ D.sha = x.sha; callCardLoad(); $('#savecsv').hidden = true; if (isN(last.cur)) setCur(last.cur); if (last.tab && last.tab !== 'cycle' && last.tab !== 'fleet') showTab(last.tab); } }
+  else if (sample && sample.length > 100) load(sample, '(REC only)_20251126-090117.csv');
+})();
 })();
 </script>
