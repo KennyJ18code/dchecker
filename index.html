@@ -142,6 +142,8 @@ body.no-narr .nowline{display:none}
 .synnotes{margin-top:6px}.synnotes summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:6px 2px}.synnotes .syn{margin-top:8px}
 .synkey{font-size:12px;color:var(--muted);margin:10px 2px 0}.synkey i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid var(--line)}.synkey i.crit{background:var(--tint-crit)}.synkey i.minor{background:var(--tint-minor)}.synkey i.fan{background:var(--tint-fan)}.synkey i.humid{background:var(--tint-humid)}.synkey i:first-child{margin-left:0}
 .callcard{margin:0 14px 12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2)}.callcard.off{display:none}.callrow{margin:0 0 10px}.callrow:last-child{margin:0}.callrow b{display:block;font-size:13px;margin:0 0 6px}.callrow label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}.callrow input,.callrow textarea{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:14px;width:100%;max-width:100%;font-family:var(--sans);resize:vertical}.callrow label input{flex:1;min-width:0}.callrow textarea{display:block;margin:6px 0 0}.callchips{display:flex;flex-wrap:wrap;gap:6px}.callchips button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700}.callchips button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.jobask{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain}.jobbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(440px,100%);padding:16px 18px;display:flex;flex-direction:column;gap:10px}.jobbox .jt{font-size:17px}.jobbox .note{margin:0;font-size:12.5px;color:var(--muted)}.jobbox label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700}.jobbox .req{font-weight:600;font-size:11px;color:var(--alarm);margin-left:6px}.jobbox input{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:16px;font-family:var(--sans)}.jobacts{display:flex;gap:8px;justify-content:space-between;margin-top:4px}.jobacts .btn{padding:10px 14px;font-size:14px}.jobacts .primary{flex:1}.jobacts .primary:disabled{opacity:.45}
+.jobrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}.jobrow #call-job{flex:1;min-width:0}.minerow .jobline{font-weight:700;color:var(--ink)}
 .syn h3{margin:0 0 4px;font-size:14px}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
 .syn .do::before{content:"Do: ";font-weight:800;color:var(--accent)}.syn .why::before{content:"Evidence: ";font-weight:800;color:var(--muted)}
 .syntime{margin:0;padding:0 14px 12px 14px;list-style:none;display:flex;flex-direction:column;gap:2px;max-height:420px;overflow:auto}
@@ -775,7 +777,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     </div>
     <p class="note" style="padding:0 14px 6px">Tap <b>Open</b> to view a recording here with no download; <b>CSV</b> saves the plain file; the zip holds every recording not yet opened on this device. Files are stored as plain CSV under <code>library/year/month/</code>, named date_model_tech_id.</p>
     <div class="fb" id="fbthis" hidden><span>This recording — was the app's read useful?</span><button class="btn small" data-v="right" type="button">👍 Right</button><button class="btn small" data-v="wrong" type="button">👎 Wrong</button><button class="btn small" data-v="unclear" type="button">Unclear</button><input id="fbnote" placeholder="note (optional)"></div>
-    <div class="tablewrap"><table id="fleettable"><thead><tr><th></th><th>Recorded</th><th>System</th><th>Tech</th><th>Size</th><th>Rows</th><th>Mode</th><th>Complaint</th><th>Top finding</th><th>Found / fix</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="tablewrap"><table id="fleettable"><thead><tr><th></th><th>Recorded</th><th>System</th><th>Customer</th><th>Tech</th><th>Size</th><th>Rows</th><th>Mode</th><th>Complaint</th><th>Top finding</th><th>Found / fix</th><th></th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <!-- DATA -->
@@ -839,7 +841,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Electric rate</b><small>$ per kWh, for the running cost of the outdoor unit over a recording</small></span><input type="number" class="snum" data-s="rate" min="0" max="2" step="0.01" inputmode="decimal"></label>
     </section>
     <section class="sgroup"><h3>Shop library</h3>
-      <label class="srow"><span class="t"><b>Save what this app analyzes</b><small>Every recording opened here is kept in the shop library to teach the software: the decoded log, the model, tech name, the app's findings and any grille readings you type. Customer name and address never leave the phone.</small></span><input type="checkbox" class="sw" data-s="share"></label>
+      <label class="srow"><span class="t"><b>Save what this app analyzes</b><small>Every recording opened here is kept in the shop library to teach the software: the decoded log, the model, the job details (tech, customer, address), the app's findings and any grille readings you type. Only the shop's signed-in readers can see any of it.</small></span><input type="checkbox" class="sw" data-s="share"></label>
       <div class="note" id="sharestatus"></div>
       <div class="sbsign"><b>Read the library</b><small>For the shop's own reader accounts; techs do not need this. Signing in adds a Library tab.</small>
         <div class="row"><input id="sb-email" type="email" placeholder="email" autocomplete="username"><input id="sb-pass" type="password" placeholder="password" autocomplete="current-password"><button class="btn small primary" id="sb-signin" type="button">Sign in</button><button class="btn small" id="sb-signout" type="button" hidden>Sign out</button></div>
@@ -4265,16 +4267,16 @@ async function openFiles(files){
       const hdr = members.find(m => /header\.txt$/i.test(m.name)); const hf = hdr ? td.decode(hdr.data).split(',') : []; const cf = cust ? td.decode(cust.data).split(',') : [];
       const model = (hf[2] || '').replace(/\.txt$/i, '') || null;
       load(csv, arch.name + (who ? ' — ' + who : ''), model); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname);
-      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D){ queueUpload({file_name:arch.name, tech_name:cf[7] || null, company:cf[8] || null, model}); mineSave(arch.name, model); } return;
+      logEvent('open_log', {source:'tgz', rows:D && D.n}); if (D) jobGate({file_name:arch.name, tech_name:cf[7] || null, company:cf[8] || null, model}, arch.name, model, {tech:cf[7] || '', customer:cf[3] || '', address:cf[1] || ''}); return;
     }
     const log = files.find(f => /\.log$/i.test(f.name)), lab = byName('datalabel\\.txt');
     if (log){
       if (!lab) throw new Error('pick datalabel.txt together with the .log (both are in the recording folder)');
       const csv = dlToCsv(dlParseLabels(await lab.text()), dlSplit(new Uint8Array(await log.arrayBuffer())));
-      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); logEvent('open_log', {source:'log', rows:D && D.n}); if (D){ queueUpload({file_name:log.name}); mineSave(log.name, null); } return;
+      load(csv, log.name); $('#savecsv').hidden = /claude\.ai$/.test(location.hostname); logEvent('open_log', {source:'log', rows:D && D.n}); if (D) jobGate({file_name:log.name}, log.name, null, null); return;
     }
     const csvf = files.find(f => /\.csv$/i.test(f.name)) || files[0];
-    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true; logEvent('open_log', {source:'csv', rows:D && D.n}); if (D){ queueUpload({file_name:csvf.name}); mineSave(csvf.name, null); }
+    load(await csvf.text(), csvf.name); $('#savecsv').hidden = true; logEvent('open_log', {source:'csv', rows:D && D.n}); if (D) jobGate({file_name:csvf.name}, csvf.name, null, null);
   } catch(e){ toast('Could not open: ' + e.message); }
 }
 window.dchkOpen = openFiles;
@@ -4284,8 +4286,8 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    Supabase REST without an SDK. Anyone using the app uploads anonymously (insert-only; the publishable key cannot read anything back);
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
-   learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v88';
+   learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
+const APP_VERSION = 'v89';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -4375,8 +4377,8 @@ async function queueUpload(meta){
     const blob = new Blob([buf], {type:'text/csv'}), ext = 'csv';   // plain CSV: opens straight from a download, no extracting
     const clean = v => String(v || '').replace(/^INV_Unitary_/i, '').replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
     const day = D.t[0] ? D.t[0].toISOString().slice(0, 10) : 'undated';
-    const base = [day, clean(meta.model || D.model || modelFamily() || 'log'), clean(meta.tech_name) || null, sha.slice(0, 8)].filter(Boolean).join('_');
-    await qPut({sha, name:base + '.' + ext, type:blob.type, blob, meta:{file_name:meta.file_name || D.name, tech_name:meta.tech_name || loadJSON('dchk.techname', '') || null, company:meta.company || null, model:meta.model || D.model || null,
+    const base = [day, clean(meta.customer) || null, clean(meta.model || D.model || modelFamily() || 'log'), clean(meta.tech_name) || null, sha.slice(0, 8)].filter(Boolean).join('_');
+    await qPut({sha, name:base + '.' + ext, type:blob.type, blob, meta:{file_name:meta.file_name || D.name, customer:meta.customer || null, address:meta.address || null, tech_name:meta.tech_name || loadJSON('dchk.techname', '') || null, company:meta.company || null, model:meta.model || D.model || null,
       row_count:D.n, interval_s:+D.interval.toFixed(1), started_at:D.t[0] && D.t[0].toISOString(), ended_at:D.t[D.n-1] && D.t[D.n-1].toISOString(), equipment:{out:EQ.out, auto:EQ.auto}, summary:recordingSummary(),
       app_version:APP_VERSION, refrigerant:REF.ref, unit_size:SIZE || null, capacity:capacitySummary(), device_id:DEVICE}});
     flushQueue();
@@ -4471,8 +4473,8 @@ function libRender(){
     const cap = r.capacity || {}, en = cap.energy || {}, mins = r.started_at && r.ended_at ? Math.round((new Date(r.ended_at) - new Date(r.started_at)) / 60000) : null;
     const modes = (r.summary && r.summary.modes || []).filter(m => m !== 'other').map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ');
     const kind = r.equipment ? (r.equipment.out === 'ac' ? 'AC' : 'Heat pump') : '';
-    tr.innerHTML = `<td>${SEEN.has(r.id) ? '' : '<span class="newdot" title="not opened on this device yet">●</span>'}</td><td>${r.started_at ? new Date(r.started_at).toLocaleDateString() : ''}<br><small>${r.started_at ? new Date(r.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td><td>${kind}${r.model ? '<br><small>' + synEsc(String(r.model).replace(/^INV_Unitary_/i, '')) + '</small>' : ''}${r.refrigerant ? '<br><small>' + (REFNAME[r.refrigerant] || r.refrigerant) + '</small>' : ''}</td><td>${synEsc(r.tech_name || '')}${r.company ? '<br><small>' + synEsc(r.company) + '</small>' : ''}</td><td>${r.unit_size ? r.unit_size.replace('E', ' E') + (/\d/.test(r.unit_size) ? '' : '') : ''}</td><td>${r.row_count || ''}${mins != null ? '<br><small>' + mins + ' min</small>' : ''}</td><td>${modes}${isN(en.kwh) ? '<br><small>' + en.kwh.toFixed(1) + ' kWh</small>' : ''}</td><td class="sigs">${(() => { const c = LIB_CALLS[r.sha256]; return c ? synEsc([...(c.complaint_cats || []), c.complaint].filter(Boolean).join(' · ')) : ''; })()}</td><td class="sigs">${synEsc(libTopFinding(r))}</td><td class="sigs">${(() => { const c = LIB_CALLS[r.sha256]; return c ? synEsc([c.found, c.fix, c.outcome].filter(Boolean).join(' · ')) : ''; })()}</td><td class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="csv">CSV</button></td>`;
-    tr.querySelector('[data-act=open]').addEventListener('click', async () => { try { toast('Opening…'); const {blob, name} = await libFetchFile(r); await openFiles([new File([blob], name)]); SEEN.add(r.id); seenSave(); libRender(); CURRENT_REC = {sha:r.sha256, id:r.id}; showFeedback(); $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
+    tr.innerHTML = `<td>${SEEN.has(r.id) ? '' : '<span class="newdot" title="not opened on this device yet">●</span>'}</td><td>${r.started_at ? new Date(r.started_at).toLocaleDateString() : ''}<br><small>${r.started_at ? new Date(r.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</small></td><td>${kind}${r.model ? '<br><small>' + synEsc(String(r.model).replace(/^INV_Unitary_/i, '')) + '</small>' : ''}${r.refrigerant ? '<br><small>' + (REFNAME[r.refrigerant] || r.refrigerant) + '</small>' : ''}</td><td>${(() => { const c = LIB_CALLS[r.sha256] || {}, cu = c.customer || r.customer, ad = c.address || r.address; return cu ? synEsc(cu) + (ad ? '<br><small>' + synEsc(ad) + '</small>' : '') : ''; })()}</td><td>${synEsc((LIB_CALLS[r.sha256] || {}).tech_name || r.tech_name || '')}${r.company ? '<br><small>' + synEsc(r.company) + '</small>' : ''}</td><td>${r.unit_size ? r.unit_size.replace('E', ' E') + (/\d/.test(r.unit_size) ? '' : '') : ''}</td><td>${r.row_count || ''}${mins != null ? '<br><small>' + mins + ' min</small>' : ''}</td><td>${modes}${isN(en.kwh) ? '<br><small>' + en.kwh.toFixed(1) + ' kWh</small>' : ''}</td><td class="sigs">${(() => { const c = LIB_CALLS[r.sha256]; return c ? synEsc([...(c.complaint_cats || []), c.complaint].filter(Boolean).join(' · ')) : ''; })()}</td><td class="sigs">${synEsc(libTopFinding(r))}</td><td class="sigs">${(() => { const c = LIB_CALLS[r.sha256]; return c ? synEsc([c.found, c.fix, c.outcome].filter(Boolean).join(' · ')) : ''; })()}</td><td class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="csv">CSV</button></td>`;
+    tr.querySelector('[data-act=open]').addEventListener('click', async () => { try { toast('Opening…'); { const c = LIB_CALLS[r.sha256] || {}; PREJOB = {tech:c.tech_name || r.tech_name || '', customer:c.customer || r.customer || '', address:c.address || r.address || ''}; } const {blob, name} = await libFetchFile(r); await openFiles([new File([blob], name)]); SEEN.add(r.id); seenSave(); libRender(); CURRENT_REC = {sha:r.sha256, id:r.id}; showFeedback(); $('#tab-cycle').click(); } catch(e){ toast('Could not open: ' + e.message); } });
     tr.querySelector('[data-act=csv]').addEventListener('click', async () => { try { const {blob, name} = await libFetchFile(r); saveBlob(blob, name); SEEN.add(r.id); seenSave(); libRender(); } catch(e){ toast('Could not download: ' + e.message); } });
     tb.appendChild(tr);
   }
@@ -4481,8 +4483,8 @@ async function fleetRefresh(){
   if (!SB || !sbReady()) return;
   const st = $('#fleetstatus'); st.textContent = 'loading…';
   try {
-    LIB_ROWS = await sbFetch('/rest/v1/recordings?select=id,created_at,tech_name,company,model,refrigerant,unit_size,started_at,ended_at,row_count,interval_s,equipment,summary,capacity,file_name,file_path,sha256&order=started_at.desc.nullslast&limit=500').then(r => r.json());
-    LIB_CALLS = {}; try { for (const c of await sbFetch('/rest/v1/calls?select=sha256,tech_name,complaint,complaint_cats,found,fix,outcome,created_at&order=created_at.desc&limit=2000').then(r => r.json())) if (!LIB_CALLS[c.sha256]) LIB_CALLS[c.sha256] = c; } catch(e){}
+    LIB_ROWS = await sbFetch('/rest/v1/recordings?select=id,created_at,tech_name,customer,address,company,model,refrigerant,unit_size,started_at,ended_at,row_count,interval_s,equipment,summary,capacity,file_name,file_path,sha256&order=started_at.desc.nullslast&limit=500').then(r => r.json());
+    LIB_CALLS = {}; try { for (const c of await sbFetch('/rest/v1/calls?select=sha256,tech_name,customer,address,complaint,complaint_cats,found,fix,outcome,created_at&order=created_at.desc&limit=4000').then(r => r.json())){ const m = LIB_CALLS[c.sha256] || (LIB_CALLS[c.sha256] = {}); for (const [k, v] of Object.entries(c)) if (m[k] == null && v != null && !(Array.isArray(v) && !v.length)) m[k] = v; } } catch(e){}
     libRender();
     try { $('#libtidy').hidden = !(LIB_ROWS.some(r => /^anon\//.test(r.file_path || '')) || (await libList('anon')).length); } catch(e){ $('#libtidy').hidden = true; }
   } catch(e){ st.textContent = 'could not load: ' + e.message; }
@@ -4535,13 +4537,13 @@ let CALL = null, callT = null, callSent = '';
 const callKey = () => D && D.sha ? 'dchk.call.' + D.sha : null;
 function callCardBuild(){
   const host = $('#callcard'); if (!host) return;
-  host.innerHTML = `<div class="callrow"><label>Your name <input id="call-name" placeholder="kept on this phone" autocomplete="off" value="${synEsc(loadJSON('dchk.techname', ''))}"></label></div>
+  host.innerHTML = `<div class="callrow jobrow"><span id="call-job"></span><button class="btn small" type="button" id="call-jobedit">Edit job</button></div>
     <div class="callrow"><b>Why the customer called</b><div class="callchips" id="call-cats">${CALL_CATS.map(c => `<button type="button" data-cat="${c}">${c}</button>`).join('')}</div>
     <textarea id="call-complaint" rows="2" placeholder="In the customer's words, e.g. “upstairs never gets below 76 in the afternoon”"></textarea></div>
     <div class="callrow"><b>What you found and what fixed it</b><textarea id="call-found" rows="2" placeholder="What was wrong"></textarea><textarea id="call-fix" rows="2" placeholder="What you did about it"></textarea>
     <div class="callchips" id="call-out">${CALL_OUT.map(c => `<button type="button" data-out="${c}">${c}</button>`).join('')}</div></div>
     <div class="note" id="call-status"></div>`;
-  host.querySelector('#call-name').addEventListener('input', e => { saveJSON('dchk.techname', e.target.value.trim()); callChanged(); });
+  host.querySelector('#call-jobedit').addEventListener('click', jobEdit);
   host.querySelector('#call-cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b || !CALL) return; const c = b.dataset.cat; CALL.cats = CALL.cats.includes(c) ? CALL.cats.filter(x => x !== c) : [...CALL.cats, c]; callRender(); callChanged(); });
   host.querySelector('#call-out').addEventListener('click', e => { const b = e.target.closest('[data-out]'); if (!b || !CALL) return; CALL.outcome = CALL.outcome === b.dataset.out ? '' : b.dataset.out; callRender(); callChanged(); });
   for (const [id, k] of [['call-complaint', 'complaint'], ['call-found', 'found'], ['call-fix', 'fix']]) host.querySelector('#' + id).addEventListener('input', e => { if (!CALL) return; CALL[k] = e.target.value; callChanged(); });
@@ -4550,6 +4552,7 @@ function callRender(){
   const host = $('#callcard'); if (!host) return;
   const on = !!(D && D.sha); host.classList.toggle('off', !on); if (!on){ $('#call-status').textContent = ''; return; }
   CALL = CALL || {cats:[], complaint:'', found:'', fix:'', outcome:''};
+  { const j = jobOf(D.sha); $('#call-job').innerHTML = j ? `<b>${synEsc(j.customer)}</b>${j.address ? ' · ' + synEsc(j.address) : ''} · tech ${synEsc(j.tech)}` : '<b>No job details yet</b>'; }
   host.querySelectorAll('#call-cats [data-cat]').forEach(b => b.classList.toggle('on', CALL.cats.includes(b.dataset.cat)));
   host.querySelectorAll('#call-out [data-out]').forEach(b => b.classList.toggle('on', CALL.outcome === b.dataset.out));
   for (const [id, k] of [['call-complaint', 'complaint'], ['call-found', 'found'], ['call-fix', 'fix']]){ const el = host.querySelector('#' + id); if (el.value !== (CALL[k] || '')) el.value = CALL[k] || ''; }
@@ -4559,7 +4562,7 @@ function callCardLoad(){ const k = callKey(); CALL = k ? Object.assign({cats:[],
 function callChanged(){ const k = callKey(); if (!k || !CALL) return; saveJSON(k, CALL); clearTimeout(callT); callT = setTimeout(callSend, 5000); callRender(); }
 async function callSend(){
   if (!D || !D.sha || !CALL || !(shareOn() || SB)) return;
-  const row = {device_id:DEVICE, sha256:D.sha, tech_name:loadJSON('dchk.techname', '') || null, complaint:CALL.complaint.trim() || null, complaint_cats:CALL.cats, found:CALL.found.trim() || null, fix:CALL.fix.trim() || null, outcome:CALL.outcome || null, model:D.model || modelFamily() || null, app_version:APP_VERSION};
+  const jb = jobOf(D.sha) || {}; const row = {device_id:DEVICE, sha256:D.sha, tech_name:jb.tech || loadJSON('dchk.techname', '') || null, customer:jb.customer || null, address:jb.address || null, complaint:CALL.complaint.trim() || null, complaint_cats:CALL.cats, found:CALL.found.trim() || null, fix:CALL.fix.trim() || null, outcome:CALL.outcome || null, model:D.model || modelFamily() || null, app_version:APP_VERSION};
   if (!row.complaint && !row.complaint_cats.length && !row.found && !row.fix && !row.outcome) return;
   const key = JSON.stringify(row); if (key === callSent) return;
   try { await sbPost('calls', row); callSent = key; CALL.sentAt = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); saveJSON(callKey(), CALL); callRender(); logEvent('call_notes', {cats:row.complaint_cats, outcome:row.outcome}); } catch(e){ console.warn('call', e); }
@@ -4571,14 +4574,14 @@ const MINE_MAX = 150;
 async function mineAll(){ const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('mine').objectStore('mine').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
 async function minePut(it){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('mine', 'readwrite'); t.objectStore('mine').put(it); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
 async function mineDel(sha){ const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('mine', 'readwrite'); t.objectStore('mine').delete(sha); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
-async function mineSave(fileName, model){
+async function mineSave(fileName, model, job){
   if (!D || !D._text) return;
   try {
     const sha = D.sha || await sha256(new TextEncoder().encode(D._text)); D.sha = sha;
     let findings = []; try { findings = synopsisFindings().filter(f => f.st !== 'ok' && f.st !== 'info').slice(0, 3).map(f => f.title); } catch(e){}
     const old = (await mineAll()).find(x => x.sha === sha);
     saveJSON('dchk.last', {sha, cur:0, tab:'cycle'});
-    await minePut({sha, fileName:fileName || D.name, model:model || D.model || null, fam:D.fam, eq:EQ.out, started:D.t[0] ? D.t[0].toISOString() : null, ended:D.t[D.n-1] ? D.t[D.n-1].toISOString() : null, n:D.n, modes:[...new Set(D.mode.filter(m => m !== 'other'))], findings, text:D._text, first:old ? old.first : Date.now(), at:Date.now()});
+    await minePut({sha, job:job || (old && old.job) || jobOf(sha) || null, fileName:fileName || D.name, model:model || D.model || null, fam:D.fam, eq:EQ.out, started:D.t[0] ? D.t[0].toISOString() : null, ended:D.t[D.n-1] ? D.t[D.n-1].toISOString() : null, n:D.n, modes:[...new Set(D.mode.filter(m => m !== 'other'))], findings, text:D._text, first:old ? old.first : Date.now(), at:Date.now()});
     const all = (await mineAll()).sort((a, b) => b.at - a.at); for (const x of all.slice(MINE_MAX)) await mineDel(x.sha);
   } catch(e){ console.warn('mine', e); }
   if (!$('#panel-mine').hidden) mineRender();
@@ -4586,14 +4589,14 @@ async function mineSave(fileName, model){
 async function mineRender(){
   const host = $('#minelist'), q = ($('#minefilter').value || '').trim().toLowerCase(); if (!host) return;
   let all = []; try { all = (await mineAll()).sort((a, b) => b.at - a.at); } catch(e){}
-  const rows = all.filter(x => { if (!q) return true; const call = loadJSON('dchk.call.' + x.sha, {}); return JSON.stringify([x.fileName, x.model, x.findings, x.modes, call.complaint, call.cats, call.found, call.fix]).toLowerCase().includes(q); });
+  const rows = all.filter(x => { if (!q) return true; const call = loadJSON('dchk.call.' + x.sha, {}); return JSON.stringify([x.job, x.fileName, x.model, x.findings, x.modes, call.complaint, call.cats, call.found, call.fix]).toLowerCase().includes(q); });
   $('#minestatus').textContent = all.length ? `${rows.length} of ${all.length} recording${all.length === 1 ? '' : 's'} on this device` : 'Nothing yet: every log you open here will be listed, so you can come back to it.';
   host.innerHTML = '';
   for (const x of rows){
     const call = loadJSON('dchk.call.' + x.sha, {}), mins = x.started && x.ended ? Math.round((new Date(x.ended) - new Date(x.started)) / 60000) : null;
     const kind = x.fam === 'multi' ? 'Multi split' : (x.eq === 'ac' ? 'Air conditioner' : 'Heat pump'), modes = (x.modes || []).map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ');
     const el = document.createElement('div'); el.className = 'minerow';
-    el.innerHTML = `<div class="t"><b>${x.started ? new Date(x.started).toLocaleDateString() + ' ' + new Date(x.started).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—'}</b> · ${kind}${x.model ? ' · ' + synEsc(String(x.model).replace(/^INV_Unitary_/i, '')) : ''} · ${x.n} rows${mins != null ? ' · ' + mins + ' min' : ''}${modes ? ' · ' + modes : ''}<br><small>${synEsc(x.fileName || '')} · opened ${new Date(x.at).toLocaleDateString()}</small></div>
+    el.innerHTML = `<div class="t"><b>${x.started ? new Date(x.started).toLocaleDateString() + ' ' + new Date(x.started).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—'}</b> · ${kind}${x.model ? ' · ' + synEsc(String(x.model).replace(/^INV_Unitary_/i, '')) : ''} · ${x.n} rows${mins != null ? ' · ' + mins + ' min' : ''}${modes ? ' · ' + modes : ''}${(() => { const j = x.job || jobOf(x.sha); return j ? `<br><span class="jobline">${synEsc([j.customer, j.address].filter(Boolean).join(' · '))}${j.tech ? ' · tech ' + synEsc(j.tech) : ''}</span>` : ''; })()}<br><small>${synEsc(x.fileName || '')} · opened ${new Date(x.at).toLocaleDateString()}</small></div>
       ${call.complaint || (call.cats && call.cats.length) ? `<div class="c"><b>Call:</b> ${synEsc([...(call.cats || []), call.complaint].filter(Boolean).join(' · '))}${call.fix || call.found || call.outcome ? `<br><b>Found / fix:</b> ${synEsc([call.found, call.fix, call.outcome].filter(Boolean).join(' · '))}` : ''}</div>` : ''}
       ${x.findings && x.findings.length ? `<div class="f">${x.findings.map(f => '<span>' + synEsc(f) + '</span>').join('')}</div>` : ''}
       <div class="acts"><button class="btn small primary" type="button" data-act="open">Open</button><button class="btn small" type="button" data-act="del" title="Remove from this device (the shop library keeps its copy)">Remove</button></div>`;
@@ -4604,6 +4607,49 @@ async function mineRender(){
 }
 $('#minefilter').addEventListener('input', mineRender);
 $('#mineclear').addEventListener('click', async () => { for (const x of await mineAll()) await mineDel(x.sha); mineRender(); });
+// --- Job details: tech name and customer name are required for every newly opened recording, address is asked for too. Kept per recording on
+//     the device (and in My logs), written on the recording's library row, and sent with the call notes so a recording that was already in the
+//     library picks them up as well. Readable only by the shop's signed-in readers. ---
+const jobKey = sha => 'dchk.job.' + sha;
+const jobOf = sha => sha ? loadJSON(jobKey(sha), null) : null;
+let PREJOB = null;   // set by the Library tab before it opens a recording it already knows
+function jobAsk(pre){
+  return new Promise(res => {
+    const el = document.createElement('div'); el.className = 'jobask';
+    el.innerHTML = `<form class="jobbox" autocomplete="off"><b class="jt">Job details</b><p class="note">Saved with this recording so the job can be found and revisited. Tech and customer are required.</p>
+      <label><span>Tech name <span class="req">required</span></span><input id="job-tech" required value="${synEsc(pre.tech || '')}" placeholder="Your name"></label>
+      <label><span>Customer name <span class="req">required</span></span><input id="job-cust" required value="${synEsc(pre.customer || '')}" placeholder="e.g. Jane Smith"></label>
+      <label><span>Address</span><input id="job-addr" value="${synEsc(pre.address || '')}" placeholder="Street, city"></label>
+      <div class="jobacts"><button class="btn" type="button" id="job-shop">Shop test / training</button><button class="btn primary" type="submit" id="job-save" disabled>Save</button></div></form>`;
+    document.body.appendChild(el); document.body.classList.add('modal');
+    const t = el.querySelector('#job-tech'), c = el.querySelector('#job-cust'), a = el.querySelector('#job-addr'), sv = el.querySelector('#job-save');
+    const ok = () => { sv.disabled = !(t.value.trim() && c.value.trim()); }; [t, c].forEach(x => x.addEventListener('input', ok)); ok();
+    el.querySelector('#job-shop').addEventListener('click', () => { c.value = 'Shop test'; if (!a.value.trim()) a.value = 'Shop'; ok(); if (!t.value.trim()) t.focus(); });
+    el.querySelector('form').addEventListener('submit', e => { e.preventDefault(); if (sv.disabled) return; const job = {tech:t.value.trim(), customer:c.value.trim(), address:a.value.trim()}; el.remove(); document.body.classList.remove('modal'); res(job); });
+    setTimeout(() => (t.value.trim() ? (c.value.trim() ? a : c) : t).focus(), 50);
+  });
+}
+async function jobGate(meta, fileName, model, pre){
+  if (!D || !D._text) return;
+  const dd = D, sha = D.sha || await sha256(new TextEncoder().encode(D._text)); D.sha = sha;
+  const known = jobOf(sha), lib = PREJOB; PREJOB = null;
+  let job = known && known.tech && known.customer ? known : null;
+  if (!job){ const cand = Object.assign({tech:loadJSON('dchk.techname', '')}, pre || {}, lib || {}, known || {}); job = (lib && cand.tech && cand.customer) ? cand : await jobAsk(cand); }
+  saveJSON(jobKey(sha), job); saveJSON('dchk.techname', job.tech);
+  if (D !== dd) return;
+  if (!lib) queueUpload(Object.assign({}, meta, {tech_name:job.tech, customer:job.customer, address:job.address || null}));
+  await mineSave(fileName, model, job); jobSend(job); callCardLoad();
+}
+async function jobSend(job){
+  if (!D || !D.sha || !(shareOn() || SB)) return;
+  try { await sbPost('calls', {device_id:DEVICE, sha256:D.sha, tech_name:job.tech, customer:job.customer, address:job.address || null, model:D.model || modelFamily() || null, app_version:APP_VERSION}); } catch(e){ console.warn('job', e); }
+}
+async function jobEdit(){
+  if (!D || !D.sha) return; const cur0 = jobOf(D.sha) || {tech:loadJSON('dchk.techname', '')};
+  const job = await jobAsk(cur0); saveJSON(jobKey(D.sha), job); saveJSON('dchk.techname', job.tech);
+  try { const x = (await mineAll()).find(r => r.sha === D.sha); if (x){ x.job = job; await minePut(x); } } catch(e){}
+  jobSend(job); callRender();
+}
 // feedback lives at the foot of the synopsis, where the app's read is
 { const fb = $('#fbthis'), syn = $('#panel-synopsis'); if (fb && syn) syn.appendChild(fb); }
 document.querySelectorAll('#fbthis [data-v]').forEach(b => b.addEventListener('click', async () => {
