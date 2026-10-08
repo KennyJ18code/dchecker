@@ -611,6 +611,7 @@ body.no-cabinet #indoor-var .cab{display:none}
 
 .tagtip{position:fixed;left:0;top:0;z-index:85;pointer-events:none;max-width:300px;padding:8px 11px;border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 80%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:var(--shadow);color:var(--ink);font:12.5px/1.4 var(--sans)}
 .tagtip[hidden]{display:none}
+#tags .tag{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .tagtip .tt-h{display:flex;align-items:center;gap:8px;justify-content:space-between}.tagtip .tt-h b{font-weight:800;font-size:13px}
 .tagtip .tt-k{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 7px;background:var(--ok-soft);color:var(--ok)}
 .tagtip .tt-k.calc{background:var(--accent-soft);color:var(--accent)}.tagtip .tt-k.custom{background:var(--warn-soft);color:var(--warn)}
@@ -4296,7 +4297,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v90';
+const APP_VERSION = 'v91';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -5409,7 +5410,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
   let on = null;
   const show = (e, ev) => {
     const t = e._tip; if (!t) return;
-    tip.innerHTML = `<div class="tt-h"><b>${synEsc(t.label)}</b><span class="tt-k ${t.kind}">${t.kind === 'calc' ? 'Calculated' : t.kind === 'custom' ? 'Custom' : 'Measured'}</span></div>${t.note ? `<div class="tt-f">${synEsc(t.note)}</div>` : ''}${t.kind === 'meas' ? '<div class="tt-s">Logged by the unit\'s own sensor, shown as recorded.</div>' : ''}<div class="tt-p">Tap to pin its trend</div>`;
+    tip.innerHTML = `<div class="tt-h"><b>${synEsc(t.label)}</b><span class="tt-k ${t.kind}">${t.kind === 'calc' ? 'Calculated' : t.kind === 'custom' ? 'Custom' : 'Measured'}</span></div>${t.note ? `<div class="tt-f">${synEsc(t.note)}</div>` : ''}${t.kind === 'meas' ? '<div class="tt-s">Logged by the unit\'s own sensor, shown as recorded.</div>' : ''}<div class="tt-p">${lpShown ? 'Tap the tag again to pin its trend' : 'Tap to pin its trend'}</div>`;
     tip.hidden = false; move(ev);
   };
   const move = ev => { const pad = 14, r = tip.getBoundingClientRect(); let x = ev.clientX + pad, y = ev.clientY + pad;
@@ -5417,8 +5418,23 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
     tip.style.transform = `translate(${Math.max(8, x)}px,${Math.max(8, y)}px)`; };
   document.addEventListener('pointerover', ev => { if (ev.pointerType !== 'mouse') return; const e = ev.target.closest && ev.target.closest('#tags .tag'); if (e === on) return; on = e; if (e) show(e, ev); else tip.hidden = true; });
   document.addEventListener('pointermove', ev => { if (on && !tip.hidden) move(ev); });
-  document.addEventListener('pointerdown', () => { tip.hidden = true; on = null; });
-  document.addEventListener('scroll', () => { tip.hidden = true; on = null; }, true);
+  // phones: a long press on a tag shows the card above the finger; the tap that ends it does not pin the trend
+  let lp = null, lpShown = false, sx = 0, sy = 0;
+  const lpCancel = () => { clearTimeout(lp); lp = null; };
+  document.addEventListener('pointerdown', ev => {
+    if (ev.pointerType === 'mouse'){ tip.hidden = true; on = null; return; }
+    const e = ev.target.closest && ev.target.closest('#tags .tag');
+    if (lpShown){ tip.hidden = true; lpShown = false; }   // a new touch ends the card; only the touch that opened it is kept from pinning
+    lpCancel(); if (!e) return; sx = ev.clientX; sy = ev.clientY;
+    lp = setTimeout(() => { lp = null; lpShown = true; show(e, {clientX:sx, clientY:sy}); const r = tip.getBoundingClientRect();
+      const x = Math.min(Math.max(8, sx - r.width / 2), innerWidth - r.width - 8), y = sy - r.height - 24 >= 8 ? sy - r.height - 24 : sy + 28;
+      tip.style.transform = `translate(${x}px,${y}px)`; if (navigator.vibrate) try { navigator.vibrate(12); } catch(_){} }, 450);
+  });
+  document.addEventListener('pointermove', ev => { if (lp && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 10) lpCancel(); });
+  document.addEventListener('pointerup', lpCancel); document.addEventListener('pointercancel', lpCancel);
+  document.addEventListener('click', ev => { if (lpShown && ev.target.closest && ev.target.closest('#tags .tag')){ ev.stopPropagation(); ev.preventDefault(); } }, true);
+  document.addEventListener('contextmenu', ev => { if (ev.target.closest && ev.target.closest('#tags .tag')) ev.preventDefault(); });
+  document.addEventListener('scroll', () => { tip.hidden = true; on = null; lpShown = false; lpCancel(); }, true);
 })();
 
 /* ---------- wiring ---------- */
