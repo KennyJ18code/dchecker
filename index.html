@@ -535,6 +535,17 @@ body.no-cabinet #indoor-var .cab{display:none}
 .toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 
+
+/* tab strip: every tab the same size, weight and height; icon and label on one line */
+.tabs{display:grid;grid-auto-flow:column;grid-auto-columns:104px}
+@media (min-width:601px){.top .btn,.brand h1,.brand small{white-space:nowrap}.top .wrap{flex-wrap:nowrap}.top .file{flex:1 1 auto;min-width:0;flex-wrap:nowrap}.top .dsname{flex:1 1 auto;min-width:0}.brand{flex:none}.tabs{flex:none}}
+@media (min-width:601px) and (max-width:1100px){.brand small{display:none}}
+@media (min-width:601px) and (max-width:1000px){.top .dsname{display:none}}
+.tabs button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:0;height:34px;padding:0 8px;font-size:13px;font-weight:700;line-height:1;white-space:nowrap}
+.tabs button svg{width:16px;height:16px;flex:none;stroke-width:1.8}
+.tabs button span{font-size:13px;font-weight:700}
+.tabs button[aria-selected="true"]{font-weight:700}
+.pvgear{display:none}
 /* ===== phone layout (bottom tabs + folded chips) ===== */
 .pvbanner{display:none}
 @media (max-width:600px){
@@ -546,12 +557,13 @@ body.no-cabinet #indoor-var .cab{display:none}
   .brand{display:none}
   .file{flex:1;min-width:0;flex-wrap:nowrap}
   .file .dsname{flex:1;min-width:0;max-width:none}
-  .pvgear{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:8px;width:38px;height:34px;display:grid;place-items:center;padding:0}
+  .pvgear{display:grid;flex:none;border:1px solid var(--line);background:var(--panel);border-radius:8px;width:38px;height:34px;display:grid;place-items:center;padding:0}
   .pvgear svg{width:18px;height:18px}
   #settingsbtn{display:none}
   /* tabs become a bottom bar in thumb reach */
-  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;margin:0;border-radius:0;background:var(--panel);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));height:calc(var(--tabh) + env(safe-area-inset-bottom,0px));gap:0;box-shadow:0 -4px 14px rgba(0,0,0,.06)}
-  .tabs button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 2px;font-size:10.5px;font-weight:700;border-radius:8px;color:var(--muted)}
+  .tabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;margin:0;border-radius:0;background:var(--panel);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));height:calc(var(--tabh) + env(safe-area-inset-bottom,0px));gap:0;box-shadow:0 -4px 14px rgba(0,0,0,.06)}
+  .tabs button{flex:1;min-width:0;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 2px;font-size:10.5px;line-height:1.1;font-weight:700;border-radius:8px;color:var(--muted)}
+  .tabs button span{font-size:10.5px}
   .tabs button svg{width:22px;height:22px}
   .tabs button[aria-selected="true"]{background:transparent;box-shadow:none;color:var(--accent)}
   .tabs button[aria-selected="true"] svg{stroke:var(--accent)}
@@ -574,13 +586,13 @@ body.no-cabinet #indoor-var .cab{display:none}
 
 /* phone on its side: the 2D drawing cannot be read at this height, so landscape is for the 3D model and Trends */
 .pvturn{display:none}
-@media (max-height:500px) and (orientation:landscape) and (max-width:1000px){
+@media (max-height:500px) and (orientation:landscape) and (max-width:1000px) and (pointer:coarse){
   :root{--tabh:44px}
   body{padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px))}
   .pvbanner,.top .file,.top .pvgear,.top .brand,.stamprow,.nowbar,.nowline,.hint{display:none !important}
   .top{position:static;border:0;background:transparent}.top .wrap{padding:0}
   .tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;margin:0;border-radius:0;background:var(--panel);border-top:1px solid var(--line);padding:2px 4px env(safe-area-inset-bottom,0px);height:calc(var(--tabh) + env(safe-area-inset-bottom,0px));gap:0;display:flex}
-  .tabs button{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;padding:2px;font-size:12px;font-weight:700;color:var(--muted);background:transparent;box-shadow:none}
+  .tabs button{flex:1;min-width:0;height:auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;padding:2px;font-size:12px;font-weight:700;color:var(--muted);background:transparent;box-shadow:none}
   .tabs button svg{width:18px;height:18px}.tabs button[aria-selected="true"]{color:var(--accent);background:transparent;box-shadow:none}
   .timeline{bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px));padding-bottom:0}
   .timeline .dock,.timeline .demand,.timeline .tickkey,.timeline #b-first,.timeline #b-last,.timeline #speed,.viewbar .thermscale,.viewbar #thermscale{display:none !important}
@@ -4271,7 +4283,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, and thumbs-up/down feedback. Customer name and address never leave the phone. */
-const APP_VERSION = 'v86';
+const APP_VERSION = 'v87';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
