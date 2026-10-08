@@ -608,6 +608,15 @@ body.no-cabinet #indoor-var .cab{display:none}
   .pvturn svg{width:44px;height:44px;stroke:var(--muted)}.pvturn b{font-size:16px}.pvturn p{margin:0;color:var(--muted);font-size:13px;max-width:44ch}
   .pvturn .row{display:flex;gap:10px}.pvturn .btn{padding:10px 18px;font-size:14px}
 }
+
+.tagtip{position:fixed;left:0;top:0;z-index:85;pointer-events:none;max-width:300px;padding:8px 11px;border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 80%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:var(--shadow);color:var(--ink);font:12.5px/1.4 var(--sans)}
+.tagtip[hidden]{display:none}
+.tagtip .tt-h{display:flex;align-items:center;gap:8px;justify-content:space-between}.tagtip .tt-h b{font-weight:800;font-size:13px}
+.tagtip .tt-k{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 7px;background:var(--ok-soft);color:var(--ok)}
+.tagtip .tt-k.calc{background:var(--accent-soft);color:var(--accent)}.tagtip .tt-k.custom{background:var(--warn-soft);color:var(--warn)}
+.tagtip .tt-f{margin-top:5px;font-family:var(--mono);font-size:11.5px;color:var(--ink2)}
+.tagtip .tt-s{margin-top:5px;font-size:11.5px;color:var(--ink2)}
+.tagtip .tt-p{margin-top:6px;font-size:11px;color:var(--muted)}
 </style>
 
 <header class="top"><div class="wrap">
@@ -2883,7 +2892,7 @@ function renderCycle(i){
     const ids = (tg.states && (Array.isArray(tg.states) ? tg.states : pick(tg.states, m))) || [id];
     const st = worstOf(ids, i);
     e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + ((ch.calc && !/pct$/.test(id) && !ch.custom) ? ' calc' : '') + (ch.custom ? ' custom' : '') + ' ' + (isN(v) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '') + (chainState(id, i) ? ' ' + chainState(id, i) : '') + (implausAt(id, i) ? ' implaus' : '');
-    e.title = ch.label + (ch.note ? ' · ' + (typeof ch.note === 'function' ? ch.note(m) : ch.note) : '') + ' · tap to pin trend';
+    e.removeAttribute('title'); e._tip = {label:ch.label, note:ch.note ? (typeof ch.note === 'function' ? ch.note(m) : ch.note) : '', kind:ch.custom ? 'custom' : (ch.calc ? 'calc' : 'meas')};
   });
 }
 // change from the previous row: ▲ green / ▼ red, as a percentage (absolute when the previous value is near zero)
@@ -4149,7 +4158,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v89';
+const APP_VERSION = 'v90';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -5253,6 +5262,25 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
   new MutationObserver(mark).observe($('#dimsel'), {attributes:true, subtree:true, attributeFilter:['aria-pressed']});
   window.addEventListener('resize', () => { mark(); if (typeof V3 !== 'undefined' && V3) V3.resize(); });
   setTimeout(mark, 300);
+})();
+
+
+/* ---------- reading tooltip: what a tag is and where its number comes from, styled like the app ---------- */
+(() => {
+  const tip = document.createElement('div'); tip.className = 'tagtip'; tip.hidden = true; document.body.appendChild(tip);
+  let on = null;
+  const show = (e, ev) => {
+    const t = e._tip; if (!t) return;
+    tip.innerHTML = `<div class="tt-h"><b>${synEsc(t.label)}</b><span class="tt-k ${t.kind}">${t.kind === 'calc' ? 'Calculated' : t.kind === 'custom' ? 'Custom' : 'Measured'}</span></div>${t.note ? `<div class="tt-f">${synEsc(t.note)}</div>` : ''}${t.kind === 'meas' ? '<div class="tt-s">Logged by the unit\'s own sensor, shown as recorded.</div>' : ''}<div class="tt-p">Tap to pin its trend</div>`;
+    tip.hidden = false; move(ev);
+  };
+  const move = ev => { const pad = 14, r = tip.getBoundingClientRect(); let x = ev.clientX + pad, y = ev.clientY + pad;
+    if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - pad; if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - pad;
+    tip.style.transform = `translate(${Math.max(8, x)}px,${Math.max(8, y)}px)`; };
+  document.addEventListener('pointerover', ev => { if (ev.pointerType !== 'mouse') return; const e = ev.target.closest && ev.target.closest('#tags .tag'); if (e === on) return; on = e; if (e) show(e, ev); else tip.hidden = true; });
+  document.addEventListener('pointermove', ev => { if (on && !tip.hidden) move(ev); });
+  document.addEventListener('pointerdown', () => { tip.hidden = true; on = null; });
+  document.addEventListener('scroll', () => { tip.hidden = true; on = null; }, true);
 })();
 
 /* ---------- wiring ---------- */
