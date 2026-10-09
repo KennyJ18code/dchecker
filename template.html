@@ -144,7 +144,7 @@ body.no-narr .nowline{display:none}
 .callcard{margin:0 14px 12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2)}.callcard.off{display:none}.callrow{margin:0 0 10px}.callrow:last-child{margin:0}.callrow b{display:block;font-size:13px;margin:0 0 6px}.callrow label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}.callrow input,.callrow textarea{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:14px;width:100%;max-width:100%;font-family:var(--sans);resize:vertical}.callrow label input{flex:1;min-width:0}.callrow textarea{display:block;margin:6px 0 0}.callchips{display:flex;flex-wrap:wrap;gap:6px}.callchips button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700}.callchips button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .jobask{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain}.jobbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(440px,100%);padding:16px 18px;display:flex;flex-direction:column;gap:10px}.jobbox .jt{font-size:17px}.jobbox .note{margin:0;font-size:12.5px;color:var(--muted)}.jobbox label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700}.jobbox .req{font-weight:600;font-size:11px;color:var(--alarm);margin-left:6px}.jobbox input{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:16px;font-family:var(--sans)}.jobacts{display:flex;gap:8px;justify-content:space-between;margin-top:4px}.jobacts .btn{padding:10px 14px;font-size:14px}.jobacts .primary{flex:1}.jobacts .primary:disabled{opacity:.45}
 .jobrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}.jobrow #call-job{flex:1;min-width:0}.minerow .jobline{font-weight:700;color:var(--ink)}
-.syn h3{margin:0 0 4px;font-size:14px}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
+.syn h3{margin:0 0 4px;font-size:14px}.syn h3 .mchip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 7px;border-radius:9px;margin:0 7px 2px 0;vertical-align:middle;color:var(--ink)}.syn h3 .mchip.heat{background:var(--hi-soft)}.syn h3 .mchip.cool{background:var(--lo-soft)}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
 .syn .do::before{content:"Do: ";font-weight:800;color:var(--accent)}.syn .why::before{content:"Evidence: ";font-weight:800;color:var(--muted)}
 .syntime{margin:0;padding:0 14px 12px 14px;list-style:none;display:flex;flex-direction:column;gap:2px;max-height:420px;overflow:auto}
 .syntime li{display:grid;grid-template-columns:52px 1fr;gap:10px;font-size:12.5px;padding:4px 8px;border-radius:6px;cursor:pointer;align-items:baseline}
@@ -1024,6 +1024,25 @@ const STAT = [
 ];
 for (let k = 0; k < MZ.ports; k++){ const L = MZ.letters[k], b = 97 + 28*k;
   STAT.push({id:'zaddr'+k, mcol:b, label:`Zone ${L} addr`}, {id:'zmode'+k, mcol:b+1, label:`Zone ${L} mode`}, {id:'zerr'+k, mcol:b+3, label:`Zone ${L} error`}, {id:'zflow'+k, mcol:b+23, label:`Zone ${L} airflow`}, {id:'ztx'+k, mcol:b+27, label:`Zone ${L} transmission`}); }
+// ---- the header label each reading must sit under (u = unitary FIT/VC exports, m = multi-zone exports) ----
+// On import every reading is found by this label first; its column number is only a fallback, and a column whose header does not
+// match is left blank and reported, so a shifted or renamed export can never put a number under the wrong chip.
+const HDR = {
+  oat:{u:/^Outdoor air temp/i, m:/^Outdoor air temp/i}, ochex:{u:/^ODU hex temp/i, m:/^ODU hex temp/i}, disch:{u:/^Disch temp\.\s*\(/i, m:/^Disch temp\.\s*\(/i},
+  suct:{u:/^Suction temp/i}, ocmid:{u:/^ODU hex mid temp/i}, liq:{u:/^Liquid pipe temp/i}, hp:{u:/^High pressure/i}, lp:{u:/^Low pressure/i}, cond:{u:/^Cond temp/i}, evap:{u:/^Evap temp/i},
+  inv1:{u:/^INV prim cur/i}, inv2:{u:/^INV scnd cur/i}, fin:{u:/^INV fin temp/i, m:/^Fin temp/i}, syscur:{u:/^(Sys\.? ?Op\.? ?Current|System operation current)/i, m:/^Operation cur/i},
+  demand:{u:/^Demand %/i}, retry:{u:/^Retry code/i}, ecode:{u:/^(OU )?Error code$/i, m:/^Error code$/i},
+  tdisch:{m:/^Trgt\.? ?Dsch\.? ?Temp/i}, maxhz:{m:/^Max Hz ?\(rps\)/i}, minhz:{m:/^Min Hz/i}, limpeak:{m:/^Max Hz ?\(peak cut\)/i}, limfrz:{m:/^Max Hz ?\(frz prtc\)/i}, limtd:{m:/^Max Hz ?\(Td\)/i}, liminv:{m:/^Max Hz ?\(INV cur\)/i}, volt:{m:/^AC voltage/i},
+  rps:{m:/^Comp\.? ?\(rps\)/i}, trps:{m:/^Trgt comp/i}, tfan:{m:/^Trgt o_fan1/i}, fan:{m:/^O_fan1 ?\(rpm\)/i},
+  opmode:{u:/^Op mode/i, m:/^Op mode/i}, therm:{u:/^Therm\.? on\/off/i}, restart:{u:/^Restart standby/i}, startup:{u:/^Startup ctrl/i}, defrost:{u:/^Defrost op/i, m:/^Defrost op/i}, oilret:{u:/^Oil ret/i},
+  dsig:{u:/^Demand signal/i}, lownoise:{u:/^Low noise/i}, freeze:{u:/^Freeze protection/i}, etype:{u:/^(OU )?Error type/i, m:/^Error code$/i},
+  dropDisch:{u:/^Disch temp\.? drop/i}, dropInv:{u:/^(INV cur\.? drop|Comp\.? INV 2nd Drop)/i}, dropHp:{u:/^HP drop/i}, dropLp:{u:/^LP drop/i}, dropFin:{u:/^Fin temp drop/i}, dropOther:{u:/^Other drop/i},
+  fourway:{m:/^4way valve on\/off/i}, fwmode:{m:/^4way vlv op/i}, compcmd:{m:/^Compressor$/i}, refrig:{u:/^\*?Refrigerant type/i},
+};
+const ZHDR = {dd:/^Delta-D/i, ra:/^Return air temp/i, ihx:/^Heat exchanger temp/i, ifan:/^Fan frequency/i, sp:/^R\/C setpoint/i, zaddr:/^IDU address/i, zmode:/^Operation mode$/i, zerr:/^Error code$/i, zflow:/^Airflow \(C\)/i, ztx:/^In\/out transmission/i};
+for (const c of [...NUM, ...STAT]){ const h = HDR[c.id]; if (h){ if (h.u && !c.lab) c.hdr = h.u; if (h.m) c.mhdr = h.m; }
+  let z; if ((z = /^(rmgas|rmliq|pev)(\d)$/.exec(c.id))){ const L = MZ.letters[+z[2]]; c.mhdr = new RegExp(z[1] === 'pev' ? `^Port ${L} EV` : `^Rm_${L} ${z[1] === 'rmgas' ? 'gas' : 'liquid'} temp`, 'i'); }
+  else if ((z = /^(dd|ra|ihx|ifan|sp|zaddr|zmode|zerr|zflow|ztx)(\d)$/.exec(c.id))){ c.zblock = true; c.zone = +z[2]; c.mhdr = ZHDR[z[1]]; } }   // zone readings share one label per indoor-unit block; found inside their own block
 const ALLCH = [...NUM, ...DERIVED];
 const chById = Object.fromEntries(ALLCH.map(c => [c.id, c]));
 // user-defined channels: name + formula over channel ids (e.g. "disch - cond", "(igas + iliq) / 2")
@@ -1589,8 +1608,23 @@ function buildDataset(text, name){
   const labels = head.map(h => { const m = h.match(/^\d+\s*:\s*(.*)$/); return (m ? m[1] : h).trim(); });
   // Unitary models number their columns differently from column 76 on (a DH9VS inserts a second fan, an injection EV and a drain pan valve),
   // so a reading that has a label pattern is found by that label and never by number: a blank reading is safer than the wrong column.
-  const colIdx = c => { if (fam !== 'multi' && c.lab){ const hits = labels.map((l, k) => c.lab.test(l) ? k : -1).filter(k => k >= 0); if (hits.length) return c.last ? hits[hits.length-1] : hits[0]; if (numbered) return -1; }
-    const col = fam === 'multi' ? c.mcol : c.col; if (col == null) return -1; if (byNum[col] != null) return byNum[col]; if (numbered) return -1; const key = c.label.toLowerCase().split(' ')[0]; return head.findIndex(h => h.toLowerCase().includes(key)); };
+  // Every reading is located by its header label first (zone readings inside their own indoor-unit block, outdoor readings before the
+  // first block); the column number is a fallback only when the reading has no label pattern. A numbered column whose header does not
+  // match stays blank and is reported in the synopsis column check, so a shifted or renamed export never lands under the wrong chip.
+  const idu = labels.map((l, k) => /^IDU address$/i.test(l) ? k : -1).filter(k => k >= 0), colmap = [];
+  const colIdx = c => {
+    const re = fam === 'multi' ? (c.mhdr || null) : (c.lab || c.hdr || null), want = fam === 'multi' ? c.mcol : c.col;
+    let lo = 0, hi = labels.length;
+    if (fam === 'multi'){ if (c.zblock){ lo = idu[c.zone] != null ? idu[c.zone] : hi; hi = idu[c.zone + 1] != null ? idu[c.zone + 1] : labels.length; } else if (idu.length) hi = idu[0]; }
+    let hit = -1; if (re){ const hits = []; for (let k = lo; k < hi; k++) if (re.test(labels[k])) hits.push(k); if (hits.length) hit = c.last ? hits[hits.length-1] : hits[0]; }
+    const byN = want != null && byNum[want] != null ? byNum[want] : -1;
+    let ix = -1, how = 'absent';
+    if (hit >= 0){ ix = hit; how = (byN < 0 || byN === hit) ? 'label' : 'moved'; }
+    else if (byN >= 0){ if (re) how = 'mismatch'; else { ix = byN; how = 'number'; } }
+    else if (!numbered && want != null && !re){ const key = c.label.toLowerCase().split(' ')[0]; ix = head.findIndex(h => h.toLowerCase().includes(key)); how = ix >= 0 ? 'guess' : 'absent'; }
+    c._hdr = ix >= 0 ? labels[ix].toLowerCase() : '';
+    if (want != null || re) colmap.push({id:c.id, label:c.label, col:want, at:ix >= 0 ? head[ix].replace(/\s*:.*$/, '') : null, hdr:ix >= 0 ? labels[ix] : (byN >= 0 ? labels[byN] : null), how});
+    return ix; };
   const n = rows.length - 1;
   const t = new Array(n), num = {}, str = {};
   for (let i = 0; i < n; i++) t[i] = parseDate(rows[i+1][0]);
@@ -1599,7 +1633,7 @@ function buildDataset(text, name){
   const conv = (c, raw) => {
     if (raw == null) return null; raw = raw.trim(); if (!raw || raw === '---' || raw === '-') return null;
     let v = parseFloat(raw); if (!Number.isFinite(v)) return null;
-    const hdr = (unitOf[c.col] || '').toLowerCase();
+    const hdr = c._hdr || '';
     if (c.kind === 'temp' && /\(\s*c\s*\)|°c/.test(hdr)) v = v*9/5 + 32;
     if (c.kind === 'dtemp' && /\(\s*c\s*\)|°c/.test(hdr)) v = v*9/5;
     if (c.kind === 'press' && /kpa/.test(hdr)) v = v*0.145038;
@@ -1621,7 +1655,7 @@ function buildDataset(text, name){
   const runSec = new Array(n); let startIdx = -1;
   for (let i = 0; i < n; i++){ const on = (isN(num.rps[i]) ? num.rps[i] > 0 : (str.compcmd[i] === 'ON')) && str.compcmd[i] !== 'OFF'; if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
   const zones = fam === 'multi' ? [...Array(MZ.ports).keys()].filter(k => num['rmgas'+k].some(isN) || num['rmliq'+k].some(isN) || num['pev'+k].some(v => isN(v) && v > 0) || str['zaddr'+k].some(v => v != null)) : [];
-  return {name, n, t, num, str, mode, runSec, interval, head, fam, zones};
+  return {name, n, t, num, str, mode, runSec, interval, head, fam, zones, colmap};
 }
 
 /* ---------- capacity: BTU/h and COP from the compressor's own power draw ---------- */
@@ -2169,7 +2203,7 @@ function rulebookFindings(){
    A thermistor or transducer that holds one exact value while the compressor speed and its neighbours move is stuck.
    A reading far outside what its neighbours allow is implausible. An EEV whose pulses move while the temperatures it
    meters do not follow is not responding. */
-const XT = {stuckMin:20, stuckMinAir:90, stuckMinPress:15, otherMove:5, rpsMove:8, wildMin:10, wildVsOat:90, coilVsAir:45, portGasLiq:45, idCoil:60, spikeF:30, spikePsi:100, spikeN:3,
+const XT = {stuckMin:20, stuckMinAir:90, stuckMinPress:15, otherMove:5, rpsMove:8, wildMin:10, wildVsOat:90, coilVsAir:45, portGasLiq:45, idCoil:60, heatCoilOver:110, heatGasOver:120, spikeF:30, spikePsi:100, spikeN:3,
             evMove:{ev:40, iev:60, pev:60}, evSettle:3, evWindow:8, evResp:1.0, evMinMoves:5, evBadFrac:0.7, evOkFrac:0.3};
 function sensorList(){
   const L = [];
@@ -2209,15 +2243,19 @@ function sensorChecks(){
   for (const id of coilIds) if (chById[id].present) wild.push([`${chById[id].label} vs outdoor air`, i => (isN(num[id][i]) && isN(oat[i]) && Math.abs(num[id][i] - oat[i]) > XT.wildVsOat) ? `${chById[id].short} ${f1s(num[id][i])}°F with outdoor air ${f1s(oat[i])}°F` : null]);
   if (chById.disch.present && chById.ochex.present) wild.push(['Discharge colder than the outdoor coil', i => (isN(num.disch[i]) && isN(num.ochex[i]) && num.disch[i] < num.ochex[i] - 5) ? `discharge ${f1s(num.disch[i])}°F, coil ${f1s(num.ochex[i])}°F` : null]);
   if (!multi && chById.hp.present && chById.lp.present) wild.push(['High pressure below low pressure', i => (isN(num.hp[i]) && isN(num.lp[i]) && num.hp[i] <= num.lp[i]) ? `HP ${f0(num.hp[i])} psi, LP ${f0(num.lp[i])} psi` : null]);
-  if (!multi && chById.igas.present && chById.iliq.present) wild.push(['Indoor gas vs liquid pipe', i => (isN(num.igas[i]) && isN(num.iliq[i]) && Math.abs(num.igas[i] - num.iliq[i]) > XT.idCoil) ? `ID gas ${f1s(num.igas[i])}°F, ID liquid ${f1s(num.iliq[i])}°F` : null]);
+  // The indoor coil is an evaporator in cooling (pipes and coil within a few tens of degrees of each other) and a condenser in heating
+  // (hot gas in at the discharge temperature, warm liquid out, coil far above room air), so each pair is judged against the mode of that row.
+  const modeWord = i => D.mode[i] === 'heat' ? 'heating' : 'cooling';
+  const pairBad = (i, d, coolLim, heatOver) => D.mode[i] === 'heat' ? (d < -15 || d > heatOver) : D.mode[i] === 'cool' ? Math.abs(d) > coolLim : false;
+  if (!multi && chById.igas.present && chById.iliq.present) wild.push(['Indoor gas vs liquid pipe', i => (isN(num.igas[i]) && isN(num.iliq[i]) && pairBad(i, num.igas[i] - num.iliq[i], XT.idCoil, XT.heatGasOver)) ? `ID gas ${f1s(num.igas[i])}°F, ID liquid ${f1s(num.iliq[i])}°F in ${modeWord(i)}` : null]);
   if (multi) for (const k of D.zones){ const L = MZ.letters[k];
-    wild.push([`Zone ${L} coil vs return air`, i => (isN(num['ifan'+k][i]) && num['ifan'+k][i] > 0 && isN(num['ihx'+k][i]) && isN(num['ra'+k][i]) && Math.abs(num['ihx'+k][i] - num['ra'+k][i]) > XT.coilVsAir) ? `coil ${f1s(num['ihx'+k][i])}°F, return air ${f1s(num['ra'+k][i])}°F` : null]);
-    wild.push([`Port ${L} gas vs liquid`, i => (isN(num['pev'+k][i]) && num['pev'+k][i] > 0 && isN(num['rmgas'+k][i]) && isN(num['rmliq'+k][i]) && Math.abs(num['rmgas'+k][i] - num['rmliq'+k][i]) > XT.portGasLiq) ? `gas ${f1s(num['rmgas'+k][i])}°F, liquid ${f1s(num['rmliq'+k][i])}°F` : null]); }
+    wild.push([`Zone ${L} coil vs return air`, i => (isN(num['ifan'+k][i]) && num['ifan'+k][i] > 0 && isN(num['ihx'+k][i]) && isN(num['ra'+k][i]) && pairBad(i, num['ihx'+k][i] - num['ra'+k][i], XT.coilVsAir, XT.heatCoilOver)) ? `coil ${f1s(num['ihx'+k][i])}°F, return air ${f1s(num['ra'+k][i])}°F in ${modeWord(i)}` : null]);
+    wild.push([`Port ${L} gas vs liquid`, i => (isN(num['pev'+k][i]) && num['pev'+k][i] > 0 && isN(num['rmgas'+k][i]) && isN(num['rmliq'+k][i]) && pairBad(i, num['rmgas'+k][i] - num['rmliq'+k][i], XT.portGasLiq, XT.heatGasOver)) ? `gas ${f1s(num['rmgas'+k][i])}°F, liquid ${f1s(num['rmliq'+k][i])}°F in ${modeWord(i)}` : null]); }
   for (const [title, test] of wild){ const ep = episodes(i => run(i) && D.runSec[i] >= 300 && !!test(i), Math.max(2, Math.round(XT.wildMin / dt)));
     if (ep.length){ const e = ep[0], rule = {id:'X2', rid:'L2', sev:'major', title:`Implausible reading: ${title}`}; const detail = test(e.a); for (const q of ep) mark(q.a, q.b, rule, test(q.a));
       const ids = IMPL_IDS[title] || (/ vs outdoor air$/.test(title) ? [(ALLCH.find(c => c.label === title.replace(/ vs outdoor air$/, '')) || {}).id, 'oat'] : []);
       for (const q of ep) for (let i = q.a; i <= q.b; i++){ if (!D.implaus[i]) D.implaus[i] = new Set(); ids.filter(Boolean).forEach(x => D.implaus[i].add(x)); }
-      F.push({rid:'L2', sev:'major', st:'warn', title:`Implausible reading: ${title}`, why:`${detail} for ${f0((e.b - e.a + 1) * dt)} min from ${fmtTime(D.t[e.a])}${ep.length > 1 ? ` (${ep.length} episodes)` : ''}. The refrigerant cannot be in that state; one of the two sensors is wrong, misplaced or reading the wrong pipe.`, fix:['Clamp a probe next to each of the two sensors and see which one disagrees with reality.','Check the sensor is on the right pipe and clipped tight; then resistance-check it.']}); } }
+      F.push({rid:'L2', sev:'major', st:'warn', mode:(D.mode[e.a] === 'heat' || D.mode[e.a] === 'cool') ? D.mode[e.a] : null, title:`Implausible reading: ${title}`, why:`${detail} for ${f0((e.b - e.a + 1) * dt)} min from ${fmtTime(D.t[e.a])}${ep.length > 1 ? ` (${ep.length} episodes)` : ''}. The refrigerant cannot be in that state; one of the two sensors is wrong, misplaced or reading the wrong pipe.`, fix:['Clamp a probe next to each of the two sensors and see which one disagrees with reality.','Check the sensor is on the right pipe and clipped tight; then resistance-check it.']}); } }
   D.sensorFindings = F;
 }
 // ---- EEV response: after a real pulse move at steady speed, the metered temperature must follow within a few minutes ----
@@ -2893,7 +2931,7 @@ function renderCycle(i){
     const ids = (tg.states && (Array.isArray(tg.states) ? tg.states : pick(tg.states, m))) || [id];
     const st = worstOf(ids, i);
     e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + ((ch.calc && !/pct$/.test(id) && !ch.custom) ? ' calc' : '') + (ch.custom ? ' custom' : '') + ' ' + (isN(v) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '') + (chainState(id, i) ? ' ' + chainState(id, i) : '') + (implausAt(id, i) ? ' implaus' : '');
-    e.removeAttribute('title'); e._tip = {label:ch.label, note:ch.note ? (typeof ch.note === 'function' ? ch.note(m) : ch.note) : '', kind:ch.custom ? 'custom' : (ch.calc ? 'calc' : 'meas')};
+    e.removeAttribute('title'); const cmap = D.colmap && D.colmap.find(x => x.id === id); e._tip = {label:ch.label, note:ch.note ? (typeof ch.note === 'function' ? ch.note(m) : ch.note) : '', kind:ch.custom ? 'custom' : (ch.calc ? 'calc' : 'meas'), src:cmap && cmap.hdr && cmap.how !== 'mismatch' ? `File column ${cmap.at}: "${cmap.hdr}"` : ''};
   });
 }
 // change from the previous row: ▲ green / ▼ red, as a percentage (absolute when the previous value is near zero)
@@ -3462,7 +3500,8 @@ const CHAIN_DEFS = [
     fix:['Keep the D-Checker app on screen and within range for the whole recording, or use the PC app for long logs.']}),
   absorb:[/^Recording has gaps/]},
  {id:'I2', fam:'any', cats:['minor'], cause:[], effect:[],
-  when:() => { const n = (D.sensorFindings || []).filter(f => /^Implausible reading/.test(f.title || '')).length; return n >= 3 ? {rows:[], n} : null; },
+  // only when the import's header check actually found columns out of place: with every header verified, several impossible pairs are sensors, not the file
+  when:() => { const n = (D.sensorFindings || []).filter(f => /^Implausible reading/.test(f.title || '')).length, bad = (D.colmap || []).filter(x => x.how === 'mismatch').length; return n >= 3 && bad ? {rows:[], n} : null; },
   text:e => ({title:`${e.n} readings impossible at once → the file's columns do not match their labels → judge nothing from this log until it is re-exported`,
     why:`${e.n} separate pairs of sensors disagreed with physics at the same time. One bad sensor does not do that; a column shift in the export does. The app maps columns by their labels, but an export with labels that do not match its data cannot be rescued.`,
     fix:['Re-export from D-Checker (or open the phone\'s .tgz directly) and compare.']}),
@@ -3488,7 +3527,8 @@ function chainFindings(F0){
     if (!e) continue;
     const t = def.text(e, c), cause = typeof def.cause === 'function' ? def.cause(e) : def.cause, effect = typeof def.effect === 'function' ? def.effect(e) : def.effect;
     const conf = CHAIN_CONFIRMED[def.id] ? 'confirmed' : 'provisional';
-    out.push({chain:true, cid:def.id, st:def.st || (def.cats.includes('crit') ? 'alarm' : 'warn'), sev:def.cats.includes('crit') ? 'critical' : 'moderate', cats:def.cats, title:t.title, why:t.why, fix:t.fix, absorb:def.absorb || [], conf, confNote:CHAIN_CONFIRMED[def.id] || null});
+    let mh = 0, mc = 0; for (const [a, b] of (e.rows || [])) for (let i = a; i <= b; i++){ if (D.mode[i] === 'heat') mh++; else if (D.mode[i] === 'cool') mc++; }   // the mode the chain was judged in
+    out.push({chain:true, cid:def.id, mode:(mh || mc) ? (mh > mc ? 'heat' : 'cool') : null, st:def.st || (def.cats.includes('crit') ? 'alarm' : 'warn'), sev:def.cats.includes('crit') ? 'critical' : 'moderate', cats:def.cats, title:t.title, why:t.why, fix:t.fix, absorb:def.absorb || [], conf, confNote:CHAIN_CONFIRMED[def.id] || null});
     CHAINS_ACTIVE.push({id:def.id, cause:(cause || []).filter(Boolean), effect:(effect || []).filter(Boolean), rows:e.rows || []});
     fired.add(def.id); groupOf(def.id).forEach(g => taken.add(g));
   }
@@ -3541,21 +3581,24 @@ function synopsisFindings(){
     const floorShare = share(runRows, i => isN(num.rps[i]) && num.rps[i] <= 15), capShare = share(runRows, i => isN(num.rps[i]) && isN(num.maxhz[i]) && num.rps[i] >= num.maxhz[i] - 1);
     if (floorShare >= 0.25) F.push({st:'info', title:`Compressor at its floor ${pct(floorShare, 1)}% of the run time (median ${f0(rpsMed)} rps of ${f0(cap)} allowed)`, why:`outdoor air ${f0(D.range.oat && D.range.oat.min)}–${f0(D.range.oat && D.range.oat.max)}°F over the recording`, do:'The house is asking for far less than the unit can give. Coils run warm at low speed, so latent (moisture) removal suffers. Expect humidity complaints on mild days; use Dry mode or lower fan speeds.'});
     if (capShare >= 0.25) F.push({st:'warn', title:`Compressor pinned at its cap ${pct(capShare, 1)}% of the run time`, why:`cap ${f0(cap)} rps`, do:'The unit is running out of capacity or is being limited. Check the limiter findings, then the load.'});
-    for (const id of ['limpeak','limfrz','limtd','liminv']){ const r = rows.filter(i => isN(num[id][i]) && num[id][i] < 255); if (r.length >= 2) F.push({rid:'L5', st:'warn', title:`${chById[id].label.replace('Max Hz limit: ', '')} limiter active ${f0(r.length * dt)} min`, why:`speed capped at ${f0(med(r.map(i => num[id][i])))} rps; first at ${fmtTime(D.t[r[0]])}`, do:{limpeak:'Peak-cut is a demand/quiet setting on the remote or the outdoor DIP switches, not a fault.', limfrz:'Freeze protection: an indoor coil got near freezing. Low indoor airflow (dirty filter, low fan) or a head that is too big for its room.', limtd:'Discharge-temperature limit: the compressor ran hot. Check charge and outdoor airflow.', liminv:'Inverter-current limit: high load, high ambient or a hot inverter fin.'}[id]}); }
+    for (const id of ['limpeak','limfrz','limtd','liminv']){ const r = rows.filter(i => isN(num[id][i]) && num[id][i] < 255); if (r.length >= 2){ const heating = share(r, i => D.mode[i] === 'heat') >= 0.5;
+      // the unit's own column name is "frz prtc"; in heating no indoor coil can freeze, so the same cap is guarding a coil that is running too hot
+      const hotIdle = heating ? D.zones.filter(k => share(r, i => isN(num['ifan'+k][i]) && num['ifan'+k][i] === 0 && isN(num['ihx'+k][i]) && num['ihx'+k][i] >= 120) >= 0.5).map(k => `${MZ.letters[k]} (${f0(med(r.map(i => num['ihx'+k][i])))}°F, fan off)`) : [];
+      F.push({rid:'L5', st:'warn', mode:id === 'limfrz' ? (heating ? 'heat' : 'cool') : null, title:`${chById[id].label.replace('Max Hz limit: ', '')} limiter active ${f0(r.length * dt)} min`, why:`speed capped at ${f0(med(r.map(i => num[id][i])))} rps; first at ${fmtTime(D.t[r[0]])}${id === 'limfrz' && heating ? ` · the unit labels this column "frz prtc"${hotIdle.length ? `; idle head${hotIdle.length > 1 ? 's' : ''} ${hotIdle.join(', ')} sat over 120°F while it was active` : ''}` : ''}`, do:{limpeak:'Peak-cut is a demand/quiet setting on the remote or the outdoor DIP switches, not a fault.', limfrz:heating ? 'In heating this cap holds the compressor back when an indoor coil runs too hot: a head whose fan is off while its port still passes hot gas, or restricted indoor airflow. Check the heads with their fans off.' : 'Freeze protection: an indoor coil got near freezing. Low indoor airflow (dirty filter, low fan) or a head that is too big for its room.', limtd:'Discharge-temperature limit: the compressor ran hot. Check charge and outdoor airflow.', liminv:'Inverter-current limit: high load, high ambient or a hot inverter fin.'}[id]}); } }
     const tdm = med(settled.map(i => num.tderr[i]));
     if (isN(tdm) && tdm <= -15) F.push({st:'info', title:`Discharge ran ${f0(-tdm)}°F below its target while settled`, why:`the control aims for a discharge temperature; it could not raise it at these speeds`, do:'Consistent with low load. Not a fault by itself.'});
     if (isN(tdm) && tdm >= 15) F.push({st:'warn', title:`Discharge ran ${f0(tdm)}°F above its target while settled`, why:`median over settled rows`, do:'Hot compressor: suspect low charge, a starved port, or condenser airflow.'});
-    const cool = modes.includes('cool');
+    const coolRun = runRows.filter(i => D.mode[i] === 'cool'), cool = coolRun.length >= Math.max(10, Math.round(5 / dt));   // the dehumidification cards judge cooling rows only
     for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k], fan = num['ifan'+k], hx = num['ihx'+k], ra = num['ra'+k], sp = num['sp'+k], dd = num['dd'+k];
-      const closed = runRows.filter(i => isN(ev[i]) && ev[i] === 0), openR = runRows.filter(i => isN(ev[i]) && ev[i] > 0);
+      const closed = coolRun.filter(i => isN(ev[i]) && ev[i] === 0), openR = coolRun.filter(i => isN(ev[i]) && ev[i] > 0);
       let best = 0, cur = 0; for (const i of rows){ cur = (isN(ev[i]) && ev[i] === 0) ? cur + 1 : 0; best = Math.max(best, cur); }
       const fanOnClosed = share(closed, i => isN(fan[i]) && fan[i] > 0);
-      if (cool && closed.length && closed.length / runRows.length >= 0.4 && fanOnClosed >= 0.8)
-        F.push({rid:'M14', st:'warn', title:`Zone ${L}: satisfied ${pct(closed.length, runRows.length)}% of the time with its fan still running`, why:`port closed up to ${f0(best * dt)} min at a stretch; coil ${f0(med(closed.map(i => hx[i])))}°F while closed (room ${f0(med(closed.map(i => ra[i])))}°F), fan ${f0(med(closed.map(i => fan[i])))} rpm`, do:'A wet coil with the fan running and no refrigerant flow puts the water back into the room. Put this head in Dry mode, or drop its fan to Auto/Low, or lower its setpoint so it keeps metering. This is the main reason a multi-split will not dehumidify.'});
-      if (cool && openR.length){ const hxMed = med(openR.map(i => hx[i])), coldShare = share(openR, i => isN(hx[i]) && hx[i] <= 52), fanMed = med(openR.map(i => fan[i])), fanMax = Math.max(...runRows.map(i => fan[i]).filter(isN));
-        if (hxMed >= 52 && openR.length / runRows.length >= 0.3) F.push({rid:'M13', st:'warn', title:`Zone ${L}: coil only ${f0(hxMed)}°F while metering (≤52°F just ${pct(coldShare, 1)}% of the time)`, why:`fan ${f0(fanMed)} rpm${fanMax && fanMed >= fanMax - 5 ? ' (its maximum, the whole time)' : ''}, return air ${f0(med(openR.map(i => ra[i])))}°F`, do:'Too warm to condense much moisture. Turn this head\'s fan down to Auto or Low; a slower coil runs colder and pulls more water per hour.'}); }
-      const spv = med(rows.map(i => sp[i])), ram = med(runRows.map(i => ra[i])), ddm = med(runRows.map(i => dd[i]));
-      if (cool && isN(spv) && isN(ram) && isN(ddm) && ram <= spv + 1 && ddm >= 4 && openR.length / runRows.length >= 0.8) F.push({rid:'M15', st:'info', title:`Zone ${L}: keeps calling (ΔD ${f0(ddm)}) although return air ${f0(ram)}°F is within 1°F of its ${f0(spv)}°F setpoint`, why:`port open ${pct(openR.length, runRows.length)}% of the time`, do:'The head is not deciding from the return-air sensor: check for the remote\'s "I feel"/room sensor mode, a sensor in a warm spot, or a setback schedule.'});
+      if (cool && closed.length && closed.length / coolRun.length >= 0.4 && fanOnClosed >= 0.8)
+        F.push({rid:'M14', mode:'cool', st:'warn', title:`Zone ${L}: satisfied ${pct(closed.length, coolRun.length)}% of the time with its fan still running`, why:`port closed up to ${f0(best * dt)} min at a stretch; coil ${f0(med(closed.map(i => hx[i])))}°F while closed (room ${f0(med(closed.map(i => ra[i])))}°F), fan ${f0(med(closed.map(i => fan[i])))} rpm`, do:'A wet coil with the fan running and no refrigerant flow puts the water back into the room. Put this head in Dry mode, or drop its fan to Auto/Low, or lower its setpoint so it keeps metering. This is the main reason a multi-split will not dehumidify.'});
+      if (cool && openR.length){ const hxMed = med(openR.map(i => hx[i])), coldShare = share(openR, i => isN(hx[i]) && hx[i] <= 52), fanMed = med(openR.map(i => fan[i])), fanMax = Math.max(...coolRun.map(i => fan[i]).filter(isN));
+        if (hxMed >= 52 && openR.length / coolRun.length >= 0.3) F.push({rid:'M13', mode:'cool', st:'warn', title:`Zone ${L}: coil only ${f0(hxMed)}°F while metering (≤52°F just ${pct(coldShare, 1)}% of the time)`, why:`fan ${f0(fanMed)} rpm${fanMax && fanMed >= fanMax - 5 ? ' (its maximum, the whole time)' : ''}, return air ${f0(med(openR.map(i => ra[i])))}°F`, do:'Too warm to condense much moisture. Turn this head\'s fan down to Auto or Low; a slower coil runs colder and pulls more water per hour.'}); }
+      const spv = med(coolRun.map(i => sp[i])), ram = med(coolRun.map(i => ra[i])), ddm = med(coolRun.map(i => dd[i]));
+      if (cool && isN(spv) && isN(ram) && isN(ddm) && ram <= spv + 1 && ddm >= 4 && openR.length / coolRun.length >= 0.8) F.push({rid:'M15', mode:'cool', st:'info', title:`Zone ${L}: keeps calling (ΔD ${f0(ddm)}) although return air ${f0(ram)}°F is within 1°F of its ${f0(spv)}°F setpoint`, why:`port open ${pct(openR.length, coolRun.length)}% of the cooling time`, do:'The head is not deciding from the return-air sensor: check for the remote\'s "I feel"/room sensor mode, a sensor in a warm spot, or a setback schedule.'});
       { const seen = {}; for (const i of rows){ const e = errInfo(s['zerr'+k][i], false); if (e){ const key = e.code || e.raw; (seen[key] = seen[key] || {e, rows:[]}).rows.push(i); } }
         for (const {e, rows:er} of Object.values(seen)) F.push({st:'alarm', title:`Zone ${L} error ${e.code || e.raw}: ${e.t}`, why:`${er.length} rows (${f0(er.length * dt)} min), first at ${fmtTime(D.t[er[0]])} · raw ${e.raw}`, fix:e.k ? e.k.c : ['Look the code up in the service manual.'], do:'Clear this before judging anything else on this head.'}); }
       const tx = rows.filter(i => s['ztx'+k][i] && !/normal/i.test(s['ztx'+k][i])); if (tx.length) F.push({st:'warn', title:`Zone ${L} transmission faults`, why:`${tx.length} rows`, do:'Indoor–outdoor communication dropped; check the interconnect wiring at both ends.'});
@@ -3581,11 +3624,15 @@ function synopsisFindings(){
     // sensor disagreements from the signature pass
     const cnt = code => rows.filter(i => (D.sig[i] || []).some(x => x.code === code)).length;
     for (const [code, title, doTxt] of [['pt-tc','Tc disagrees with the HP transducer','A pressure sensor or the saturation table is off; verify with gauges.'],['pt-te','Te disagrees with the LP transducer','A pressure sensor or the saturation table is off; verify with gauges.'],['hp-ip','Outdoor and indoor pressure sensors disagree','One of the two pressure sensors is wrong, or the indoor sensor is on a restricted line; compare both to a gauge.'],['order','Thermistor order violated','A thermistor is reading wrong or misplaced; check the flagged pair.']]){ const c = cnt(code); if (c >= Math.max(3, 0.05 * n)) F.push({rid:code === 'hp-ip' ? 'S5' : 'L2', st:'warn', title:`${title} on ${c} rows`, why:`signature '${code}'`, do:doTxt}); }
-    if (modes.includes('heat')){ const d = D.runs.reduce((a, r) => a + (r.defrost || 0), 0); const dm = D.runs.reduce((a, r) => a + (r.defrostMin || 0), 0); if (d) F.push({rid:'S10', st:d / Math.max(1, spanMin / 60) >= 2 ? 'warn' : 'info', title:`${d} defrost${d === 1 ? '' : 's'} in ${f0(spanMin)} min (${f0(dm)} min defrosting)`, why:`from the defrost control flag`, do:d / Math.max(1, spanMin / 60) >= 2 ? 'Frequent defrosts: check the outdoor coil for ice/dirt, the defrost thermistor placement, and outdoor fan operation.' : 'Normal defrost frequency for the conditions.'}); }
+    if (modes.includes('heat')){ const d = D.runs.reduce((a, r) => a + (r.defrost || 0), 0); const dm = D.runs.reduce((a, r) => a + (r.defrostMin || 0), 0); if (d) F.push({rid:'S10', mode:'heat', st:d / Math.max(1, spanMin / 60) >= 2 ? 'warn' : 'info', title:`${d} defrost${d === 1 ? '' : 's'} in ${f0(spanMin)} min (${f0(dm)} min defrosting)`, why:`from the defrost control flag`, do:d / Math.max(1, spanMin / 60) >= 2 ? 'Frequent defrosts: check the outdoor coil for ice/dirt, the defrost thermistor placement, and outdoor fan operation.' : 'Normal defrost frequency for the conditions.'}); }
   }
   // dropouts
   const drop = rows.filter(i => D.dropout[i]).length; if (drop >= 3) F.push({st:'info', title:`${drop} rows with sensor dropouts`, why:`HP, LP or Tc read zero`, do:'Ignore those rows; if they cluster, check the D-Checker cable and the pressure sensor connectors.'});
   if (!F.length) F.push({st:'ok', title:'Nothing stood out in this recording', why:`${f0(runMin)} min of run time, ${steadyRows.length ? f0(steadyRows.length * dt) + ' min steady' : 'never reached steady state'}`, do:'If there is a complaint, record longer, through a full cycle, or in the complaint conditions.'});
+  // import column check: every reading was matched to the header row by name before it was linked to a chip; anything out of place is listed
+  if (D.colmap){ const seen = D.colmap.filter(x => x.how !== 'absent'), bad = seen.filter(x => x.how === 'mismatch'), moved = seen.filter(x => x.how === 'moved');
+    if (bad.length) F.push({rid:'L2', st:'warn', title:`Column check: ${bad.length} of ${seen.length} readings were not under the header the app expected`, why:bad.map(x => `${x.label}: column ${x.col} is headed "${x.hdr}", left blank`).join(' · '), fix:['Re-export the recording from D-Checker with the default column set and compare.', 'If the export is right, the app\'s header table needs this model added: send the file to the library and flag it.']});
+    else F.push({st:'ok', title:`Column check: all ${seen.length} readings sit under their expected headers`, why:`each reading was found in the file's header row by name before it was linked to its chip${moved.length ? `; ${moved.length} of them (${moved.map(x => x.label).join(', ')}) sit at a different column number than the standard layout, which is normal for this model` : ''}; readings this export does not carry are simply blank`, do:'The numbers on the cycle view are the file\'s own columns, each confirmed by its header label.'}); }
   try { for (const r of rulebookFindings()) F.push(r); } catch(e){ console.warn('rulebook findings', e); }
   for (const r of (D.sensorFindings || [])) F.push(r); for (const r of (D.evFindings || [])) F.push(r);
   { const chains = chainFindings(F); if (chains.length){ const absorbed = chains.flatMap(c => c.absorb || []); for (let k = F.length - 1; k >= 0; k--) if (absorbed.some(re => re.test(F[k].title || ''))) F.splice(k, 1); F.unshift(...chains); } }
@@ -3664,14 +3711,16 @@ function buildSynopsis(){
   buildSynopsisTables();
   const n = D.n, dt = D.interval / 60, runMin = D.runSec.filter(x => x >= 0).length * dt, steadyMin = D.steady.filter(Boolean).length * dt;
   const F = synopsisFindings();
-  const modes = [...new Set(D.mode.filter(m => m !== 'other'))].map(m => m === 'heat' ? 'heating' : 'cooling').join(' + ') || 'unknown mode';
+  const heatMin = D.mode.filter((m, i) => D.runSec[i] >= 0 && m === 'heat').length * dt, coolMin = D.mode.filter((m, i) => D.runSec[i] >= 0 && m === 'cool').length * dt;
+  const mixed = heatMin > 0 && coolMin > 0;
+  const modes = mixed ? `heating for ${f0(heatMin)} min and cooling for ${f0(coolMin)} min` : heatMin > 0 ? 'heating' : coolMin > 0 ? 'cooling' : 'unknown mode';
   const worst = F[0].st;
   const unit = D.fam === 'multi' ? `${D.zones.length}-zone mini split` : (EQ.out === 'ac' ? 'air conditioner' : 'heat pump') + (D.model ? ' ' + D.model.replace(/^INV_Unitary_/i, '') : '');
   const verdict = worst === 'alarm' ? 'needs attention' : worst === 'warn' ? 'has things worth fixing' : worst === 'info' ? 'looks normal for the conditions' : 'looks healthy';
-  $('#synhead').textContent = `This ${unit} ran ${f0(runMin)} min in ${modes} over ${f0(n * dt)} min of recording and ${verdict}.`;
+  $('#synhead').textContent = mixed ? `This ${unit} ran ${f0(runMin)} min over ${f0(n * dt)} min of recording, ${modes}, and ${verdict}. Each card below says which mode it was judged in.` : `This ${unit} ran ${f0(runMin)} min in ${modes} over ${f0(n * dt)} min of recording and ${verdict}.`;
   const facts = [`<span><b>${D.runs.length}</b> run${D.runs.length === 1 ? '' : 's'}</span>`, `<span><b>${f0(steadyMin)}</b> min steady</span>`, D.range.oat ? `<span>outdoor <b>${f0(D.range.oat.min)}–${f0(D.range.oat.max)}°F</b></span>` : '', D.range.rps ? `<span>comp <b>${f0(D.range.rps.min)}–${f0(D.range.rps.max)} rps</b></span>` : '', D.range.disch ? `<span>discharge <b>${f0(D.range.disch.min)}–${f0(D.range.disch.max)}°F</b></span>` : '', D.range.hp ? `<span>HP <b>${f0(D.range.hp.min)}–${f0(D.range.hp.max)}</b> · LP <b>${f0(D.range.lp.min)}–${f0(D.range.lp.max)} psi</b></span>` : ''];
   $('#synfacts').innerHTML = facts.filter(Boolean).join('');
-  const card = f => { const cats = catsOf(f); return `<div class="syn ${f.st}${f.chain ? ' chain' : ''}" data-cats="${cats.join(' ')}" style="${tintStyle(cats)}"><h3>${synEsc(f.title)}</h3>${f.chain ? `<p class="conf ${f.conf}">${f.conf === 'confirmed' ? 'Confirmed by real repair' : 'Provisional: this pattern is written from the physics and has not yet been confirmed on a repair. Tell the app with 👍 / 👎 below.'}</p>` : ''}<p class="why">${synEsc(f.why)}</p>${Array.isArray(f.fix) ? '<ol>' + f.fix.map(x => '<li>' + synEsc(x) + '</li>').join('') + '</ol>' : '<p class="do">' + synEsc(f.do || '') + '</p>'}</div>`; };
+  const card = f => { const cats = catsOf(f); return `<div class="syn ${f.st}${f.chain ? ' chain' : ''}" data-cats="${cats.join(' ')}" style="${tintStyle(cats)}"><h3>${f.mode ? `<span class="mchip ${f.mode}">${f.mode === 'heat' ? 'heating' : 'cooling'}</span>` : ''}${synEsc(f.title)}</h3>${f.chain ? `<p class="conf ${f.conf}">${f.conf === 'confirmed' ? 'Confirmed by real repair' : 'Provisional: this pattern is written from the physics and has not yet been confirmed on a repair. Tell the app with 👍 / 👎 below.'}</p>` : ''}<p class="why">${synEsc(f.why)}</p>${Array.isArray(f.fix) ? '<ol>' + f.fix.map(x => '<li>' + synEsc(x) + '</li>').join('') + '</ol>' : '<p class="do">' + synEsc(f.do || '') + '</p>'}</div>`; };
   const main = F.filter(f => f.st !== 'info' && f.st !== 'ok'), notes = F.filter(f => f.st === 'info' || f.st === 'ok');
   $('#synlist').innerHTML = main.map(card).join('') + (main.length ? '' : '<div class="syn ok"><h3>Nothing out of line in this recording</h3></div>')
     + (notes.length ? `<details class="synnotes"><summary>Also noted · ${notes.length}</summary>${notes.map(card).join('')}</details>` : '')
@@ -4161,7 +4210,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v92';
+const APP_VERSION = 'v93';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -5274,7 +5323,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
   let on = null;
   const show = (e, ev) => {
     const t = e._tip; if (!t) return;
-    tip.innerHTML = `<div class="tt-h"><b>${synEsc(t.label)}</b><span class="tt-k ${t.kind}">${t.kind === 'calc' ? 'Calculated' : t.kind === 'custom' ? 'Custom' : 'Measured'}</span></div>${t.note ? `<div class="tt-f">${synEsc(t.note)}</div>` : ''}${t.kind === 'meas' ? '<div class="tt-s">Logged by the unit\'s own sensor, shown as recorded.</div>' : ''}<div class="tt-p">${lpShown ? 'Tap the tag again to pin its trend' : 'Tap to pin its trend'}</div>`;
+    tip.innerHTML = `<div class="tt-h"><b>${synEsc(t.label)}</b><span class="tt-k ${t.kind}">${t.kind === 'calc' ? 'Calculated' : t.kind === 'custom' ? 'Custom' : 'Measured'}</span></div>${t.note ? `<div class="tt-f">${synEsc(t.note)}</div>` : ''}${t.kind === 'meas' ? '<div class="tt-s">Logged by the unit\'s own sensor, shown as recorded.</div>' : ''}${t.src ? `<div class="tt-s">${synEsc(t.src)}</div>` : ''}<div class="tt-p">${lpShown ? 'Tap the tag again to pin its trend' : 'Tap to pin its trend'}</div>`;
     tip.hidden = false; move(ev);
   };
   const move = ev => { const pad = 14, r = tip.getBoundingClientRect(); let x = ev.clientX + pad, y = ev.clientY + pad;
