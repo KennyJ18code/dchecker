@@ -144,6 +144,7 @@ body.no-narr .nowline{display:none}
 .callcard{margin:0 14px 12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2)}.callcard.off{display:none}.callrow{margin:0 0 10px}.callrow:last-child{margin:0}.callrow b{display:block;font-size:13px;margin:0 0 6px}.callrow label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}.callrow input,.callrow textarea{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:14px;width:100%;max-width:100%;font-family:var(--sans);resize:vertical}.callrow label input{flex:1;min-width:0}.callrow textarea{display:block;margin:6px 0 0}.callchips{display:flex;flex-wrap:wrap;gap:6px}.callchips button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700}.callchips button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .jobask{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain}.jobbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(440px,100%);padding:16px 18px;display:flex;flex-direction:column;gap:10px}.jobbox .jt{font-size:17px}.jobbox .note{margin:0;font-size:12.5px;color:var(--muted)}.jobbox label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700}.jobbox .req{font-weight:600;font-size:11px;color:var(--alarm);margin-left:6px}.jobbox input{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:16px;font-family:var(--sans)}.jobacts{display:flex;gap:8px;justify-content:space-between;margin-top:4px}.jobacts .btn{padding:10px 14px;font-size:14px}.jobacts .primary{flex:1}.jobacts .primary:disabled{opacity:.45}
 .jobrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}.jobrow #call-job{flex:1;min-width:0}.minerow .jobline{font-weight:700;color:var(--ink)}
+.srch{margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
 .syn h3{margin:0 0 4px;font-size:14px}.syn h3 .mchip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 7px;border-radius:9px;margin:0 7px 2px 0;vertical-align:middle;color:var(--ink)}.syn h3 .mchip.heat{background:var(--hi-soft)}.syn h3 .mchip.cool{background:var(--lo-soft)}.syn p{margin:3px 0;font-size:13px;color:var(--ink2)}.syn p b{color:var(--ink)}.syn .do{color:var(--ink)}
 .syn .do::before{content:"Do: ";font-weight:800;color:var(--accent)}.syn .why::before{content:"Evidence: ";font-weight:800;color:var(--muted)}
 .syntime{margin:0;padding:0 14px 12px 14px;list-style:none;display:flex;flex-direction:column;gap:2px;max-height:420px;overflow:auto}
@@ -794,6 +795,7 @@ body.no-cabinet #indoor-var .cab{display:none}
   <section class="panel card" id="panel-data" hidden>
     <details class="ptbox"><summary>Capacity · BTU/h and COP from the log, with an air-side check</summary><div id="capcard"></div></details>
     <details class="ptbox"><summary>Error codes · what they mean and what to check first</summary><div id="errref"></div></details>
+    <details class="ptbox" id="srcbox"><summary>Where every number comes from · file column, header and formula for this recording</summary><div id="srcmap"></div></details>
     <details class="ptbox"><summary>PT chart · R-410A and R-32</summary><div id="ptchart"></div></details>
     <h2>Rows · click a row to jump to it</h2>
     <div class="datawrap" id="datawrap"></div>
@@ -840,6 +842,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Fault-library chips</b><small>Amber classic-fault scores</small></span><input type="checkbox" class="sw" data-s="faults"></label>
       <label class="srow"><span class="t"><b>Pinned trend strips</b><small>The bottom bar under the diagram</small></span><input type="checkbox" class="sw" data-s="dock"></label>
       <label class="srow"><span class="t"><b>Synopsis at the end</b><small>Open the full synopsis when playback reaches the last row</small></span><input type="checkbox" class="sw" data-s="synEnd"></label>
+      <label class="srow"><span class="t"><b>Provisional patterns (testing only)</b><small>Cause → effect chains and physics checks that have not been confirmed on a real repair. Off for techs: the synopsis then shows measured facts, the rulebook and confirmed patterns only.</small></span><input type="checkbox" class="sw" data-s="provisional"></label>
     </section>
     <section class="sgroup"><h3>Size and layout</h3>
       <label class="srow"><span class="t"><b>Desktop layout</b><small>Side-by-side drawing on a wide screen</small></span><select data-s="land"><option value="auto">Auto by screen</option><option value="on">Always</option><option value="off">Never</option></select></label>
@@ -977,12 +980,13 @@ const DERIVED = [
   {id:'linedt', label:'Liquid line ΔT (indoor → outdoor)', short:'Line ΔT', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.iliq, r.liq) : null, note:'ID liquid − liquid pipe; heat loss along the line set, large = flashing / restriction'},
   {id:'dsh', label:'Discharge superheat', short:'Disch SH', unit:'°F', calc:r => sub(r.disch, r.cond), note:'Discharge − Tc'},
   {id:'cr',  label:'Compression ratio', short:'Comp ratio', unit:'', dec:2, calc:r => (isN(r.hp)&&isN(r.lp)&&r.lp>-14) ? (r.hp+14.7)/(r.lp+14.7) : null, note:'(HP+14.7)/(LP+14.7)'},
-  {id:'coildt',label:'Indoor coil ΔT (gas − liquid)', short:'ID coil ΔT', unit:'°F', calc:r => sub(r.igas, r.iliq), note:m => m==='heat' ? 'Gas − liquid (condenser drop)' : 'Gas − liquid (coil SH)'},
+  {id:'coildt',label:'Indoor coil gas − liquid', short:'ID gas−liq', unit:'°F', calc:r => sub(r.igas, r.iliq), note:m => m==='heat' ? 'Indoor gas − indoor liquid thermistor (condenser drop)' : 'Indoor gas − indoor liquid thermistor. The liquid thermistor does not sit at saturation, so this is a coil temperature spread, not a superheat'},
+  {id:'ish', label:'Indoor coil superheat', short:'ID coil SH', unit:'°F', calc:(r,m) => (m === 'cool' && isN(r.ipress) && r.ipress > 20 && isN(r.igas)) ? r.igas - satF(r.ipress, REF.ref) : null, note:() => `Indoor gas − ${REFNAME[REF.ref]} saturation at the indoor pressure sensor, which sits on the gas pipe (Daikin FIT piping drawing)`},
   {id:'appr',label:'Outdoor coil approach', short:'Approach', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.oat, r.evap) : sub(r.cond, r.oat), note:m => m==='heat' ? 'OAT − Te' : 'Tc − OAT'},
   {id:'evpct', label:'Outdoor EV % open', short:'Outdoor EV', unit:'%', dec:0, max:100, calc:r => isN(r.ev) ? r.ev/EVMAX*100 : null, note:() => `pulses ÷ ${EVMAX} (full open)`},
   {id:'ievpct',label:'Indoor EV % open', short:'Indoor EV', unit:'%', dec:0, max:100, calc:r => isN(r.iev) ? r.iev/480*100 : null, note:'pulses ÷ 480 (full open)'},
   {id:'rpserr',label:'Comp vs target', short:'Comp Δ', unit:'rps', calc:r => sub(r.rps, r.trps), note:'Actual − target'},
-  {id:'odsat', label:'Outdoor coil vs saturation', short:'OD coil − sat', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.ochex, r.evap) : sub(r.cond, r.ochex), note:m => m==='heat' ? 'OD coil − Te' : 'Tc − OD coil'},
+  {id:'odsat', label:'Outdoor coil vs saturation', short:'OD coil − sat', unit:'°F', calc:(r,m) => { const oc = isN(r.ocmid) ? r.ocmid : r.ochex; return m==='heat' ? sub(oc, r.evap) : sub(r.cond, oc); }, note:m => m==='heat' ? 'OD coil mid (or coil) − Te' : 'Tc − OD coil mid thermistor (the bottom thermistor reads subcooled liquid in cooling)'},
   {id:'apr',   label:'INV current per rps', short:'Amps / rps', unit:'A/rps', dec:3, calc:r => (isN(r.inv1)&&isN(r.rps)&&r.rps>0) ? r.inv1/r.rps : null, note:'INV current ÷ comp speed'},
   {id:'tcchk', label:'Tc check vs PT table', short:'Tc − PT(HP)', unit:'°F', calc:r => (isN(r.hp)&&r.hp>30&&isN(r.cond)) ? r.cond - satF(r.hp) : null, note:() => `logged Tc − ${REFNAME[REF.ref]} sat temp at HP`},
   {id:'techk', label:'Te check vs PT table', short:'Te − PT(LP)', unit:'°F', calc:r => (isN(r.lp)&&r.lp>20&&isN(r.evap)) ? r.evap - satF(r.lp) : null, note:() => `logged Te − ${REFNAME[REF.ref]} sat temp at LP`},
@@ -1339,7 +1343,7 @@ function renderMulti(i, m, running){
 let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://qowsaogbijuwzunuxoty.supabase.co', sbKey:'sb_publishable_kdmWouVV5XfqQCDdwJpL_Q_A5akIuKV', share:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15};
+const S_DEF = {sbUrl:'https://qowsaogbijuwzunuxoty.supabase.co', sbKey:'sb_publishable_kdmWouVV5XfqQCDdwJpL_Q_A5akIuKV', share:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15, provisional:false};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
@@ -1506,6 +1510,16 @@ function rowErrors(i){
   if (s.ierr){ const ie = errInfo(s.ierr[i], true); if (ie) out.push(Object.assign({who:'Indoor'}, ie)); }
   if (multi) for (const k of D.zones){ const ze = errInfo(s['zerr'+k][i], false); if (ze) out.push(Object.assign({who:'Zone ' + MZ.letters[k]}, ze)); }
   return out;
+}
+function buildSrcMap(){
+  const host = $('#srcmap'); if (!host || !D) return; const cm = D.colmap || [], m = D.mode[cur] || 'cool';
+  const how = x => x.how === 'label' ? 'header matched' : x.how === 'moved' ? `header matched (standard column would be ${x.col})` : x.how === 'number' ? 'by column number only' : x.how === 'guess' ? 'by name guess' : '<b>not found: shown blank</b>';
+  const rowsM = cm.filter(x => x.how !== 'absent').map(x => `<tr><td>${synEsc(x.label)}</td><td class="code">${x.at != null ? x.at : '—'}</td><td>${synEsc(x.hdr || '')}</td><td>${how(x)}</td></tr>`).join('');
+  const rowsD = DERIVED.filter(d => D.num[d.id] && D.num[d.id].some(isN)).map(d => `<tr><td>${synEsc(d.label)}</td><td class="code">calc</td><td>${synEsc(typeof d.note === 'function' ? (d.note(m) || '') : (d.note || ''))}</td><td>Calculated from the readings above</td></tr>`).join('');
+  const tg = Object.entries(TARGET_OF).filter(([a, t]) => chById[t] && chById[t].present && chById[a] && D.num[t] && D.num[t].some(isN)).map(([a, t]) => { const x = cm.find(y => y.id === t); return `<tr><td>${synEsc(chById[a].label)}</td><td class="code">${x && x.at != null ? x.at : '—'}</td><td>${synEsc(x && x.hdr ? x.hdr : chById[t].label)}</td><td>shown as that reading's target</td></tr>`; }).join('');
+  host.innerHTML = `<p class="note">Every reading in this recording with the file column and header it was read from; calculated readings show their formula. A reading this export does not carry is not shown anywhere. Targets list which chip each target column is attached to.</p>
+    <div class="ptwrap errwrap"><table class="pt err"><thead><tr><th>Reading</th><th>Column</th><th>Header in this file / formula</th><th>How it was found</th></tr></thead><tbody>${rowsM}${rowsD}</tbody></table></div>
+    ${tg ? `<h3 class="srch">Targets</h3><div class="ptwrap errwrap"><table class="pt err"><thead><tr><th>Shown on</th><th>Column</th><th>Header</th><th>Role</th></tr></thead><tbody>${tg}</tbody></table></div>` : ''}`;
 }
 function buildErrRef(){
   const host = $('#errref'); if (!host) return;
@@ -2288,7 +2302,7 @@ function evChecks(){
   const valves = [];
   if (!multi){
     if (chById.ev.present) valves.push({id:'V1', name:'Outdoor EV', pls:'ev', thr:XT.evMove.ev, modes:{heat:{ch:'sh', sign:-1, what:'suction superheat'}}});                       // heating: meters the outdoor coil; cooling: bypassed by the check valve
-    if (chById.iev.present) valves.push({id:'V2', name:'Indoor EV', pls:'iev', thr:XT.evMove.iev, modes:{cool:{ch:'coildt', sign:-1, what:'indoor coil gas − liquid'}, heat:{ch:'sc', sign:-1, what:'subcooling'}}});
+    if (chById.iev.present) valves.push({id:'V2', name:'Indoor EV', pls:'iev', thr:XT.evMove.iev, modes:{cool:{ch:'ish', sign:-1, what:'indoor coil superheat'}, heat:{ch:'sc', sign:-1, what:'subcooling'}}});
   } else for (const k of D.zones) valves.push({id:'V1', name:`Port ${MZ.letters[k]} EV`, pls:'pev'+k, thr:XT.evMove.pev, zone:k, modes:{cool:{ch:'ihx'+k, sign:-1, what:`zone ${MZ.letters[k]} coil temp`}, heat:{ch:'ihx'+k, sign:+1, what:`zone ${MZ.letters[k]} coil temp`}}});
   const mean = (ch, a, b) => { let s = 0, c = 0; for (let j = a; j <= b; j++){ const v = num[ch][j]; if (isN(v)){ s += v; c++; } } return c ? s / c : null; };
   for (const V of valves){
@@ -2395,7 +2409,7 @@ function analyze(){
       const bad = [];
       for (const [la, a, lb, b] of rulesOrd){ const va = num[a][i], vb = num[b][i]; if (isN(va) && isN(vb) && va < vb - 3) bad.push(`${la} ${va.toFixed(1)} < ${lb} ${vb.toFixed(1)}`); }
       const coilSat = m === 'heat' ? num.evap[i] : num.cond[i];
-      if (isN(num.ochex[i]) && isN(coilSat) && Math.abs(num.ochex[i] - coilSat) > 20) bad.push(`OD coil ${num.ochex[i].toFixed(1)} is ${Math.abs(num.ochex[i]-coilSat).toFixed(0)}°F from ${m==='heat'?'Te':'Tc'}`);
+      { const oc = isN(num.ocmid[i]) ? num.ocmid[i] : num.ochex[i]; if (isN(oc) && isN(coilSat) && Math.abs(oc - coilSat) > 20) bad.push(`OD coil ${oc.toFixed(1)} is ${Math.abs(oc-coilSat).toFixed(0)}°F from ${m==='heat'?'Te':'Tc'}`); }
       if (bad.length) out.push({code:'order', label:'Thermistor order violated', detail:bad.join('; ') + ' — bad sensor or a real reversal', st:'sig'});
     }
     // fault library: each fault is a set of conditions; confidence = met / applicable
@@ -2688,7 +2702,7 @@ const TAGS_PORT = [
   // indoor unit
   {ch:'iliq',  x:175, y:200, anchor:'right', from:[190,200], mk:'temp'},
   {ch:'ievpct', x:175, y:300, anchor:'right', bar:true, sub:'iev', subLabel:'', subUnit:true},
-  {ch:{heat:'scid', cool:'coildt'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:212, y:210, sub:{heat:'linedt'}, subLabel:'line loss', target:{cool:'tsh'}},
+  {ch:{heat:'scid', cool:'ish'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:212, y:210, sub:{heat:'linedt', cool:'coildt'}, subLabel:{heat:'line loss', cool:'gas−liq'}},   // Target SH belongs to the suction superheat tag, not here
   {ch:'igas',  x:735, y:200, anchor:'right', from:[750,200], mk:'temp'},
   {ch:'ipress',x:735, y:300, anchor:'right', from:[750,300], mk:'press'},
   {ch:'cfm',   x:735, y:398, anchor:'right', target:'reqcfm', targetLabel:'req'},
@@ -2729,7 +2743,7 @@ const TAGS_LAND = [
   {ch:'igas',  x:200, y:115, from:[240,170], mk:'temp'},
   {ch:'ipress',x:360, y:115, from:[400,170], mk:'press'},
   {ch:'iliq',  x:200, y:640, from:[160,600], mk:'temp'},
-  {ch:{heat:'scid', cool:'coildt'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:40, y:760, sub:{heat:'linedt'}, subLabel:'line loss', target:{cool:'tsh'}},
+  {ch:{heat:'scid', cool:'ish'}, label:{heat:'SC at ID coil', cool:'ID coil SH'}, x:40, y:760, sub:{heat:'linedt', cool:'coildt'}, subLabel:{heat:'line loss', cool:'gas−liq'}},
   {ch:'ievpct', x:300, y:760, anchor:'ctr', bar:true, sub:'iev', subLabel:'', subUnit:true},
   {ch:'cfm',   x:590, y:640, anchor:'right', target:'reqcfm', targetLabel:'req'},
   {ch:'cap',   label:'Calc capacity', x:590, y:778, anchor:'right', sub:'cop', subLabel:'COP'},
@@ -2918,7 +2932,7 @@ function renderCycle(i){
         const txt = cls === 'off' ? '✓' : (d > 0 ? '▲+' : '▼−') + Math.abs(d).toFixed(dec);
         se.innerHTML = `${tg.targetLabel || 'target'} ${fmt(t, chById[tgtId])} <span class="dv ${cls}">${txt}</span>`; se.hidden = false;
       } else { const parts = [];
-        if (subId && isN(D.num[subId][i])){ const sc = chById[subId]; parts.push(((tg.subLabel != null ? tg.subLabel : sc.short) + ' ' + fmt(D.num[subId][i], sc) + (tg.subUnit && sc.unit ? ' ' + sc.unit : '')).trim()); }
+        if (subId && isN(D.num[subId][i])){ const sc = chById[subId]; const sl = pick(tg.subLabel, m); parts.push(((sl != null ? sl : sc.short) + ' ' + fmt(D.num[subId][i], sc) + (tg.subUnit && sc.unit ? ' ' + sc.unit : '')).trim()); }
         if (tg.sub2 && isN(D.num[tg.sub2][i])){ const v2 = D.num[tg.sub2][i]; parts.push(`${tg.sub2Label}${D.mode[i] === 'cool' ? '~' : ''}${v2 > 0 ? '+' : '−'}${Math.abs(v2).toFixed(0)}`); }
         if (parts.length){ se.textContent = parts.join(parts.length > 1 && tg.sub2 ? '·' : ' · '); se.hidden = false; } else se.hidden = true; }
     }
@@ -2994,7 +3008,7 @@ function renderNow(i){
   items.sort((a,b) => (SEV[b.st]||0) - (SEV[a.st]||0));
   for (const it of items){ if (it.st === 'info' && !S.events) continue; add(it.label, it.st === 'info' ? 'info' : it.st, it.r); }
   const sigs = e.sigs.slice().sort((a,b) => (b.conf||0) - (a.conf||0) || (a.st === 'fault' ? -1 : 1));
-  for (const x of sigs){ if (x.st === 'rule') continue; if (x.st === 'fault' && !S.faults) continue; if (x.st === 'sig' && !S.sigs) continue; if (x.st === 'info' && !S.events) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
+  for (const x of sigs){ if (x.st === 'rule') continue; if (x.st === 'fault' && !S.faults) continue; if (x.st === 'sig' && !S.sigs) continue; if (!sigOk(x)) continue; if (x.st === 'info' && !S.events) continue; add(x.label, x.st === 'info' ? 'info' : x.st === 'fault' ? 'fault' : 'sig', x.detail); }
   if (S.rulebook){ const ord = {critical:0, major:1, moderate:2, minor:3, law:4}; const rl = e.sigs.filter(x => x.st === 'rule').sort((a, b) => ord[a.sev] - ord[b.sev]).slice(0, 3);
     const seen = new Set(); for (const x of rl){ if (seen.has(x.code)) continue; seen.add(x.code); const c = document.createElement('span'); c.className = 'chip rule ' + x.sev; c.innerHTML = synEsc(x.rule.title); c.title = x.detail; mc.appendChild(c); } }
   // always-visible demand / call readout
@@ -3048,7 +3062,7 @@ function narrateRow(i){
     }
   }
   if (S.rulebook){ const ord = {critical:0, major:1, moderate:2, minor:3, law:4}; const top = (D.sig[i] || []).filter(x => x.st === 'rule').sort((a, b) => ord[a.sev] - ord[b.sev])[0]; if (top) parts.push(`<span class="${top.sev === 'critical' ? 'a' : top.sev === 'major' ? 'w' : ''}">${synEsc(top.rule.title)}</span>`); }
-  const sigs = (D.sig[i] || []).filter(x => (x.st === 'sig' && S.sigs) || (x.st === 'fault' && S.faults)).slice(0, 2);
+  const sigs = (D.sig[i] || []).filter(x => ((x.st === 'sig' && S.sigs) || (x.st === 'fault' && S.faults)) && sigOk(x)).slice(0, 2);
   for (const x of sigs) parts.push(`<span class="${x.st === 'fault' ? 'a' : 'w'}">${synEsc(x.label)}</span>`);
   { const errs = rowErrors(i); if (errs.length) parts.unshift(`<span class="a">ERROR ${synEsc(errs.map(e => (e.who === 'Outdoor' ? '' : e.who + ' ') + (e.code || e.raw) + (e.k ? ' ' + e.k.t : '')).join(' · '))}</span>`); }
   return parts.join(' · ');
@@ -3059,6 +3073,9 @@ function narrateRow(i){
    fixed on a real job, 'provisional' = written from the physics and not yet confirmed on a repair (the card says so and asks for the
    👍/👎). As confirmed jobs come in through the shop library the thresholds tighten and the label flips. */
 let CHAINS_ACTIVE = [];   // [{id, cause:[channel ids], effect:[channel ids], rows:[[a,b],…]}] — drives the cause / effect marks on the cycle view
+// physics checks that rest on an assumed sensor position or a statistical norm rather than a measured identity: shown only with provisional patterns on
+const SIG_PROV = new Set(['od-coil', 'order', 'pt-tc', 'pt-te', 'amps']);
+const sigOk = x => x.st !== 'sig' || S.provisional || !SIG_PROV.has(x.code);
 const CHAIN_CONFIRMED = {C1:'1 job — R-32 FIT in cooling, June 2026: the indoor gas-pipe thermistor was the failed part'};   // chains confirmed on a real repair, with the evidence
 function chainCtx(){
   const num = D.num, s = D.str, n = D.n, dt = D.interval / 60;
@@ -3299,7 +3316,7 @@ const CHAIN_DEFS = [
     fix:['Recover to nameplate weight plus line-set allowance.', 'If the charge weighs right, look for a restriction downstream of the liquid-line sensor (drier, strainer, indoor EEV inlet).']}),
   absorb:[/^Subcooling ran .* over target/, /^Discharge peaked/, /^High head/]},
  {id:'CC4', fam:'unitary', cats:['crit'], cause:['hp'], effect:['cond', 'odsat', 'appr'],
-  when:c => { if (c.cool.length < 10 || !c.has('ochex')) return null; const odsat = c.med(c.cool, 'odsat'), appr = c.med(c.cool, 'appr'), coilair = c.med(c.cool, i => isN(c.v('ochex', i)) && isN(c.v('oat', i)) ? c.v('ochex', i) - c.v('oat', i) : null), scerr = c.med(c.cool, 'scerr'), sc = c.med(c.cool, 'sc');
+  when:c => { if (c.cool.length < 10 || !c.has('ochex')) return null; const ocId = c.has('ocmid') ? 'ocmid' : 'ochex'; const odsat = c.med(c.cool, 'odsat'), appr = c.med(c.cool, 'appr'), coilair = c.med(c.cool, i => isN(c.v(ocId, i)) && isN(c.v('oat', i)) ? c.v(ocId, i) - c.v('oat', i) : null), scerr = c.med(c.cool, 'scerr'), sc = c.med(c.cool, 'sc');
     return isN(odsat) && odsat >= 12 && isN(appr) && appr >= 25 && isN(coilair) && coilair <= 20 && (isN(scerr) ? scerr >= -2 : (isN(sc) && sc >= 5)) ? {rows:c.span(c.cool), odsat, appr, coilair, sc} : null; },
   text:e => ({title:'Non-condensables in the system → head pressure higher than the coil temperature explains → derate, with subcooling and the coil itself looking normal',
     why:`The pressure transducer put condensing at ${f1s(e.appr)}°F over outdoor air, but the coil thermistor sat only ${f1s(e.coilair)}°F over the air, ${f1s(e.odsat)}°F below the saturation temperature the pressure implies, with subcooling a normal ${f1s(e.sc)}°F. A dirty coil raises both the pressure and the coil temperature together; only a gas that does not condense (air, nitrogen) raises the pressure alone.`,
@@ -3548,6 +3565,7 @@ function chainFindings(F0){
   const groupOf = id => Object.entries(groups).filter(([g, ids]) => ids.includes(id)).map(([g]) => g), taken = new Set();
   for (const def of CHAIN_DEFS){
     if (def.fam !== 'any' && def.fam !== fam) continue;
+    if (!S.provisional && !CHAIN_CONFIRMED[def.id]) continue;   // a pattern no repair has confirmed is not shown to techs
     if (groupOf(def.id).some(g => taken.has(g))) continue;
     let e = null; try { e = def.when(c); } catch(err){ console.warn('chain', def.id, err); }
     if (!e) continue;
@@ -3652,7 +3670,7 @@ function synopsisFindings(){
     if (runRows.length){ const under = share(settled, i => isN(num.rpserr[i]) && num.rpserr[i] <= -SIG.rpsHold); if (under >= 0.2) F.push({rid:'L5', st:'warn', title:`Compressor held ≥${SIG.rpsHold} rps under its target ${pct(under, 1)}% of the settled time`, why:`see the drop-control findings for what held it`, do:'Capacity is being limited by a protection, not by the thermostat.'}); }
     if (chById.cfm.present && chById.reqcfm.present){ const shortA = share(runRows, i => isN(num.cfm[i]) && isN(num.reqcfm[i]) && num.reqcfm[i] > 0 && num.cfm[i] < 0.9 * num.reqcfm[i]); if (shortA >= 0.2) F.push({rid:'S8', st:'warn', title:`Indoor airflow short of request ${pct(shortA, 1)}% of the run time`, why:`present CFM under 90% of requested`, do:'Dirty filter, closed registers or a duct restriction. Fix airflow before judging refrigerant numbers.'}); }
     // sensor disagreements from the signature pass
-    const cnt = code => rows.filter(i => (D.sig[i] || []).some(x => x.code === code)).length;
+    const cnt = code => rows.filter(i => (D.sig[i] || []).some(x => x.code === code && sigOk(x))).length;
     for (const [code, title, doTxt] of [['pt-tc','Tc disagrees with the HP transducer','A pressure sensor or the saturation table is off; verify with gauges.'],['pt-te','Te disagrees with the LP transducer','A pressure sensor or the saturation table is off; verify with gauges.'],['hp-ip','Outdoor and indoor pressure sensors disagree','One of the two pressure sensors is wrong, or the indoor sensor is on a restricted line; compare both to a gauge.'],['order','Thermistor order violated','A thermistor is reading wrong or misplaced; check the flagged pair.']]){ const c = cnt(code); if (c >= Math.max(3, 0.05 * n)) F.push({rid:code === 'hp-ip' ? 'S5' : 'L2', st:'warn', title:`${title} on ${c} rows`, why:`signature '${code}'`, do:doTxt}); }
     if (modes.includes('heat')){ const d = D.runs.reduce((a, r) => a + (r.defrost || 0), 0); const dm = D.runs.reduce((a, r) => a + (r.defrostMin || 0), 0); if (d) F.push({rid:'S10', mode:'heat', st:d / Math.max(1, spanMin / 60) >= 2 ? 'warn' : 'info', title:`${d} defrost${d === 1 ? '' : 's'} in ${f0(spanMin)} min (${f0(dm)} min defrosting)`, why:`from the defrost control flag`, do:d / Math.max(1, spanMin / 60) >= 2 ? 'Frequent defrosts: check the outdoor coil for ice/dirt, the defrost thermistor placement, and outdoor fan operation.' : 'Normal defrost frequency for the conditions.'}); }
   }
@@ -3683,7 +3701,7 @@ function synopsisTimeline(){
   for (const [id, lab, st] of flags) if (s[id]) for (const e of episodes(i => s[id][i] === 'ON', 1)) E.push({i:e.a, text:lab, st, min:(e.b - e.a + 1) * dt});
   for (const e of episodes(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()), 1)) E.push({i:e.a, text:`Error ${rowErrors(e.a).map(x => x.code || x.raw).join(', ') || s.etype[e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
   for (let i = 0; i < n; i++) if (isN(num.retry[i]) && num.retry[i] !== 0 && (i === 0 || num.retry[i] !== num.retry[i - 1])) add(i, `Retry code ${num.retry[i]}`, 'warn');
-  const codes = new Map(); for (let i = 0; i < n; i++) for (const x of (D.sig[i] || [])) if (x.st === 'sig' || x.st === 'fault') codes.set(x.code, x.label.replace(/ · \d+\/\d+$/, ''));
+  const codes = new Map(); for (let i = 0; i < n; i++) for (const x of (D.sig[i] || [])) if ((x.st === 'sig' || x.st === 'fault') && sigOk(x)) codes.set(x.code, x.label.replace(/ · \d+\/\d+$/, ''));
   for (const [code, lab] of codes) for (const e of episodes(i => (D.sig[i] || []).some(x => x.code === code), 3)) E.push({i:e.a, text:lab, st:code.startsWith('fault-') ? 'alarm' : 'warn', min:(e.b - e.a + 1) * dt});
   if (D.fam === 'multi'){
     for (const id of ['limpeak','limfrz','limtd','liminv']) for (const e of episodes(i => isN(num[id][i]) && num[id][i] < 255, 1)) E.push({i:e.a, text:`${chById[id].label.replace('Max Hz limit: ', '')} limiter (cap ${f0(num[id][e.a])} rps)`, st:'warn', min:(e.b - e.a + 1) * dt});
@@ -3757,7 +3775,7 @@ function buildSynopsis(){
   $('#synlist').innerHTML = main.map(card).join('') + (main.length ? '' : '<div class="syn ok"><h3>Nothing out of line in this recording</h3></div>')
     + (notes.length ? `<details class="synnotes"><summary>Also noted · ${notes.length}</summary>${notes.map(card).join('')}</details>` : '')
     + '<p class="synkey"><i class="crit"></i>critical <i class="minor"></i>minor <i class="fan"></i>fan / airflow <i class="humid"></i>humidity · a card in two colours belongs to both</p>';
-  $('#synnote').textContent = D.fam === 'multi' ? 'A multi-zone log has no pressure sensors, humidity or airflow, so these findings rest on coil, pipe and air temperatures plus the EV positions. Confirm humidity with a meter.' : 'Findings use the unit\'s own targets and the signature thresholds in the Runs tab. They point at what to check first; they are not a replacement for gauges and a scale.';
+  $('#synnote').textContent = D.fam === 'multi' ? 'A multi-zone log has no pressure sensors, humidity or airflow, so these findings rest on coil, pipe and air temperatures plus the EV positions. Confirm humidity with a meter.' : 'Findings use the unit\'s own targets and the signature thresholds in the Runs tab. They point at what to check first; they are not a replacement for gauges and a scale.' + (S.provisional ? ' Provisional patterns are switched on (Settings): those have not been confirmed on a real repair.' : ' Only patterns confirmed on a real repair are shown; provisional ones are off (Settings → Provisional patterns).');
 }
 function drawTicks(){
   if (!D || !evalCache || evalCache.length !== D.n) return;
@@ -4242,7 +4260,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v96';
+const APP_VERSION = 'v97';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -5300,7 +5318,7 @@ function load(text, name, model){
   if (playing) togglePlay();
   $('#dsname').textContent = `${name} · ${D.n} rows · ${fmtTime(D.t[0], true)} → ${fmtTime(D.t[D.n-1])}`;
   $('#scrub').max = D.n - 1;
-  applyEquipment(); applyRefrigerant(); buildErrRef();
+  applyEquipment(); applyRefrigerant(); buildErrRef(); { const sb = $('#srcbox'); if (sb) sb.addEventListener('toggle', () => { if (sb.open) buildSrcMap(); }); }
   evalAll(); buildTrendPicker(); buildStrips(); buildDataTable(); buildRulesTable(); buildDock(); buildRuns(); buildSynopsis();
   $('#rulejson').value = JSON.stringify(rules, null, 1);
   setCur(0);
