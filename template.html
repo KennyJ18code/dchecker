@@ -1644,6 +1644,10 @@ function buildDataset(text, name){
   for (const c of NUM){ const ix = colIdx(c); const a = new Array(n).fill(null); if (ix >= 0) for (let i = 0; i < n; i++) a[i] = conv(c, rows[i+1][ix]); num[c.id] = a; c.present = ix >= 0; }
   { const mx = Math.max(0, ...num.ev.filter(isN)); EVMAX = mx > 335 ? 480 : 327; const ec = NUM.find(c => c.id === 'ev'); if (ec) ec.max = EVMAX; }
   for (const c of STAT){ const ix = colIdx(c); const a = new Array(n).fill(null); if (ix >= 0) for (let i = 0; i < n; i++){ const v = (rows[i+1][ix]||'').trim(); a[i] = (v && v !== '---') ? v : null; } str[c.id] = a; c.present = ix >= 0; }
+  // a head switched off at its remote reports 0 °C (32.0 °F) for return air, coil and setpoint: placeholders, not readings (no remote can be set to 32 °F)
+  if (fam === 'multi'){ const isZ = v => isN(v) && Math.abs(v - 32) < 0.05;
+    for (let k = 0; k < MZ.ports; k++){ const ra = num['ra'+k], hx = num['ihx'+k], sp = num['sp'+k], dd = num['dd'+k], zm = str['zmode'+k] || []; if (!ra || !hx || !sp) continue;
+      for (let i = 0; i < n; i++) if ((!zm[i] || /^stop/i.test(zm[i])) && isZ(ra[i]) && isZ(hx[i]) && isZ(sp[i])){ ra[i] = hx[i] = sp[i] = null; if (dd && dd[i] === 0) dd[i] = null; } } }
   const mode = new Array(n);
   for (let i = 0; i < n; i++){ const m = ((str.opmode[i] || str.imode[i] || '')).toLowerCase(); mode[i] = /heat/.test(m) ? 'heat' : /cool|dry/.test(m) ? 'cool' : 'other'; }
   for (const d of DERIVED) num[d.id] = new Array(n).fill(null);
@@ -3004,11 +3008,13 @@ function narrateRow(i){
       if (isN(rps)) parts.push(`comp <b>${f0(rps)} rps</b>` + (isN(cap) && rps >= cap - 1 ? ' <span class="w">at its cap</span>' : isN(flr) && rps <= Math.max(flr, 10) + 1 ? ' at its floor (low load)' : isN(cap) ? ` of ${f0(cap)} allowed` : ''));
       const lim = ['limpeak','limfrz','limtd','liminv'].filter(id => isN(num[id][i]) && num[id][i] < 255); if (lim.length) parts.push(`<span class="w">limited by ${lim.map(id => chById[id].label.replace('Max Hz limit: ', '')).join(', ')}</span>`);
       if (rs >= 5 && isN(num.tderr[i]) && Math.abs(num.tderr[i]) >= 10) parts.push(`discharge ${f0(Math.abs(num.tderr[i]))}°F ${num.tderr[i] < 0 ? 'under' : '<span class="w">over</span>'} target`);
-      const on = [], off = [];
-      for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k][i], fan = num['ifan'+k][i], dd = num['dd'+k][i], hx = num['ihx'+k][i];
-        if (isN(ev) && ev === 0) off.push(L + (isN(fan) && fan > 0 ? '' : '·fan off'));
+      const on = [], off = [], stopped = [];
+      for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k][i], fan = num['ifan'+k][i], dd = num['dd'+k][i], hx = num['ihx'+k][i], zm = s['zmode'+k] ? s['zmode'+k][i] : null;
+        if (/^stop/i.test(zm || '')) stopped.push(L);   // switched off at its remote: not part of the call, whatever its port valve is doing
+        else if (isN(ev) && ev === 0) off.push(L + (isN(fan) && fan > 0 ? '' : '·fan off'));
         else on.push(`${L}${isN(dd) ? ' ΔD' + f0(dd) : ''}${isN(hx) ? ' coil ' + f0(hx) + '°' : ''}`); }
       if (on.length) parts.push(`calling: <b>${synEsc(on.join(', '))}</b>`);
+      if (stopped.length) parts.push(`off at the remote: ${synEsc(stopped.join(', '))}`);
       if (off.length) parts.push(`satisfied: ${synEsc(off.join(', '))}` + (off.some(x => !/fan off/.test(x)) && m === 'cool' ? ' <span class="w">(fan on over a warm coil → re-evaporation)</span>' : ''));
     } else {
       const rps = num.rps[i], trps = num.trps[i];
@@ -4210,7 +4216,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v93';
+const APP_VERSION = 'v94';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
