@@ -53,6 +53,10 @@ Every reading is located in the file's header row by its label before it is link
 
 Plausibility and zone findings are judged in the mode of each row: an indoor coil far above return air, or a port's gas pipe far above its liquid pipe, is normal in heating (the coil is the condenser) and impossible in cooling, so the limits flip with the mode. A recording that holds both modes says so in the synopsis header, and each mode-specific card carries a heating or cooling chip.
 
+## Compressor speed
+
+The target speed is what the control asked for, not the unit's maximum, and the highest speed in a recording is not the unit's rated maximum either: an inverter picks a speed and holds it for long stretches by design. The app therefore never calls a run "max speed" or "pinned" from the log alone. Findings that need the rated maximum (pinned at max and not satisfying, capacity short for the load, max speed in mild weather) stay silent until that family's rated speed is entered in `RPS_MAX`; gates that only need "at the higher speeds in this log" (floodback at speed, approach at speed) use the log's own highest speed and say so. On a multi-split the `Max Hz` column is the control's cap of the moment; it only counts as a limit while one of the limiter columns is active. A long run held within ±5 % of one speed gets an informational card saying that is normal.
+
 ## Trends
 
 Each strip in the Trends tab draws the reading's logged target on the same scale as an orange dashed line when the log has one (discharge target, target comp speed, target OU fan, target SH/SC, requested airflow); the picker marks those readings "+target". The Overlay button puts up to five ticked readings on one chart, each on its own scale in its own colour with its target dashed in that colour, and a legend showing the value at the cursor and the range of each line. On phones the reading picker folds to one line so the chart is on screen. Tapping a reading on the Cycle screen pins it to the bottom bar (up to five); with two or more pinned, the bar overlays them on one chart with the same legend (each entry has its own unpin ×), or shows a strip each with the Separate switch.

@@ -1823,6 +1823,11 @@ const RATED = {
           '24E':{t:2, cool:23000, heat:23000, e:true}, '36E':{t:3, cool:34200, heat:34200, e:true}, '42E':{t:3.5, cool:40000, heat:40000, e:true}, '48E':{t:4, cool:44000, heat:44000, e:true}},
   DH9VS: {'24':{t:2, cool:24000, heat:24000, heat5:24000}, '36':{t:3, cool:34200, heat:34200, heat5:34200}, '48':{t:4, cool:46000, heat:48000, heat5:44000}, '60':{t:5, cool:54000, heat:54000, heat5:47000}},
 };
+// The highest speed in a log is NOT the unit's maximum and the target speed is not "full speed": an inverter picks the speed its
+// control asks for and holds it for long stretches by design (Kenny, 2026-10-09). Rated max speeds go here as they are confirmed
+// from service manuals (family → rps); while a family is missing, every "at max speed" finding stays silent rather than guessing.
+const RPS_MAX = {};
+function knownRpsMax(){ const f = D && D.fam !== 'multi' ? modelFamily() : ''; return (f && RPS_MAX[f]) || null; }
 const GENERIC_SIZES = ['18', '24', '30', '36', '42', '48', '60'];   // 12,000 BTU/h per nominal ton when the family is not in the table
 function modelFamily(){
   const m = ((D && D.model) || '').replace(/^INV_Unitary_/i, '').toUpperCase();
@@ -2103,7 +2108,7 @@ function rangeWin(a, i, k){ let lo = Infinity, hi = -Infinity, n = 0; for (let j
 function faultCtx(i){
   const v = {}; for (const ch of ALLCH) v[ch.id] = D.num[ch.id] ? D.num[ch.id][i] : null;
   const k5 = Math.max(2, Math.round(300 / D.interval));
-  const evMax = chById.ev.max, rpsMax = D.ref.rpsMax || 126;
+  const evMax = chById.ev.max, rpsMax = D.ref.rpsSeen || 126;
   return {
     v, m: D.mode[i], s: D.str, i, steady: D.steady[i],
     evFrac: isN(v.ev) ? v.ev / evMax : null,
@@ -2206,7 +2211,7 @@ const RT = {lockMin:10, lockPct:0.05, dshHi:80, dshLo:20, sshLo:5, scTol:3, disc
 const SEVCLS = {critical:'alarm', major:'warn', moderate:'sig', minor:'info', law:'info'};
 const RULEBOOK = [
  {id:'L4', sev:'major', title:'Pinned at max speed and not satisfying', why:'A compressor held near its maximum for 30+ minutes without satisfying is a capacity problem, not a control problem.', fix:['Classify it: high SH with low SC is charge (S2); speed under max with no code is a protection derate (L5); normal refrigeration means load exceeds capacity — check sizing and duct leakage.'],
-  test:c => c.run ? (c.pinnedMin >= RT.pinnedMin && c.unmet) : null, detail:c => `${f0(c.pinnedMin)} min at ≥${Math.round(RT.pinnedFrac*100)}% of ${f0(c.rpsMax)} rps, call still open`},
+  test:c => c.run && isN(c.rpsMax) ? (c.pinnedMin >= RT.pinnedMin && c.unmet) : null, detail:c => `${f0(c.pinnedMin)} min at ≥${Math.round(RT.pinnedFrac*100)}% of the rated ${f0(c.rpsMax)} rps, call still open`},
  {id:'L4h', rid:'L4', sev:'major', title:'Compressor hunting', why:'An inverter should find a steady speed that matches load. Speed reversing every few minutes points at a sensor, thermostat placement, airflow or oversizing.', fix:['Sensor placement and thermostat location first, then airflow, then sizing.'],
   test:c => c.run && c.rs >= RT.huntWin ? c.reversals > RT.huntRev : null, detail:c => `${c.reversals} speed reversals in the last ${RT.huntWin} min`},
  {id:'L5', sev:'major', title:'Protection control is capping speed', why:'Before a Daikin inverter throws a code it derates: discharge temperature, high pressure, freeze-up, current or heat-sink temperature pull speed down. Runs but cannot keep up, no code, means find what the board is protecting.', fix:['Find which limit is active and fix its cause: dirty coil, recirculation, airflow, charge, power.'],
@@ -2223,15 +2228,15 @@ const RULEBOOK = [
  {id:'S4', fam:'unitary', sev:'major', title:'Indoor coil freezing in cooling', why:'Ice chokes airflow, which drops pressure further; when it thaws it sends liquid to the compressor (S1).', fix:['Airflow first (filter, blower setting, static, closed dampers), then charge, then low-ambient cooling operation, then metering.'],
   test:c => c.cool && c.run ? c.freezeMin >= RT.freezeMin : null, detail:c => `Te ${f1s(c.tEvap)}°F for ${f0(c.freezeMin)} min`},
  {id:'S7', fam:'unitary', sev:'major', title:'High head: recirculation or dirty coil', why:'The FIT blows horizontally; a fence, wall or shrub inside the clearance throws hot air back into the intake. Head climbs and the board derates.', fix:['Restore the installation-manual clearances.','Clean the coil inside out; check fan speed against command; rule out overcharge.'],
-  test:c => c.cool && c.run && isN(c.approach) && isN(c.rpsMax) ? (c.approach > RT.approachHi && c.rps >= 0.8 * c.rpsMax) : null, detail:c => `coil − ambient ${f1s(c.approach)}°F at ${f0(c.rps)} rps`},
+  test:c => c.cool && c.run && isN(c.approach) && isN(c.rpsSeen) ? (c.approach > RT.approachHi && c.rps >= 0.8 * c.rpsSeen) : null, detail:c => `coil − ambient ${f1s(c.approach)}°F at ${f0(c.rps)} rps`},
  {id:'S8', fam:'unitary', sev:'major', title:'Indoor airflow short of request', why:'Too little air makes a cold coil, freezing and floodback; too much makes a warm coil and a humid house.', fix:['Filter, duct restrictions, blower configuration in the Daikin One+ installer settings.'],
   test:c => c.run && isN(c.cfm) && isN(c.reqcfm) && c.reqcfm > 0 ? c.cfm < 0.9 * c.reqcfm : null, detail:c => `${f0(c.cfm)} of ${f0(c.reqcfm)} CFM requested`},
  {id:'S9w', rid:'S9', fam:'unitary', sev:'major', title:'Heating: outdoor coil split too wide', why:'The outdoor coil is the evaporator in heating; more than ~28°F colder than outdoor air means frost or lost airflow.', fix:['Look for ice, check the outdoor fan, defrost initiation and the coil sensor position.'],
   test:c => c.heat && c.locked && isN(c.splitHeat) ? c.splitHeat > RT.splitWide : null, detail:c => `ambient − coil ${f1s(c.splitHeat)}°F`},
  {id:'S9n', rid:'S9', fam:'unitary', sev:'major', title:'Heating: outdoor coil not picking up heat', why:'Less than ~5°F between outdoor air and the outdoor coil at speed means low charge or a metering problem.', fix:['Confirm charge — verify in cooling when weather allows, otherwise weigh in or use the manufacturer\'s heating data.'],
-  test:c => c.heat && c.locked && isN(c.splitHeat) && isN(c.rpsMax) ? (c.splitHeat < RT.splitNarrow && c.rps >= 0.6 * c.rpsMax) : null, detail:c => `ambient − coil ${f1s(c.splitHeat)}°F at ${f0(c.rps)} rps`},
+  test:c => c.heat && c.locked && isN(c.splitHeat) && isN(c.rpsSeen) ? (c.splitHeat < RT.splitNarrow && c.rps >= 0.6 * c.rpsSeen) : null, detail:c => `ambient − coil ${f1s(c.splitHeat)}°F at ${f0(c.rps)} rps`},
  {id:'S11', fam:'unitary', sev:'moderate', minMin:10, title:'Shoulder-season humidity conditions', why:'At 65–80°F outside the sensible load is small, the compressor sits near minimum and the coil never gets cold enough. The system satisfies the thermostat long before the moisture.', fix:['Enable dehumidification in the Daikin One+ (reduced dehum airflow, overcool limit).','Confirm the system is not grossly oversized; if settings cannot fix it, add whole-house dehumidification.','Confirm with room dew point (target ≤ 55°F); the log has no humidity.'],
-  test:c => c.cool && c.run && isN(c.oat) && isN(c.rpsMin) ? (c.oat >= RT.shoulderLo && c.oat <= RT.shoulderHi && c.rps <= c.rpsMin * 1.1 + 1) : null, detail:c => `${f0(c.oat)}°F outside, comp ${f0(c.rps)} rps near its minimum`},
+  test:c => c.cool && c.run && isN(c.oat) && isN(c.rpsLow) ? (c.oat >= RT.shoulderLo && c.oat <= RT.shoulderHi && c.rps <= c.rpsLow * 1.1 + 1) : null, detail:c => `${f0(c.oat)}°F outside, comp ${f0(c.rps)} rps, near the lowest speed in this log`},
  {id:'S12', fam:'unitary', sev:'moderate', title:'Blower running with the compressor off', why:'Between compressor cycles the wet coil becomes a humidifier and puts the water back into the house.', fix:['Fan on auto during cooling season; use the thermostat\'s dehumidification settings for circulation.'],
   test:c => c.cool && !c.run ? (isN(c.cfm) && c.cfm > 0) : null, detail:c => `${f0(c.cfm)} CFM with the compressor off`},
  // ---- mini split ----
@@ -2264,7 +2269,7 @@ const RULEBOOK = [
 function ruleCtx(i){
   const v = id => D.num[id] ? D.num[id][i] : null, s = D.str, m = D.mode[i], multi = D.fam === 'multi';
   const run = D.runSec[i] >= 0, rs = D.runSec[i] / 60, cool = m === 'cool', heat = m === 'heat';
-  const rps = v('rps'), trps = v('trps'), rpsMax = multi ? (isN(v('maxhz')) ? v('maxhz') : D.ref.rpsMax) : D.ref.rpsMax, rpsMin = D.ref.rpsMin;
+  const rps = v('rps'), trps = v('trps'), rpsMax = D.ref.rpsMax, rpsMin = D.ref.rpsMin, rpsSeen = D.ref.rpsSeen, rpsLow = D.ref.rpsLow;
   const ochex = isN(v('ochex')) ? v('ochex') : v('ocmid'), oat = v('oat');
   const zones = multi ? D.zones : [], active = zones.filter(k => isN(v('pev'+k)) && v('pev'+k) > 0), closed = zones.filter(k => isN(v('pev'+k)) && v('pev'+k) === 0);
   const ihxAct = active.map(k => v('ihx'+k)).filter(isN);
@@ -2278,29 +2283,30 @@ function ruleCtx(i){
   const hiFanWarm = cool ? active.filter(k => isN(v('ifan'+k)) && fanMax[k] && v('ifan'+k) >= fanMax[k] - 5 && isN(v('ihx'+k)) && v('ihx'+k) >= RT.warmCoil).map(k => MZ.letters[k]) : [];
   const reevap = cool ? closed.filter(k => isN(v('ifan'+k)) && v('ifan'+k) > 0 && isN(v('ihx'+k)) && isN(v('ra'+k)) && Math.abs(v('ihx'+k) - v('ra'+k)) <= 4).map(k => MZ.letters[k]) : [];
   const unmet = multi ? zones.some(k => isN(v('dd'+k)) && v('dd'+k) > 0) : (s.therm[i] === 'ON');
-  return {i, run, rs, cool, heat, multi, rps, trps, rpsMax, rpsMin, disch, dsh, tEvap, tCond, oat, ochex, ssh:v('sh'), sc:v('sc'), scErr:v('scerr'), approach:(cool && isN(ochex) && isN(oat)) ? ochex - oat : null,
+  return {i, run, rs, cool, heat, multi, rps, trps, rpsMax, rpsMin, rpsSeen, rpsLow, disch, dsh, tEvap, tCond, oat, ochex, ssh:v('sh'), sc:v('sc'), scErr:v('scerr'), approach:(cool && isN(ochex) && isN(oat)) ? ochex - oat : null,
           splitHeat:(heat && isN(ochex) && isN(oat)) ? oat - ochex : null, cfm:v('cfm'), reqcfm:v('reqcfm'), fin:v('fin'), fan:v('fan'), tfan:v('tfan'), ihxMax, ihxMin,
           evMax:evs.length ? Math.max(...evs) : (multi ? null : v('evpct')), evMin:evs.length ? Math.min(...evs) : (multi ? null : v('evpct')), limits, hiFanWarm, reevap, unmet,
           locked:D.locked[i], sinceDefrost:D.sinceDefrost[i], pinnedMin:D.pinnedMin[i], heldMin:D.heldMin[i], reversals:D.reversals[i], freezeMin:D.freezeMin[i], r32:REF.ref === 'R32'};
 }
 function runRulebook(){
   const n = D.n, num = D.num, dt = D.interval / 60, s = D.str;
-  const rpsRun = num.rps.filter((x, i) => isN(x) && D.runSec[i] >= 0 && x > 0); D.ref.rpsMin = rpsRun.length ? Math.min(...rpsRun) : null;
+  const rpsRun = num.rps.filter((x, i) => isN(x) && D.runSec[i] >= 0 && x > 0); D.ref.rpsLow = rpsRun.length ? Math.min(...rpsRun) : null;   // lowest speed seen in this log, not the rated minimum
+  { const fl = D.fam === 'multi' && num.minhz ? num.minhz.filter(x => isN(x) && x > 0) : []; D.ref.rpsMin = fl.length ? fl.slice().sort((a, b) => a - b)[Math.floor(fl.length / 2)] : null; }   // the control's own floor when the log carries it
   if (D.fam === 'multi'){ D.ref.zoneFanMax = {}; for (const k of D.zones){ const f = num['ifan'+k].filter(isN); D.ref.zoneFanMax[k] = f.length ? Math.max(...f) : null; } }
   // L1 speed_locked: running ≥ lockMin with compressor speed inside ±5% over the last lockMin minutes
   const kL = Math.max(2, Math.round(RT.lockMin / dt));
   D.locked = new Array(n).fill(false); D.sinceDefrost = new Array(n).fill(999); D.pinnedMin = new Array(n).fill(0); D.heldMin = new Array(n).fill(0); D.reversals = new Array(n).fill(0); D.freezeMin = new Array(n).fill(0);
   let lastDef = -1e9, pinned = 0, held = 0, frz = 0;
-  const rpsMaxRef = () => D.ref.rpsMax;
+  const rpsSeenRef = () => D.ref.rpsSeen;
   const kH = Math.max(2, Math.round(RT.huntWin / dt));
   for (let i = 0; i < n; i++){
     const run = D.runSec[i] >= 0, rps = num.rps[i];
     if (s.defrost[i] === 'ON') lastDef = i; D.sinceDefrost[i] = (i - lastDef) * dt;
     if (run && D.runSec[i] >= RT.lockMin * 60 && i >= kL){ let lo = Infinity, hi = -Infinity, ok = true; for (let j = i - kL; j <= i; j++){ const x = num.rps[j]; if (!isN(x)){ ok = false; break; } lo = Math.min(lo, x); hi = Math.max(hi, x); } D.locked[i] = ok && (hi - lo) <= Math.max(2, RT.lockPct * hi); }
-    const cap = D.fam === 'multi' && isN(num.maxhz[i]) ? num.maxhz[i] : rpsMaxRef();
+    const cap = D.fam === 'multi' ? null : D.ref.rpsMax;   // 'pinned' only against a known rated maximum; a multi's Max Hz is the control's cap of the moment
     pinned = (run && isN(rps) && cap && rps >= RT.pinnedFrac * cap) ? pinned + dt : 0; D.pinnedMin[i] = pinned;
     held = (run && isN(rps) && isN(num.trps[i]) && rps < num.trps[i] - Math.max(2, 0.05 * num.trps[i])) ? held + dt : 0; D.heldMin[i] = held;
-    if (run && i >= kH){ let rev = 0, dir = 0; for (let j = i - kH + 1; j <= i; j++){ const a = num.rps[j - 1], b = num.rps[j]; if (!isN(a) || !isN(b)) continue; const d = b - a; if (Math.abs(d) < Math.max(4, 0.06 * (rpsMaxRef() || 60))) continue; const nd = Math.sign(d); if (dir && nd !== dir) rev++; dir = nd; } D.reversals[i] = rev; }
+    if (run && i >= kH){ let rev = 0, dir = 0; for (let j = i - kH + 1; j <= i; j++){ const a = num.rps[j - 1], b = num.rps[j]; if (!isN(a) || !isN(b)) continue; const d = b - a; if (Math.abs(d) < Math.max(4, 0.06 * (rpsSeenRef() || 60))) continue; const nd = Math.sign(d); if (dir && nd !== dir) rev++; dir = nd; } D.reversals[i] = rev; }
     let te = null; if (D.fam === 'multi'){ const act = D.zones.filter(k => isN(num['pev'+k][i]) && num['pev'+k][i] > 0).map(k => num['ihx'+k][i]).filter(isN); te = act.length ? Math.min(...act) : null; } else te = num.evap[i];
     frz = (run && D.mode[i] === 'cool' && isN(te) && te < RT.freeze) ? frz + dt : 0; D.freezeMin[i] = frz;
   }
@@ -2444,10 +2450,10 @@ function analyze(){
   const rng = (a, i) => { let lo = Infinity, hi = -Infinity; for (let j = i-kS; j <= i; j++){ const v = a[j]; if (!isN(v)) return null; lo = Math.min(lo, v); hi = Math.max(hi, v); } return hi-lo; };
   for (let i = kS; i < n; i++){ if (D.runSec[i] < SIG.steadyMin*60 || D.dropout[i]) continue; const r1 = rng(num.rps, i), r2 = chById.hp.present ? rng(num.hp, i) : 0, r3 = chById.lp.present ? rng(num.lp, i) : 0, r4 = chById.ev.present ? rng(num.ev, i) : (D.fam === 'multi' ? Math.max(...D.zones.map(k => rng(num['pev'+k], i) ?? Infinity), 0) : 0); if (r1 != null && r2 != null && r3 != null && r1 <= SIG.steadyRps && r2 <= SIG.steadyHp && r3 <= SIG.steadyLp && (r4 == null || r4 <= SIG.steadyEv)) D.steady[i] = true; }
   const evVals = num.ev.filter(isN), rpsVals = num.rps.filter(isN);
-  const evMax = evVals.length ? Math.max(...evVals) : null, rpsMax = rpsVals.length ? Math.max(...rpsVals) : null;
+  const evMax = evVals.length ? Math.max(...evVals) : null, rpsSeen = rpsVals.length ? Math.max(...rpsVals) : null;   // highest speed in this log, used only for 'at speed' gates
   const aprSteady = []; for (let i = 0; i < n; i++) if (D.steady[i] && isN(num.apr[i])) aprSteady.push(num.apr[i]);
   const aprRef = aprSteady.length >= 10 ? aprSteady.slice().sort((a,b) => a-b)[Math.floor(aprSteady.length/2)] : null;
-  D.ref = {evMax, rpsMax, aprRef};
+  D.ref = {evMax, rpsSeen, rpsMax:knownRpsMax(), aprRef};
   // per-channel range over the log and steady-state baseline (median / spread) for the Bars and Deviation views
   D.range = {}; D.base = {};
   for (const ch of ALLCH){
@@ -2496,7 +2502,7 @@ function analyze(){
       if (pinned && settled && isN(num.scerr[i]) && num.scerr[i] <= -SIG.scErr) out.push({code:'ev-open', label:'EV pinned open, SC below target', detail:`EV ${num.ev[i].toFixed(0)} of ${EVM} pls, SC ${num.scerr[i].toFixed(1)}°F vs target — undercharge or liquid-line restriction`, st:'sig'});
     }
     if (isN(num.ev[i]) && num.ev[i] <= EVM*0.12 && settled && isN(num.scerr[i]) && num.scerr[i] >= SIG.scErr) out.push({code:'ev-closed', label:'EV nearly closed, SC above target', detail:`EV ${num.ev[i].toFixed(0)} of ${EVM} pls, SC +${num.scerr[i].toFixed(1)}°F vs target — overcharge or restriction downstream`, st:'sig'});
-    if (rpsMax && isN(num.dsh[i]) && isN(num.rps[i]) && rs >= 5 && num.dsh[i] < SIG.dshLow && num.rps[i] >= rpsMax*SIG.rpsFrac) out.push({code:'floodback', label:'Low discharge SH at speed', detail:`DSH ${num.dsh[i].toFixed(1)}°F at ${num.rps[i].toFixed(0)} rps — liquid floodback signature`, st:'sig'});
+    if (rpsSeen && isN(num.dsh[i]) && isN(num.rps[i]) && rs >= 5 && num.dsh[i] < SIG.dshLow && num.rps[i] >= rpsSeen*SIG.rpsFrac) out.push({code:'floodback', label:'Low discharge SH at speed', detail:`DSH ${num.dsh[i].toFixed(1)}°F at ${num.rps[i].toFixed(0)} rps — liquid floodback signature`, st:'sig'});
     if (isN(num.dslope[i]) && num.dslope[i] >= SIG.dischSlope && isN(num.rpsslope[i]) && Math.abs(num.rpsslope[i]) <= 2) out.push({code:'disch-climb', label:'Discharge climbing at steady speed', detail:`+${num.dslope[i].toFixed(1)}°F/min over the last 5 min`, st:'sig'});
     if (isN(num.lpslope[i]) && num.lpslope[i] <= SIG.lpSlope && isN(num.evslope[i]) && num.evslope[i] >= SIG.evSlope) out.push({code:'lp-fall', label:'LP falling while EV opens', detail:`${num.lpslope[i].toFixed(1)} psi/min with EV +${num.evslope[i].toFixed(1)} pls/min — starving evaporator`, st:'sig'});
     const drops = ['dropDisch','dropInv','dropHp','dropLp','dropFin'].filter(id => s[id][i] === 'ON').map(id => STAT.find(x => x.id === id).label);
@@ -3143,7 +3149,8 @@ function narrateRow(i){
     parts.push(`<b>${synEsc(mode)}</b>${ph ? ' · <span class="w">' + ph + '</span>' : ''} · ${f0(rs)} min in`);
     if (D.fam === 'multi'){
       const rps = num.rps[i], cap = num.maxhz[i], flr = num.minhz[i];
-      if (isN(rps)) parts.push(`comp <b>${f0(rps)} rps</b>` + (isN(cap) && rps >= cap - 1 ? ' <span class="w">at its cap</span>' : isN(flr) && rps <= Math.max(flr, 10) + 1 ? ' at its floor (low load)' : isN(cap) ? ` of ${f0(cap)} allowed` : ''));
+      const limAct = ['limpeak','limfrz','limtd','liminv'].some(id => isN(num[id][i]) && num[id][i] < 255);   // without a limiter the cap is just the speed the control chose
+      if (isN(rps)) parts.push(`comp <b>${f0(rps)} rps</b>` + (isN(cap) && rps >= cap - 1 && limAct ? ' <span class="w">held at a protection cap</span>' : isN(flr) && rps <= Math.max(flr, 10) + 1 ? ' at its floor (low load)' : ''));
       const lim = ['limpeak','limfrz','limtd','liminv'].filter(id => isN(num[id][i]) && num[id][i] < 255); if (lim.length) parts.push(`<span class="w">limited by ${lim.map(id => chById[id].label.replace('Max Hz limit: ', '')).join(', ')}</span>`);
       if (rs >= 5 && isN(num.tderr[i]) && Math.abs(num.tderr[i]) >= 10) parts.push(`discharge ${f0(Math.abs(num.tderr[i]))}°F ${num.tderr[i] < 0 ? 'under' : '<span class="w">over</span>'} target`);
       const on = [], off = [], stopped = [];
@@ -3193,11 +3200,11 @@ function chainCtx(){
   const episodesOf = (pred, minRows) => { const out = []; let a = -1; for (let i = 0; i <= n; i++){ const o = i < n && !!pred(i); if (o && a < 0) a = i; if (!o && a >= 0){ if (i - a >= (minRows || 1)) out.push([a, i - 1]); a = -1; } } return out; };
   const sf = re => (D.sensorFindings || []).some(f => re.test(f.title || ''));
   const cal = (D.capinfo && D.capinfo.cal) || {off:{}}, cap = D.capinfo || {};
-  const hrs = n * dt / 60, defrosts = D.runs.reduce((a, r) => a + (r.defrost || 0), 0), rpsMax = D.ref.rpsMax, rpsMin = D.ref.rpsMin;
+  const hrs = n * dt / 60, defrosts = D.runs.reduce((a, r) => a + (r.defrost || 0), 0), rpsMax = D.ref.rpsMax, rpsMin = D.ref.rpsMin, rpsSeen = D.ref.rpsSeen, rpsLow = D.ref.rpsLow;
   const fanMax = has('fan') ? Math.max(0, ...num.fan.filter(isN)) : 0;
   const dfEp = hasS('defrost') ? episodesOf(i => sv('defrost', i) === 'ON', 1) : [];
   const zones = D.zones || [], L = k => MZ.letters[k];
-  return {num, s, n, dt, all, run, settled, cool, heat, v, sv, has, hasS, med, share, on, span, slope, episodesOf, sf, cal, cap, hrs, defrosts, rpsMax, rpsMin, fanMax, dfEp, zones, L, multi:D.fam === 'multi', r32:REF.ref === 'R32'};
+  return {num, s, n, dt, all, run, settled, cool, heat, v, sv, has, hasS, med, share, on, span, slope, episodesOf, sf, cal, cap, hrs, defrosts, rpsMax, rpsMin, rpsSeen, rpsLow, fanMax, dfEp, zones, L, multi:D.fam === 'multi', r32:REF.ref === 'R32'};
 }
 // each chain: when(c) → evidence object (truthy) or null; text(e, c) → {title, why, fix}; cause/effect may be functions of e
 const CHAIN_DEFS = [
@@ -3305,10 +3312,10 @@ const CHAIN_DEFS = [
     fix:['Filter, coil face, blower wheel and closed registers first; then static pressure against the blower table.', 'If the blower setting was trimmed down, bring it back to the matched airflow.']}),
   absorb:[/^Indoor airflow short of request/, /^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]},
  {id:'C3', fam:'unitary', cats:['crit'], cause:['ievpct'], effect:['sh', 'dsh', 'coildt'],
-  when:c => { if (c.cool.length < 10 || !c.has('iev') || !c.rpsMax) return null; const pinned = c.share(c.cool, i => c.v('ievpct', i) >= 95), sh = c.med(c.cool, 'sh'), rps = c.med(c.cool, 'rps');
-    return pinned >= 0.7 && isN(sh) && sh < 4 && isN(rps) && rps < 0.8 * c.rpsMax ? {rows:c.span(c.cool), pinned, sh, rps, cdt:c.med(c.cool, 'coildt')} : null; },
+  when:c => { if (c.cool.length < 10 || !c.has('iev') || !c.rpsSeen) return null; const pinned = c.share(c.cool, i => c.v('ievpct', i) >= 95), sh = c.med(c.cool, 'sh'), rps = c.med(c.cool, 'rps');
+    return pinned >= 0.7 && isN(sh) && sh < 4 && isN(rps) && rps < 0.8 * c.rpsSeen ? {rows:c.span(c.cool), pinned, sh, rps, cdt:c.med(c.cool, 'coildt')} : null; },
   text:e => ({title:'Indoor EEV sitting wide open → coil overfed → liquid returning to the compressor',
-    why:`The indoor EEV stayed at or above 95% open for ${pct(e.pinned, 1)}% of the cooling run while the compressor ran at ${f0(e.rps)} rps, well under its maximum, and the coil superheat at the indoor sensors (${f1s(e.cdt)}°F) agreed with the suction superheat (${f1s(e.sh)}°F): both near zero. The valve is not closing when the board asks, or the board is not asking.`,
+    why:`The indoor EEV stayed at or above 95% open for ${pct(e.pinned, 1)}% of the cooling run while the compressor ran at ${f0(e.rps)} rps, well under the highest speed in this log, and the coil superheat at the indoor sensors (${f1s(e.cdt)}°F) agreed with the suction superheat (${f1s(e.sh)}°F): both near zero. The valve is not closing when the board asks, or the board is not asking.`,
     fix:['Check the EEV coil resistance and connector; cycle power and listen for the valve stepping closed on start-up.', 'If the valve moves, suspect the indoor board\'s thermistor inputs; if it does not, the valve body.']}),
   absorb:[/^Liquid returning to the compressor/, /^Suction superheat near zero/, /^Discharge superheat under/, /^Low discharge SH/]},
  // ---- B. valves ----
@@ -3352,14 +3359,14 @@ const CHAIN_DEFS = [
     fix:['Check the 4-way solenoid coil and its command (the 4-way column); if commanded and not shifting, the pilot or slide is stuck.', 'A pressure difference too small to shift the slide (very low charge) can do the same; check charge if the valve proves good.']}),
   absorb:[/^Implausible reading/]},
  {id:'B8', fam:'unitary', cats:['crit'], cause:['suct'], effect:['dsh', 'disch', 'cap'],
-  when:c => { if (c.settled.length < 10 || !c.hasS('svhot') || !c.rpsMax) return null; const fast = c.settled.filter(i => c.v('rps', i) >= 0.5 * c.rpsMax && isN(c.v('lp', i)) && c.v('lp', i) > 100); if (fast.length < 10) return null;
+  when:c => { if (c.settled.length < 10 || !c.hasS('svhot') || !c.rpsSeen) return null; const fast = c.settled.filter(i => c.v('rps', i) >= 0.5 * c.rpsSeen && isN(c.v('lp', i)) && c.v('lp', i) > 100); if (fast.length < 10) return null;
     const sv = c.on(fast, 'svhot'), dsh = c.med(fast, 'dsh'); return sv >= 0.8 && isN(dsh) && dsh < 20 ? {rows:c.span(fast), sv, dsh, lp:c.med(fast, 'lp')} : null; },
   text:e => ({title:'Hot-gas bypass valve open when it should not be → discharge dumped to suction → low discharge superheat, capacity lost',
     why:`The hot-gas bypass solenoid showed open ${pct(e.sv, 1)}% of the time at half speed or more with low pressure at ${f0(e.lp)} psi, nowhere near the freeze floor that justifies it, and discharge superheat ran ${f1s(e.dsh)}°F. Discharge gas is being recycled to the suction side instead of doing work.`,
     fix:['Confirm the command vs the valve: if the column says ON, the board is opening it (check the LP transducer, A12); if OFF with the signature present, the valve is stuck open.', 'Feel the bypass line: it should be cold when closed.']}),
   absorb:[/^Discharge superheat under/, /^Liquid returning to the compressor/]},
  {id:'B9', fam:'unitary', cats:['crit'], cause:['lp'], effect:['rpserr', 'suct', 'evap'],
-  when:c => { if (c.settled.length < 10 || !c.hasS('svhot') || !c.hasS('dropLp') || !c.rpsMax) return null; const slow = c.settled.filter(i => c.v('rps', i) <= 0.4 * c.rpsMax); if (slow.length < 6) return null;
+  when:c => { if (c.settled.length < 10 || !c.hasS('svhot') || !c.hasS('dropLp') || !c.rpsSeen) return null; const slow = c.settled.filter(i => c.v('rps', i) <= 0.4 * c.rpsSeen); if (slow.length < 6) return null;
     const lpd = c.on(slow, 'dropLp'), sv = c.on(slow, 'svhot'), lp = c.med(slow, 'lp'); return lpd >= 0.2 && sv >= 0.5 && isN(lp) && lp < 100 ? {rows:c.span(slow), lpd, sv, lp} : null; },
   text:e => ({title:'Hot-gas bypass commanded but suction pressure still falling → bypass valve not opening → low-pressure drop control limiting the unit at low load',
     why:`At low speed the board opened the hot-gas bypass ${pct(e.sv, 1)}% of the time and still had its low-pressure drop control active ${pct(e.lpd, 1)}% of the time with suction at ${f0(e.lp)} psi. The bypass is the board's tool for exactly this; commanded and not helping means the solenoid is not opening.`,
@@ -3544,7 +3551,7 @@ const CHAIN_DEFS = [
     fix:e.kind === 'heat' ? ['Clean the heat-sink fins and the path the fan pulls air through; check the fan reaches target speed.'] : ['Compare amps per rps with earlier logs of this unit; check head pressure and floodback chains first.']}),
   absorb:[/^Protection control is capping speed/, /^Compressor held/, /^Drive stress/]},
  {id:'E5', fam:'multi', cats:['crit'], cause:['volt'], effect:['rps', 'syscur'],
-  when:c => { if (c.settled.length < 10 || !c.has('volt')) return null; const low = c.share(c.settled, i => isN(c.v('volt', i)) && c.v('volt', i) < 200), vm = c.med(c.settled, 'volt'), lim = c.has('liminv') ? c.share(c.settled, i => isN(c.v('liminv', i)) && c.v('liminv', i) > 0 && c.v('liminv', i) < (c.rpsMax || 999)) : 0;
+  when:c => { if (c.settled.length < 10 || !c.has('volt')) return null; const low = c.share(c.settled, i => isN(c.v('volt', i)) && c.v('volt', i) < 200), vm = c.med(c.settled, 'volt'), lim = c.has('liminv') ? c.share(c.settled, i => isN(c.v('liminv', i)) && c.v('liminv', i) > 0 && c.v('liminv', i) < 255) : 0;
     return (low >= 0.2 || (isN(vm) && vm < 208)) && lim >= 0.1 ? {rows:c.span(c.settled), low, vm, lim} : null; },
   text:e => ({title:'Low line voltage → more current for the same work → inverter current limit sooner → speed capped',
     why:`Line voltage read under 200 V ${pct(e.low, 1)}% of the settled time (median ${f0(e.vm)} V) and the inverter-current speed limit was active ${pct(e.lim, 1)}% of the time. At low voltage the drive draws proportionally more current to deliver the same power and hits its limit on a day it would otherwise have run flat out.`,
@@ -3571,10 +3578,10 @@ const CHAIN_DEFS = [
   absorb:[/^Compressor held/]},
  {id:'F4', fam:'unitary', cats:['crit', 'fan'], cause:e => [e.causeId], effect:['rps', 'lp', 'evap'],
   when:c => { if (c.cool.length < 10 || !c.hasS('freeze')) return null; const fz = c.on(c.cool, 'freeze'); if (fz < 0.1) return null;
-    const shortA = c.has('cfm') && c.has('reqcfm') ? c.share(c.cool, i => isN(c.v('cfm', i)) && isN(c.v('reqcfm', i)) && c.v('reqcfm', i) > 0 && c.v('cfm', i) < 0.85 * c.v('reqcfm', i)) : 0, sc = c.med(c.cool, 'sc'), rpsFloor = c.share(c.cool, i => isN(c.v('rps', i)) && isN(c.rpsMin) && c.v('rps', i) <= c.rpsMin + 2);
+    const shortA = c.has('cfm') && c.has('reqcfm') ? c.share(c.cool, i => isN(c.v('cfm', i)) && isN(c.v('reqcfm', i)) && c.v('reqcfm', i) > 0 && c.v('cfm', i) < 0.85 * c.v('reqcfm', i)) : 0, sc = c.med(c.cool, 'sc'), rpsFloor = c.share(c.cool, i => isN(c.v('rps', i)) && isN(c.rpsLow) && c.v('rps', i) <= c.rpsLow + 2);
     const up = shortA >= 0.3 ? 'airflow' : (isN(sc) && sc < 3 ? 'charge' : 'load'); return {rows:c.span(c.cool), fz, up, shortA, sc, rpsFloor, causeId:up === 'airflow' ? 'cfm' : up === 'charge' ? 'sc' : 'rps'}; },
   text:e => ({title:e.up === 'airflow' ? 'Low indoor airflow → coil heading for freezing → freeze protection limiting the compressor' : e.up === 'charge' ? 'Low charge → suction pressure at the floor → freeze protection limiting the compressor' : 'Load too small for the unit → compressor at minimum, coil still too cold → freeze protection limiting it',
-    why:`Freeze protection was active ${pct(e.fz, 1)}% of the cooling run. ${e.up === 'airflow' ? `Airflow ran short of request ${pct(e.shortA, 1)}% of the time: not enough air to keep the coil above freezing.` : e.up === 'charge' ? `Subcooling was ${f1s(e.sc)}°F: too little refrigerant to keep suction pressure up.` : `Airflow and charge both look right and the compressor sat at its minimum speed ${pct(e.rpsFloor, 1)}% of the time: the unit cannot turn down far enough for this load.`}`,
+    why:`Freeze protection was active ${pct(e.fz, 1)}% of the cooling run. ${e.up === 'airflow' ? `Airflow ran short of request ${pct(e.shortA, 1)}% of the time: not enough air to keep the coil above freezing.` : e.up === 'charge' ? `Subcooling was ${f1s(e.sc)}°F: too little refrigerant to keep suction pressure up.` : `Airflow and charge both look right and the compressor sat at the lowest speed in this log ${pct(e.rpsFloor, 1)}% of the time: the unit is not turning down far enough for this load.`}`,
     fix:e.up === 'airflow' ? ['Filter, coil, blower, registers.'] : e.up === 'charge' ? ['Find the leak; weigh in charge.'] : ['Oversized for the space or the season: thermostat dehumidification settings, or accept the cycling.']}),
   absorb:[/^Freeze-up protection in cooling/, /^Cooling in cold weather/]},
  {id:'F5', fam:'unitary', cats:['minor'], cause:[], effect:[],
@@ -3585,10 +3592,10 @@ const CHAIN_DEFS = [
   absorb:[/rows with sensor dropouts/, /^Retry codes/]},
  // ---- G. sizing ----
  {id:'G1', fam:'unitary', cats:['minor', 'humid'], cause:['rps'], effect:['evap', 'sh'],
-  when:c => { if (c.cool.length < 10 || !isN(c.rpsMin) || D.runs.length < 2) return null; const floor = c.share(c.run.filter(i => D.mode[i] === 'cool'), i => isN(c.v('rps', i)) && c.v('rps', i) <= c.rpsMin + 2), runMed = D.runs.map(r => r.min).sort((a, b) => a - b)[Math.floor(D.runs.length / 2)], cph = D.runs.length / c.hrs;
+  when:c => { if (c.cool.length < 10 || !isN(c.rpsLow) || D.runs.length < 2) return null; const floor = c.share(c.run.filter(i => D.mode[i] === 'cool'), i => isN(c.v('rps', i)) && c.v('rps', i) <= c.rpsLow + 2), runMed = D.runs.map(r => r.min).sort((a, b) => a - b)[Math.floor(D.runs.length / 2)], cph = D.runs.length / c.hrs;
     return floor >= 0.6 && runMed < 12 && cph >= 3 ? {rows:c.span(c.run), floor, runMed, cph, oat:c.med(c.cool, 'oat')} : null; },
-  text:e => ({title:'Unit oversized for the load → runs at minimum speed and satisfies in minutes → coil never cold long enough to dry the air',
-    why:`The compressor sat at its minimum speed ${pct(e.floor, 1)}% of the cooling time, runs lasted ${f0(e.runMed)} min on average and the unit cycled ${e.cph.toFixed(1)} times an hour at ${f0(e.oat)}°F outside. An inverter that cannot turn down any further is behaving like a single-stage unit that is too big: temperature satisfied, humidity not.`,
+  text:e => ({title:'Unit oversized for the load → runs at its lowest speed and satisfies in minutes → coil never cold long enough to dry the air',
+    why:`The compressor sat at the lowest speed in this log ${pct(e.floor, 1)}% of the cooling time, runs lasted ${f0(e.runMed)} min on average and the unit cycled ${e.cph.toFixed(1)} times an hour at ${f0(e.oat)}°F outside. Cycling off instead of turning down further is what says the floor was reached: it is behaving like a single-stage unit that is too big, temperature satisfied, humidity not.`,
     fix:['Thermostat dehumidification settings (reduced airflow, overcool limit) first.', 'Confirm with a room dew point; the log has no humidity. If it holds across the season, the unit is oversized.']}),
   absorb:[/^Shoulder-season humidity/, /^Short cycling/, /^Compressor at its floor/, /^Zone .* satisfies in/]},
  {id:'G2', fam:'unitary', cats:['minor'], cause:['rps'], effect:['cap', 'demand'],
@@ -3597,7 +3604,7 @@ const CHAIN_DEFS = [
   text:e => ({title:`Full speed for ${f0(e.min)} min and still calling → capacity short for the load${isN(e.capm) ? ` (unit delivering about ${fmtBtu(e.capm).toLocaleString()} BTU/h, healthy by its own numbers)` : ''}`,
     why:`The compressor ran at 95% or more of its maximum for ${pct(e.pinned, 1)}% of a ${f0(e.min)}-minute run at ${f0(e.oat)}°F outside with the thermostat at full demand${isN(e.capm) ? `, delivering about ${fmtBtu(e.capm).toLocaleString()} BTU/h by the refrigerant side${e.good >= 0.5 ? '' : ' (low-confidence rows)'}` : ''}. Nothing in the refrigerant readings is holding it back; the house is asking for more than it has. Undersized, a building envelope or duct problem, or an extreme day.`,
     fix:['Compare the delivered capacity with the load calculation for the house; check duct losses with an air-side reading at the grilles.', 'If it happens only on design days, that is what a correctly sized inverter looks like.']}),
-  absorb:[/^Compressor pinned at its cap/, /^Pinned at max speed and not satisfying/, /^Ran continuously/, /^Max speed in mild weather/]},
+  absorb:[/^Compressor held at a protection cap/, /^Pinned at max speed and not satisfying/, /^Ran continuously/, /^Max speed in mild weather/, /^Held a steady/]},
  // ---- H. multi-zone ----
  {id:'H1', fam:'multi', cats:['crit'], cause:e => ['pev' + e.k], effect:e => ['rmgas' + e.k, 'disch', 'tderr'],
   when:c => { if (c.cool.length < 10) return null; for (const k of c.zones){ const open = c.share(c.cool, i => c.v('pevp' + k, i) >= 90), psh = c.med(c.cool, 'psh' + k), td = c.med(c.cool, 'tderr'); if (open >= 0.7 && isN(psh) && psh <= 1 && isN(td) && td <= -10) return {rows:c.span(c.cool), k, open, psh, td}; } return null; },
@@ -3722,9 +3729,9 @@ function synopsisFindings(){
     if (D.runs.length === 1 && runMin >= 180) F.push({st:'info', title:`Ran continuously for ${f0(runMin)} min without stopping`, why:`one run across the whole recording`, do:'Normal for a variable-speed unit in steady weather. Judge it by whether it held its targets, not by the run length.'}); }
   if (D.fam === 'multi'){
     const cap = med(runRows.map(i => num.maxhz[i])), rpsMed = med(runRows.map(i => num.rps[i]));
-    const floorShare = share(runRows, i => isN(num.rps[i]) && num.rps[i] <= 15), capShare = share(runRows, i => isN(num.rps[i]) && isN(num.maxhz[i]) && num.rps[i] >= num.maxhz[i] - 1);
+    const floorShare = share(runRows, i => isN(num.rps[i]) && num.rps[i] <= 15), capShare = share(runRows, i => isN(num.rps[i]) && isN(num.maxhz[i]) && num.rps[i] >= num.maxhz[i] - 1 && ['limpeak','limfrz','limtd','liminv'].some(id => isN(num[id][i]) && num[id][i] < 255));
     if (floorShare >= 0.25) F.push({st:'info', title:`Compressor at its floor ${pct(floorShare, 1)}% of the run time (median ${f0(rpsMed)} rps of ${f0(cap)} allowed)`, why:`outdoor air ${f0(D.range.oat && D.range.oat.min)}–${f0(D.range.oat && D.range.oat.max)}°F over the recording`, do:'The house is asking for far less than the unit can give. Coils run warm at low speed, so latent (moisture) removal suffers. Expect humidity complaints on mild days; use Dry mode or lower fan speeds.'});
-    if (capShare >= 0.25) F.push({st:'warn', title:`Compressor pinned at its cap ${pct(capShare, 1)}% of the run time`, why:`cap ${f0(cap)} rps`, do:'The unit is running out of capacity or is being limited. Check the limiter findings, then the load.'});
+    if (capShare >= 0.25) F.push({st:'warn', title:`Compressor held at a protection cap ${pct(capShare, 1)}% of the run time`, why:`on those rows the control's cap (median ${f0(cap)} rps) was set by an active limiter, not by the load`, do:'See the limiter card for which protection set the cap. Without a limiter active the cap is just the speed the control chose, and says nothing about the unit\'s maximum.'});
     for (const id of ['limpeak','limfrz','limtd','liminv']){ const r = rows.filter(i => isN(num[id][i]) && num[id][i] < 255); if (r.length >= 2){ const heating = share(r, i => D.mode[i] === 'heat') >= 0.5;
       // the unit's own column name is "frz prtc"; in heating no indoor coil can freeze, so the same cap is guarding a coil that is running too hot
       const hotIdle = heating ? D.zones.filter(k => share(r, i => isN(num['ifan'+k][i]) && num['ifan'+k][i] === 0 && isN(num['ihx'+k][i]) && num['ihx'+k][i] >= 120) >= 0.5).map(k => `${MZ.letters[k]} (${f0(med(r.map(i => num['ihx'+k][i])))}°F, fan off)`) : [];
@@ -3749,6 +3756,10 @@ function synopsisFindings(){
     }
   } else {
     const evMax = chById.ev.max;
+    // a long run at one speed is an inverter doing its job: the target is the speed the control chose, not the unit's maximum
+    for (const r of D.runs){ if (r.min < 45) continue; const rr = []; for (let i = r.start; i <= r.end; i++) rr.push(i); const lockedShare = share(rr, i => D.locked[i]); if (lockedShare < 0.6) continue;
+      const rpsMed = med(rr.map(i => num.rps[i])), trMed = chById.trps.present ? med(rr.map(i => num.trps[i])) : null;
+      F.push({st:'info', title:`Held a steady ${f0(rpsMed)} rps for most of a ${f0(r.min)}-minute run`, why:`speed within ±${Math.round(RT.lockPct * 100)}% for ${pct(lockedShare, 1)}% of the run${isN(trMed) ? `; the control's target was ${f0(trMed)} rps` : ''}`, do:'The target is the speed the control asked for, not the unit\'s maximum. An inverter is meant to pick a speed and hold it for long stretches; judge the run by whether it held its targets, not by its length or its speed.'}); break; }
     // charge / metering
     if (settled.length >= 6 && chById.tsc.present){ const scm = med(settled.map(i => num.scerr[i])), evm = med(settled.map(i => num.evpct[i]));
       if (isN(scm) && scm <= -SIG.scErr){ const pin = share(settled, i => isN(num.ev[i]) && num.ev[i] >= evMax * SIG.evPinFrac);
@@ -3759,8 +3770,8 @@ function synopsisFindings(){
     const shm = med(settled.map(i => num.sh[i]));
     if (isN(shm) && shm > 25) F.push({st:'warn', title:`Suction superheat high: ${f1s(shm)}°F settled median`, why:`Suction − Te`, do:'Starved evaporator: low charge, indoor EV/TXV underfeeding, or a restricted indoor strainer.'});
     if (isN(shm) && shm < 3) F.push({st:'warn', title:`Suction superheat near zero: ${f1s(shm)}°F settled median`, why:`Suction − Te`, do:'Liquid reaching the compressor: overfeeding EV, low indoor airflow, or an accumulator doing all the work.'});
-    const dshLow = share(settled.filter(i => isN(num.rps[i]) && D.ref.rpsMax && num.rps[i] >= D.ref.rpsMax * SIG.rpsFrac), i => isN(num.dsh[i]) && num.dsh[i] < SIG.dshLow);
-    if (dshLow >= 0.3) F.push({rid:'S1', st:'alarm', title:`Discharge superheat under ${SIG.dshLow}°F for ${pct(dshLow, 1)}% of the time at speed`, why:`Discharge − Tc at ≥${Math.round(SIG.rpsFrac * 100)}% of max speed`, do:'Liquid floodback signature. Find why the evaporator is not boiling it all off before it damages the compressor.'});
+    const dshLow = share(settled.filter(i => isN(num.rps[i]) && D.ref.rpsSeen && num.rps[i] >= D.ref.rpsSeen * SIG.rpsFrac), i => isN(num.dsh[i]) && num.dsh[i] < SIG.dshLow);
+    if (dshLow >= 0.3) F.push({rid:'S1', st:'alarm', title:`Discharge superheat under ${SIG.dshLow}°F for ${pct(dshLow, 1)}% of the time at speed`, why:`Discharge − Tc at ≥${Math.round(SIG.rpsFrac * 100)}% of the highest speed in this log`, do:'Liquid floodback signature. Find why the evaporator is not boiling it all off before it damages the compressor.'});
     if (D.range.disch && D.range.disch.max >= 220) F.push({rid:'S2', st:'warn', title:`Discharge peaked at ${f0(D.range.disch.max)}°F`, why:`highest logged discharge`, do:'Hot compressor: low charge, high compression ratio, or restricted airflow over the condenser.'});
     // capacity delivery
     if (runRows.length){ const under = share(settled, i => isN(num.rpserr[i]) && num.rpserr[i] <= -SIG.rpsHold); if (under >= 0.2) F.push({rid:'L5', st:'warn', title:`Compressor held ≥${SIG.rpsHold} rps under its target ${pct(under, 1)}% of the settled time`, why:`see the drop-control findings for what held it`, do:'Capacity is being limited by a protection, not by the thermostat.'}); }
@@ -4354,7 +4365,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v94';
+const APP_VERSION = 'v95';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
