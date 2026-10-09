@@ -1612,6 +1612,7 @@ function buildDataset(text, name){
   // first block); the column number is a fallback only when the reading has no label pattern. A numbered column whose header does not
   // match stays blank and is reported in the synopsis column check, so a shifted or renamed export never lands under the wrong chip.
   const idu = labels.map((l, k) => /^IDU address$/i.test(l) ? k : -1).filter(k => k >= 0), colmap = [];
+  const allRe = [...NUM, ...STAT].map(c => fam === 'multi' ? c.mhdr : (c.lab || c.hdr)).filter(Boolean);   // every header pattern the app knows, to tell 'absent' from 'wrong column'
   const colIdx = c => {
     const re = fam === 'multi' ? (c.mhdr || null) : (c.lab || c.hdr || null), want = fam === 'multi' ? c.mcol : c.col;
     let lo = 0, hi = labels.length;
@@ -1620,7 +1621,7 @@ function buildDataset(text, name){
     const byN = want != null && byNum[want] != null ? byNum[want] : -1;
     let ix = -1, how = 'absent';
     if (hit >= 0){ ix = hit; how = (byN < 0 || byN === hit) ? 'label' : 'moved'; }
-    else if (byN >= 0){ if (re) how = 'mismatch'; else { ix = byN; how = 'number'; } }
+    else if (byN >= 0){ if (re) how = allRe.some(r => r !== re && r.test(labels[byN])) ? 'absent' : 'mismatch'; else { ix = byN; how = 'number'; } }
     else if (!numbered && want != null && !re){ const key = c.label.toLowerCase().split(' ')[0]; ix = head.findIndex(h => h.toLowerCase().includes(key)); how = ix >= 0 ? 'guess' : 'absent'; }
     c._hdr = ix >= 0 ? labels[ix].toLowerCase() : '';
     if (want != null || re) colmap.push({id:c.id, label:c.label, col:want, at:ix >= 0 ? head[ix].replace(/\s*:.*$/, '') : null, hdr:ix >= 0 ? labels[ix] : (byN >= 0 ? labels[byN] : null), how});
@@ -1657,9 +1658,21 @@ function buildDataset(text, name){
   const span = valid.length > 1 ? (valid[valid.length-1] - valid[0]) / 1000 : n * 30;
   const interval = n > 1 ? Math.max(1, span / (n - 1)) : 30;
   const runSec = new Array(n); let startIdx = -1;
-  for (let i = 0; i < n; i++){ const on = (isN(num.rps[i]) ? num.rps[i] > 0 : (str.compcmd[i] === 'ON')) && str.compcmd[i] !== 'OFF'; if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
+  for (let i = 0; i < n; i++){ const on = isN(num.rps[i]) ? (num.rps[i] > 0 && !(str.compcmd[i] === 'OFF' && num.rps[i] <= 15)) : (str.compcmd[i] === 'ON'); if (on){ if (startIdx < 0) startIdx = i; runSec[i] = (i - startIdx) * interval; } else { startIdx = -1; runSec[i] = -1; } }
+  // On some platforms the "target" columns do not track the actual speed at all (Goodman GVZC: target 192 rps against 94 actual and
+  // target fan 470 against 790 rpm the whole run, nothing holding it back). A target the actual never approaches, with no protection
+  // active, cannot be the control's target as this app understands it: it is set aside and reported rather than judged against.
+  const targetsOff = {};
+  for (const [act, tgt, tol] of [['rps', 'trps', 0.1], ['fan', 'tfan', 0.1]]){ if (!num[act] || !num[tgt]) continue;
+    const rows = []; for (let i = 0; i < n; i++) if (runSec[i] >= 0 && isN(num[act][i]) && isN(num[tgt][i]) && num[tgt][i] > 0) rows.push(i); if (rows.length < 10) continue;
+    const near = rows.filter(i => Math.abs(num[act][i] - num[tgt][i]) <= Math.max(3, tol * num[tgt][i])).length / rows.length;
+    const held = rows.filter(i => ['dropDisch','dropInv','dropHp','dropLp','dropFin'].some(id => str[id] && str[id][i] === 'ON')).length / rows.length;
+    const far = rows.filter(i => Math.abs(num[act][i] - num[tgt][i]) > 0.3 * num[tgt][i]).length / rows.length;
+    if (near < 0.1 && held < 0.2 && far >= 0.8){ const med = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+      targetsOff[tgt] = {act:med(rows.map(i => num[act][i])), tgt:med(rows.map(i => num[tgt][i])), rows:rows.length}; num[tgt] = new Array(n).fill(null); } }
+  if (targetsOff.trps && num.rpserr) num.rpserr = new Array(n).fill(null);
   const zones = fam === 'multi' ? [...Array(MZ.ports).keys()].filter(k => num['rmgas'+k].some(isN) || num['rmliq'+k].some(isN) || num['pev'+k].some(v => isN(v) && v > 0) || str['zaddr'+k].some(v => v != null)) : [];
-  return {name, n, t, num, str, mode, runSec, interval, head, fam, zones, colmap};
+  return {name, n, t, num, str, mode, runSec, interval, head, fam, zones, colmap, targetsOff};
 }
 
 /* ---------- capacity: BTU/h and COP from the compressor's own power draw ---------- */
@@ -3650,6 +3663,8 @@ function synopsisFindings(){
   if (D.colmap){ const seen = D.colmap.filter(x => x.how !== 'absent'), bad = seen.filter(x => x.how === 'mismatch'), moved = seen.filter(x => x.how === 'moved');
     if (bad.length) F.push({rid:'L2', st:'warn', title:`Column check: ${bad.length} of ${seen.length} readings were not under the header the app expected`, why:bad.map(x => `${x.label}: column ${x.col} is headed "${x.hdr}", left blank`).join(' · '), fix:['Re-export the recording from D-Checker with the default column set and compare.', 'If the export is right, the app\'s header table needs this model added: send the file to the library and flag it.']});
     else F.push({st:'ok', title:`Column check: all ${seen.length} readings sit under their expected headers`, why:`each reading was found in the file's header row by name before it was linked to its chip${moved.length ? `; ${moved.length} of them (${moved.map(x => x.label).join(', ')}) sit at a different column number than the standard layout, which is normal for this model` : ''}; readings this export does not carry are simply blank`, do:'The numbers on the cycle view are the file\'s own columns, each confirmed by its header label.'}); }
+  if (D.targetsOff && Object.keys(D.targetsOff).length){ const o = D.targetsOff, parts = []; if (o.trps) parts.push(`target comp speed read ${f0(o.trps.tgt)} rps against ${f0(o.trps.act)} rps actual`); if (o.tfan) parts.push(`target fan read ${f0(o.tfan.tgt)} rpm against ${f0(o.tfan.act)} rpm actual`);
+    F.push({rid:'L2', st:'warn', title:`Target columns on this export do not track the unit: ${o.trps ? 'comp speed' : ''}${o.trps && o.tfan ? ' and ' : ''}${o.tfan ? 'fan' : ''} set aside`, why:`${parts.join('; ')}, over the whole run with no protection holding it back. On every other platform seen so far the target matches the actual within a few rps once settled, so these columns mean something else on this model. They are left blank here rather than judged against; the actuals are shown as recorded.`, fix:['Send this recording to the library and flag the model so the export can be decoded for this platform.', 'Judge the run by the actual speed, pressures and superheats; a "held under target" reading cannot be formed for this export.']}); }
   try { for (const r of rulebookFindings()) F.push(r); } catch(e){ console.warn('rulebook findings', e); }
   for (const r of (D.sensorFindings || [])) F.push(r); for (const r of (D.evFindings || [])) F.push(r);
   { const chains = chainFindings(F); if (chains.length){ const absorbed = chains.flatMap(c => c.absorb || []); for (let k = F.length - 1; k >= 0; k--) if (absorbed.some(re => re.test(F[k].title || ''))) F.splice(k, 1); F.unshift(...chains); } }
@@ -4227,7 +4242,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v95';
+const APP_VERSION = 'v96';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
