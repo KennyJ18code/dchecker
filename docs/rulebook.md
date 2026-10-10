@@ -65,7 +65,7 @@ Manuals: SiUS612209EA and installation manual 3P731493-1 (FIT R-410A), SiUS61241
 | Multi limiter zones | Freeze-up, peak-cut, discharge drop and stop, input current, and the fin's L4 line: each family's own values | SiUS121736EA PDF 106–113, 219; SiUS121632EA PDF 97–99, 199; SiUS122410EC PDF 147–150, 318 |
 | Error codes | One table per family, from its manual | each manual's error-code pages |
 
-### The diagnostic route (v103)
+### The diagnostic route (v103; multi-splits and short links v104)
 
 | Part | Source |
 |---|---|
@@ -75,6 +75,11 @@ Manuals: SiUS612209EA and installation manual 3P731493-1 (FIT R-410A), SiUS61241
 | Order of stops | The app's, not a manual's: easiest first. Groups: look, meter with the power off, gauges or thermometer, open the system. Inside a group, quick checks before long ones (charge mode, compressor efficiency, a 15-minute shutdown, a leak search); coverage only breaks ties. A code route keeps the manual's flowchart order. |
 | Borrowed, labelled | E15 flowchart steps used without the code; RS6215002r10 p.23 (temperature drop across the drier) and p.18 (reversing valve) used on the FIT |
 | Field rule | The R-410A FIT chart on an R-32 FIT or DH9VS unit, only with Settings → Field rules on |
+| Multi-split flowcharts (v104) | As printed: SiUS121736EA (MXS) PDF 192–230, SiUS121632EA (MXL) PDF 172–210, SiUS122410EC (MXM / MXT) PDF 283–332, SiUS121827E (5MXS48T / 4MXL36T) PDF 201–247. U0, F3, F6, L4, A5 on the outdoor unit and A5 on a head, with the checks they call (No.01, 12, 14, 17, 18, 19). The No.17 / No.19 lead-in on U0 is in the MXM / MXT and 5MXS-T / 4MXL-T charts only, as printed. |
+| Multi-split problem checklist (v104) | "General problem symptoms and check items": SiUS121736EA PDF 146, SiUS121632EA PDF 129, SiUS122410EC PDF 187, SiUS121827E PDF 151, in the manual's order. The Fine / Not fine boxes are the app's. |
+| Multi-split thermistor table (v104) | Check No.01, the same values in all four manuals (R25 °C = 20 kΩ, B = 3950 K). The MXS and MXL manuals call it reference data. |
+| Printed as is, with a note (v104) | Check No.12's stuck-open test (a room not in operation whose liquid pipe reads about the outdoor temperature → replace that room's valve). The manual's own piping diagram (SiUS121736EA PDF 267) puts that thermistor between the room's valve and the room. |
+| Short links and the QR code (v104) | The app's own. A snapshot of the route in the shop library's routes table (supabase/migration-2026-10-10-routes.sql) under a random 10-character code, with no customer details; without the library, the long link. |
 
 ### Signatures, patterns and the colour bands
 

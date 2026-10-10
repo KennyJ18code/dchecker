@@ -616,6 +616,12 @@ body.no-cabinet #indoor-var .cab{display:none}
 .rt-sign{display:block;margin-top:10px;font-size:12px;color:var(--ink)}
 .rt-linkbar,.rt-fieldbar{font-size:12.5px;border-radius:8px;padding:8px 10px;margin:0 0 10px;background:var(--warn-soft);color:var(--warn)}
 .rt-linkbar .btn{margin-left:6px}
+.rt-chk{border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:6px 0}
+.rt-chk ol{margin:4px 0 2px;padding-left:20px;font-size:12.5px;line-height:1.4}.rt-chk li{margin:2px 0}
+.rt-headrow > div:first-child{flex:1 1 300px;min-width:0}.rt-docr{flex:0 1 auto}
+.rt-qr{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;line-height:1.2;color:var(--muted);text-align:center;width:112px}
+.rt-qr a{display:block;line-height:0}.rt-qr svg{background:#fff;border-radius:4px}
+.rt-fams{margin-top:6px;align-items:center}.rt-fams .rt-lbl{margin:0 4px 0 0}
 @media (max-width:600px){
   .rt-sheet{padding:10px 10px}
   .rt-docr{text-align:left}
@@ -960,7 +966,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Electric rate</b><small>$ per kWh, for the running cost of the outdoor unit over a recording</small></span><input type="number" class="snum" data-s="rate" min="0" max="2" step="0.01" inputmode="decimal"></label>
     </section>
     <section class="sgroup"><h3>Shop library</h3>
-      <label class="srow"><span class="t"><b>Save what this app analyzes</b><small>Every recording opened here is kept in the shop library to teach the software: the decoded log, the model, the job details (tech, customer, address), the app's findings and any grille readings you type. Only the shop's signed-in readers can see any of it.</small></span><input type="checkbox" class="sw" data-s="share"></label>
+      <label class="srow"><span class="t"><b>Save what this app analyzes</b><small>Every recording opened here is kept in the shop library to teach the software: the decoded log, the model, the job details (tech, customer, address), the app's findings and any grille readings you type. Only the shop's signed-in readers can see any of it. A route you share, email or print with a QR code is kept there too, under a random code: anyone with that link can open that one route (the unit, its readings and the answers so far; never the customer's name or address).</small></span><input type="checkbox" class="sw" data-s="share"></label>
       <div class="note" id="sharestatus"></div>
       <div class="sbsign"><b>Read the library</b><small>For the shop's own reader accounts; techs do not need this. Signing in adds a Library tab.</small>
         <div class="row"><input id="sb-email" type="email" placeholder="email" autocomplete="username"><input id="sb-pass" type="password" placeholder="password" autocomplete="current-password"><button class="btn small primary" id="sb-signin" type="button">Sign in</button><button class="btn small" id="sb-signout" type="button" hidden>Sign out</button></div>
@@ -1209,7 +1215,7 @@ function manualBands(){
 
 /* ---------- state ---------- */
 let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
-window.dchkDbg = () => ({D, cur, REF, S, AIRIN, CURRENT_REC, air:airSideCalc(), KB, cycleAt, RT:{ctx:rtCtx, srcs:() => rtSources(rtCtx()), last:() => RT_LAST, text:rtText, build:buildRoute, load:rtLoad, save:rtSave, link:() => RT_LINK, url:rtLinkUrl}});   // read-only hook for tools/shot.html (KB / cycleAt: the tabled 3D part cards)
+window.dchkDbg = () => ({D, cur, REF, S, AIRIN, CURRENT_REC, air:airSideCalc(), KB, cycleAt, RT:{ctx:rtCtx, srcs:() => rtSources(rtCtx()), last:() => RT_LAST, text:rtText, build:buildRoute, load:rtLoad, save:rtSave, link:() => RT_LINK, url:rtLinkUrl, short:rtShortUrl, shortNow:() => rtShortFor(rtCtx(), rtLoad())}});   // read-only hook for tools/shot.html (KB / cycleAt: the tabled 3D part cards)
 let pins = loadJSON('dchk.pins', []);
 const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
           <g id="g-in">
@@ -5112,16 +5118,137 @@ function rtFlows(pl){
 const RT_CODEFLOW = {outdoor:{'13':'E13', '14':'E13', '15':'E15', '16':'E15', '21':'E21', '54':'E21', '22':'E22', '55':'E22', '32':'E32', '33':'E32', '41':'E41', '44':'E44', '57':'c57', '58':'E58', 'B9':'b9'},
   indoor:{'B9':'b9', '9B':'b9h', '70':'i70', '73':'i73', '74':'i74', '75':'i75'}};
 // ---- route context: everything a route needs, from the open recording or from a shared link (RT_LINK, no recording)
+// ---- multi-split routes (v104): each family's own manual. Pages are PDF pages; the manuals' own cross-references print a page number
+// that is the PDF page minus the offset below. Flowcharts read from the rendered pages: SiUS121736EA (MXS) PDF 146, 166, 192-230;
+// SiUS121632EA (MXL) PDF 129, 149, 172-210; SiUS122410EC (MXM / MXT) PDF 187, 203, 283-332; SiUS121827E (5MXS / 4MXL) PDF 151, 172, 201-247.
+const RT_MDOC = {
+  mxs:{doc:'SiUS121736EA', off:13, gen:146, U0:'192–193', F3:'208', F6:'209', L4:'219', A5o:'198–199', A5h:'166', ck:{'01':'222', '12':'225', '14':'226', '17':'229', '18':'229', '19':'230'}, pcb:'main PCB', pcb2:'main PCB', pref:false, tPage:'PDF 222', tSure:false},
+  mxl:{doc:'SiUS121632EA', off:12, gen:129, U0:'172–173', F3:'188', F6:'189', L4:'199', A5o:'178–179', A5h:'149', ck:{'01':'202', '12':'205', '14':'206', '17':'209', '18':'209', '19':'210'}, pcb:'main PCB', pcb2:'main PCB', pref:false, tSure:false, latch:true},
+  mxmS:{doc:'SiUS122410EC', off:8, gen:187, U0:'283–285', F3:'304', F6:'305–306', L4:'318–319', A5o:'290–291', A5h:'203', ck:{'01':'323', '12':'326–327', '14':'328', '17':'331', '18':'331', '19':'332'}, pcb:'sub PCB', pcb2:'main PCB', pref:true, tSure:true},
+  mxmL:{doc:'SiUS122410EC', off:8, gen:187, U0:'283–285', F3:'304', F6:'305–306', L4:'318–319', A5o:'290–291', A5h:'203', ck:{'01':'323', '12':'326–327', '14':'328', '17':'331', '18':'331', '19':'332'}, pcb:'sub PCB', pcb2:'main PCB', pref:true, tSure:true},
+  mxsT:{doc:'SiUS121827E', off:6, gen:151, U0:'201–203', F3:'222', F6:'223–224', L4:'233–234', A5o:'208–209', A5h:'172', ck:{'01':'238', '12':'242', '14':'243', '17':'246', '18':'247', '19':'247'}, pcb:'main PCB', pcb2:'main PCB', pref:true, tSure:true},
+};
+// Check No.01's table (the same values in all four manuals: R25 °C = 20 kΩ, B = 3950 K), °C and kΩ
+const RT_MTHERM = [[-20, 197.8], [-15, 148.2], [-10, 112.1], [-5, 85.60], [0, 65.93], [5, 51.14], [10, 39.99], [15, 31.52], [20, 25.02], [25, 20.00], [30, 16.10], [35, 13.04], [40, 10.62], [45, 8.707], [50, 7.176]];
+function rtMThermK(tF){ if (!isN(tF)) return null; const c = (tF - 32) / 1.8, R = RT_MTHERM; if (c < R[0][0] || c > R[R.length - 1][0]) return null;
+  for (let k = 1; k < R.length; k++) if (c <= R[k][0]){ const a = R[k - 1], b = R[k], f = (c - a[0]) / (b[0] - a[0]); return Math.exp(Math.log(a[1]) + f * (Math.log(b[1]) - Math.log(a[1]))); } return null; }
+// the numbered checks the flowcharts call, as printed (steps in order; "→" = the chart's arrow)
+function rtMChecks(fam){
+  const R = RT_MDOC[fam]; if (!R) return {};
+  return {
+    '01':{t:'Thermistor resistance check', p:R.ck['01'], steps:R.tSure
+      ? ['Measure the resistance of each thermistor using multimeter. The resistance values are defined by the table. If the measured resistance value does not match the listed value, the thermistor must be replaced.', 'Disconnect the connector of thermistor ASSY from the PCB to measure the resistance between the pins using multimeter.', 'To check the thermistor soldered on a PCB, disconnect the PCB from other PCB/parts, and measure the resistance between the both ends of soldered thermistor.']
+      : ['Disconnect the connectors of the thermistors from the PCB, and measure the resistance of each thermistor using a multimeter.', 'The data is for reference purpose only.', 'When the room temperature thermistor is soldered on a PCB, remove the PCB from the control PCB to measure the resistance.', 'When the connector of indoor heat exchanger thermistor is soldered on a PCB, remove the thermistor and measure the resistance.'], ol:false, table:true},
+    '12':{t:'Electronic expansion valve check', p:R.ck['12'], steps:[
+      'Check if the EV connector is correctly inserted in the PCB. Match the EV unit number and the connector number.',
+      'Turn the power off and on again, and check if all the EVs generate a latching sound.' + (R.latch ? ' (The latching sound varies depending on the valve type.)' : ''),
+      'If any EV does not latch, disconnect that connector and check the continuity between pins 5-1, 5-2, 5-3, 5-4. No continuity between the pins: the EV coil is faulty.',
+      'If no EV latches, the outdoor unit PCB is faulty.',
+      'If the continuity is confirmed, mount a good coil (one that latched) on the EV that did not latch: if it latches, the outdoor unit PCB is faulty; if not, the EV unit is faulty.'], more:[
+      'Valve stuck open (cooling: refrigerant noise or water at a room that is not running, operation halved by anti-icing; heating: noise at a stopped room, the room does not heat). Check method: reset the power and run cooling unit by unit; check the liquid pipe temperature of the room not in operation. "Almost the same as the outdoor temperature?" NO → the EV is not defective; YES → replace the EV of the room.',
+      'Valve stuck closed (cooling: the room does not cool; with only that room running the unit pumps down and the low pressure goes into vacuum; abnormal discharge temperature; heating: shortage from liquid held in that indoor unit, no heat). Check method: reset the power and run cooling unit by unit; check the low pressure. "Does the pressure go into the vacuum zone?" NO → the EV is not defective; YES → replace the EV of the room.'],
+      note:`The stuck-open check is shown as printed. The manual's own piping diagram places each room's liquid pipe thermistor between that room's EEV and the room${fam === 'mxs' ? ' (PDF 267)' : ''}; confirm with steps 1–5 before replacing a valve on that result alone.`},
+    '14':{t:'Inverter unit refrigerant system check', p:R.ck['14'], steps:['Is the discharge pipe thermistor disconnected from the holder? YES → Reconnect the thermistor.', 'NO → Check for refrigerant leakage (see the refrigerant shortage section) → Replace the refrigerant.']},
+    '17':{t:'Installation condition check', p:R.ck['17'], steps:['Check the allowable dimensions of the air suction and discharge area. NG → Change the installation location or direction.', 'Is the discharged air short-circuited? YES → Change the installation location or direction.', 'Is the outdoor heat exchanger very dirty? YES → Clean the outdoor heat exchanger.', 'Is the airflow blocked by obstacles or winds blowing in the opposite direction? YES → Change the installation location or direction. NO → Check the outdoor temperature (it should be within the operation range).']},
+    '18':{t:'Discharge pressure check', p:R.ck['18'], steps:['High? NO → Replace the compressor.', 'YES: Is the stop valve open? NO → Open the stop valve.', 'Is the connection pipe deformed? YES → Replace the pipe installed at the site.', 'Is the air filter or indoor/outdoor heat exchanger dirty? YES → Clean it. NO → Replace the compressor.']},
+    '19':{t:'Outdoor fan system check (DC motor)', p:R.ck['19'], steps:['Is the outdoor fan running? YES → The outdoor fan system is functioning.', 'NO: Fan motor lead wire connector disconnected? YES → Reconnect the connector. NO → Go to Check No.16 (rotation pulse check).']},
+  };
+}
+// the flowcharts, as printed; chk = the numbered check a step calls; w = what the recording can show for that step
+function rtMFlows(fam){
+  const R = RT_MDOC[fam]; if (!R) return {};
+  const big = R.pref, pcb = `Replace the outdoor unit PCB (${R.pcb}).`, pcbMain = `Replace the outdoor unit PCB (${R.pcb2}).`, F = {};
+  const conds = {
+    mxs:{U0:'For 7 minutes: input current ≤ A × output frequency + B and output frequency > C (18 class A 10/1000, B 0.3 A, C 54 Hz; 24/36 class A 27/1000, B 2 A, C 40 Hz).', F3:'Discharge pipe thermistor above A stops the compressor; clears below B (18 class 248 °F / 203 °F; 24/36 class 248 °F / 224.6 °F).', F6:'In cooling, the outdoor heat exchanger thermistor above about 149 °F (65 °C); clears below about 121.1 °F (49.5 °C).', L4:'Radiation fin above 194 °F (90 °C) with the compressor on; clears below 185 °F (85 °C).', A5h:'Cooling: indoor coil below 32 °F (0 °C). Heating peak-cut: indoor coil above 149 °F (65 °C).'},
+    mxl:{U0:'For 7 minutes: input current ≤ 27/1000 × output frequency + 2 A and output frequency > 40 Hz.', F3:'Discharge pipe thermistor above 248 °F (120 °C) stops the compressor; clears below 224.6 °F (107 °C).', F6:'In cooling, the outdoor heat exchanger thermistor above 149 °F (65 °C); clears below about 120.2 °F (49 °C).', L4:'Radiation fin above 194 °F (90 °C) with the compressor on; clears below 185 °F (85 °C).', A5h:'Cooling: indoor coil below 32 °F (0 °C). Heating peak-cut: indoor coil above 149 °F (65 °C).'},
+    mxmS:{U0:'For 7 minutes: input current ≤ A × output compressor speed + B and speed > 40 rps (2MXM A 10/1000, B 0.3 A; 3/4MXM and 2/3MXT(H) A 27/1000, B 2 A); or power consumption ≤ 2500/256 × speed + 50 W and speed > 40 rps.', F3:'Discharge pipe thermistor above 248 °F (120 °C) stops the compressor; clears below 224.6 °F (107 °C).', F6:'In cooling, the outdoor heat exchanger thermistor above 138.2 °F (59 °C); clears below 122 °F (50 °C).', L4:'2/3/4MXM, 2MXT(H): radiation fin above 203 °F (95 °C) with the compressor on; clears below 185 °F (85 °C).', A5h:'Cooling: indoor coil below 32 °F (0 °C). Heating peak-cut: indoor coil above 138.2–140 °F (59–60 °C).'},
+    mxsT:{U0:'For 7 minutes, as printed: input current ≤ A × output frequency + B and output frequency > C (A 2500/256, B 50, C 40 Hz).', F3:'Discharge pipe thermistor above 248 °F (120 °C) stops the compressor; clears below 224.6 °F (107 °C).', F6:'In cooling, the outdoor heat exchanger thermistor above about 144.5 °F (62.5 °C); clears below about 121.1 °F (49.5 °C).', L4:'Radiation fin above 158 °F (70 °C) with the compressor on; clears below 147.2 °F (64 °C).', A5h:'Cooling: indoor coil below 32 °F (0 °C). Heating peak-cut: indoor coil above 149 °F (65 °C).'},
+  };
+  conds.mxmL = Object.assign({}, conds.mxmS, {L4:'5MXM, 3/4/5MXT(H): radiation fin above 158 °F (70 °C) in normal operation, 165.2 °F (74 °C) in forced cooling, with the compressor on; clears below 147.2 °F (64 °C).'});
+  const C = conds[fam];
+  const pre = big ? [
+    {id:'s1', q:'Check the installation space. Check No.17: check the installation condition.', chk:'17', opts:[{a:'OK', go:'s2'}, {a:'NG', act:'Change the installation location or direction. Clean the outdoor heat exchanger.'}]},
+    {id:'s2', q:'Check No.19: check the outdoor fan.', chk:'19', w:'fan', opts:[{a:'OK', go:'1'}, {a:'NG', act:'Replace the outdoor fan motor. Reconnect the connector or fan motor lead wires.'}]}] : [];
+  F.U0 = {t:'Refrigerant shortage', p:R.U0, cond:C.U0, w0:'u0', nodes:[...pre,
+    {id:'1', q:'Any thermistor disconnected? (discharge pipe, indoor or outdoor heat exchanger, room temperature, outdoor temperature)', opts:[{a:'Yes', act:'Reconnect the thermistor(s).'}, {a:'No', go:'2'}]},
+    {id:'2', q:'Stop valve closed?', opts:[{a:'Yes', act:'Open the stop valve.'}, {a:'No', go:'3'}]},
+    {id:'3', q:'Check for refrigerant shortage. Oil leak at relay pipe connections?', opts:[{a:'Yes', act:'Repair the pipe flare or replace the union.'}, {a:'No', go:'4'}]},
+    {id:'4', q:'Oil leak at internal piping?', opts:[{a:'Yes', go:'4a'}, {a:'No', go:'5'}]},
+    {id:'4a', q:'Compressor vibrating too much?', opts:[{a:'Yes', act:'Check the connection of the power transistor harness. Also, replace any cracked pipes.'}, {a:'No', act:'Check if any harnesses are in contact with the piping and correct as required. Also, replace any cracked pipes.'}]},
+    {id:'5', q:'Check No.12: electronic expansion valve functioning?', chk:'12', w:'eev', opts:[{a:'Yes', go:'6'}, {a:'No', act:'Replace the electronic expansion valve.'}]},
+    {id:'6', q:'Change for a specified amount of fresh refrigerant. Refrigerant shortage error again?', opts:[{a:'No', act:'Completed.'}, {a:'Yes', go:'7'}]},
+    {id:'7', q:'Check No.01: check the thermistors.', chk:'01', w:'therm', opts:[{a:'OK', go:'8'}, {a:'NG', act:'Replace the defective thermistor(s).'}]},
+    {id:'8', q:`Replace the outdoor unit PCB (main PCB). Error again?`, opts:[{a:'Yes', act:'Replace the compressor.'}, {a:'No', act:'Completed.'}]}]};
+  F.F3 = {t:'Discharge pipe temperature control', p:R.F3, cond:C.F3, w0:'f3', nodes:[
+    {id:'1', q:'Check No.01: check the thermistors (discharge pipe, outdoor heat exchanger, outdoor temperature).', chk:'01', w:'therm', opts:[{a:'OK', go:'2'}, {a:'NG', act:'Replace the defective thermistor(s).'}]},
+    {id:'2', q:'Check No.12: check the electronic expansion valve.', chk:'12', w:'eev', opts:[{a:'OK', go:'3'}, {a:'NG', act:'Replace the electronic expansion valve or the coil.'}]},
+    {id:'3', q:'Check No.14: check the refrigerant line (refrigerant shortage, four way valve, water mixed, stop valve).', chk:'14', opts:[{a:'OK', act:pcb}, {a:'NG', act:'Refer to the refrigerant line check procedure.'}]}]};
+  F.F6 = {t:'High pressure control in cooling', p:R.F6, cond:C.F6, w0:'f6', nodes:[
+    {id:'1', q:'Check the installation space. Check No.17: check the installation condition.', chk:'17', opts:[{a:'OK', go:'2'}, {a:'NG', act:'Change the installation location or direction. Clean the outdoor heat exchanger.'}]},
+    {id:'2', q:'Check No.19: check the outdoor fan.', chk:'19', w:'fan', opts:[{a:'OK', go:'3'}, {a:'NG', act:'Replace the outdoor fan motor. Reconnect the connector or fan motor lead wires.'}]},
+    {id:'3', q:'Check No.18: check the discharge pressure.', chk:'18', opts:[{a:'OK', go:'4'}, {a:'NG', act:'Replace the stop valve.'}]},
+    {id:'4', q:'Check No.12: check the electronic expansion valve.', chk:'12', w:'eev', opts:[{a:'OK', go:'5'}, {a:'NG', act:`Replace the electronic expansion valve or the coil. ${pcb}`}]},
+    {id:'5', q:'Check No.01: check the outdoor heat exchanger thermistor.', chk:'01', w:'therm', opts:[{a:'OK', act:pcb}, {a:'NG', act:'Replace the outdoor heat exchanger thermistor.'}]}]};
+  F.L4 = {t:'Radiation fin temperature rise', p:R.L4, cond:C.L4, w0:'l4', note:'The chart refers to the manual\'s page on silicone grease on the power transistor / diode bridge for details.', nodes:[
+    {id:'1', q:'Turn off the power, then turn it on to restart the system. Error displayed again?', opts:[{a:'Yes', go:'1a'}, {a:'No', go:'3'}]},
+    {id:'1a', q:'Has the PCB been replaced?', opts:[{a:'Yes', act:'Check if silicone grease is applied properly on the radiation fin. If not, apply the silicone grease.'}, {a:'No', go:'2'}]},
+    {id:'2', q:'Check the radiation fin temperature. Above A?', w:'fin', opts:[{a:'Yes', go:'3'}, {a:'No', act:pcbMain}]},
+    {id:'3', q:'Check No.19: check the outdoor fan.', chk:'19', w:'fan', opts:[{a:'OK', go:'4'}, {a:'NG', act:`Replace the outdoor fan motor. Correct the connectors and fan motor leads. ${pcbMain}`}]},
+    {id:'4', q:'Radiation fin dirty?', opts:[{a:'Yes', act:'Clean up the radiation fin.'}, {a:'No', act:'Check the installation condition. Go to Check No.17.'}]}]};
+  const hx = /^mxm/.test(fam) ? 'indoor' : 'outdoor';   // as printed: the MXM / MXT chart checks the indoor coil thermistor here, the others the outdoor one
+  F.A5o = {t:'Anti-icing control for the indoor unit (a room that is shut down)', code:'A5', p:R.A5o, cond:'In cooling, for 5 minutes in a shut-down room: room temperature − indoor coil temperature ≥ 18 °F (10 °C) and indoor coil ≤ 30.2 °F (−1 °C).', w0:'a5o', nodes:[
+    {id:'1', q:'Check the wiring and piping. Wrong wiring or piping?', opts:[{a:'Yes', act:'Activate the wiring error check function.'}, {a:'No', go:'2'}]},
+    {id:'2', q:'Check No.12: check the electronic expansion valve. Functioning?', chk:'12', w:'eev', opts:[{a:'Yes', go:'3'}, {a:'No', act:'Replace the electronic expansion valve or coil.'}]},
+    {id:'3', q:`Check No.01: check the ${hx} heat exchanger thermistor. As described in the thermistor characteristic chart?`, chk:'01', w:'therm', opts:[{a:'Yes', go:'4'}, {a:'No', act:'Replace the outdoor heat exchanger thermistor.'}]},
+    {id:'4', q:'Check No.01: check the room temperature thermistor. As described in the thermistor characteristic chart?', chk:'01', w:'therm', opts:[{a:'Yes', go:'5'}, {a:'No', act:'Replace the room temperature thermistor.'}]},
+    {id:'5', q:'Change the refrigerant to remove moisture from the piping (after drawing a vacuum). Error again?', opts:[{a:'No', act:'Replace the indoor unit PCB (control PCB) and then start the wiring error check function.'}, {a:'Yes', act:'Replace the room temperature thermistor or indoor heat exchanger thermistor. Do the vacuum drying.'}]}]};
+  F.A5h = {t:'Freeze-up protection control / heating peak-cut control', code:'A5', head:true, p:R.A5h, cond:C.A5h, w0:'a5h', nodes:[
+    {id:'1', q:'Check the air passage. Is there any short circuit?', opts:[{a:'Yes', act:'Provide sufficient air passage.'}, {a:'No', go:'2'}]},
+    {id:'2', q:'Check the air filter. Dirty?', opts:[{a:'Yes', act:'Clean the air filter.'}, {a:'No', go:'3'}]},
+    {id:'3', q:'Check the dust accumulation on the indoor heat exchanger. Dirty?', opts:[{a:'Yes', act:'Clean the indoor heat exchanger.'}, {a:'No', go:'4'}]},
+    {id:'4', q:'Check No.01: check the indoor heat exchanger thermistor. As described in the thermistor characteristic chart?', chk:'01', w:'therm', opts:[{a:'Yes', act:'Replace the indoor unit PCB (control PCB).'}, {a:'No', act:'Replace the indoor heat exchanger thermistor.'}]}]};
+  // the "General Problem Symptoms and Check Items" table, symptom by symptom (reference pages as printed, with the PDF page)
+  const ref = p => p ? ` (manual p.${p}, PDF ${p + R.off})` : '';
+  const pg = {mxs:{lim:267, rc:[149, 150], ra:234, raL:'For RA indoor units: ', sa:[176, 177], saL:'For SA indoor units: ', u0:179, pm:219}, mxl:{lim:240, rc:[133, 134], ra:215, raL:'For CTXG, CTXS, FTXS, CDXS, FDXS, FVXS series: ', sa:[157, 158], saL:'For FFQ series: ', u0:160, pm:200},
+    mxmS:{lim:401, rc:[192, 193], ra:350, raL:'', u0:275, tr:334, cmxv:367}, mxmL:{lim:401, rc:[192, 193], ra:350, raL:'', u0:275, tr:334, cmxv:367}, mxsT:{lim:292, rc:[162, 163], ra:258, raL:'For RA indoor units: ', sa:[192, 193], saL:'For SA indoor units: ', u0:195, pm:245}}[fam];
+  const rcRef = ` (manual p.${pg.rc.join(', ')}; PDF ${pg.rc.map(x => x + R.off).join(', ')})`;
+  const items = {
+    none:[['Check the power supply.', 'Check if the rated voltage is supplied' + (big && /^mxm/.test(fam) ? ' and check wiring diagrams and specifications.' : '.')], ['Check the types of the indoor units.', 'Check if the indoor unit type is compatible with the outdoor unit.'],
+      ['Check the outdoor temperature.', 'Heating/cooling operations are not available when the outdoor temperature is out of the operation limit' + ref(pg.lim) + '.'], ['Diagnose with remote controller indication.', 'See' + rcRef + '.'],
+      [pg.raL + 'check the wireless remote controller addresses.', 'Check if address settings for the wireless remote controller and indoor unit are correct' + ref(pg.ra) + '.']]
+      .concat(pg.sa ? [[pg.saL + 'check the wireless remote controller addresses; with 2 remote controllers for 1 indoor unit, check the MAIN/SUB setting.', 'Check if the address settings and the MAIN/SUB setting are correct' + ` (manual p.${pg.sa.join(', ')}; PDF ${pg.sa.map(x => x + R.off).join(', ')})` + '.']] : [])
+      .concat(pg.tr ? [['(CMXV only) Check the transformer.', 'Check if the transformer receives and supplies the correct voltage' + ref(pg.tr) + '.']] : []),
+    stops:[['Check the power supply.', 'A power failure of 2 to 10 cycles can stop air conditioner operation (operation lamp OFF).'], ['Check the outdoor temperature.', 'Heating/cooling operations are not available when the outdoor temperature is out of the operation limit' + ref(pg.lim) + '.'], ['Diagnose with remote controller indication.', 'See' + rcRef + '.']],
+    some:[['Check the type of the indoor units.', 'Check if the indoor unit type is compatible with the outdoor unit.'], ['Diagnose with remote controller indication.', 'See' + rcRef + '.']],
+    nocool:[['Check for wiring and piping errors in the connection between the indoor and outdoor units.', 'Check the piping. Conduct the wiring error check described on the product diagnosis nameplate.'], ['Check for thermistor detection errors.', 'Check if the thermistor is mounted securely.'],
+      ['Check for faulty operation of the electronic expansion valve.', 'Set all the units to cooling operation, and compare the temperatures of the liquid pipes to see if each electronic expansion valve works.', 'eevall'], ['Diagnose with remote controller indication.', 'See' + rcRef + '.'],
+      ['Diagnose by service port pressure and operating current.', 'Check for refrigerant shortage' + ref(pg.u0) + '.', 'u0']],
+    noise:(pg.pm ? [['Check the output voltage of the power module.', 'See' + ref(pg.pm) + '.'], ['Check the power module.', '']] : []).concat([['Check the installation condition.', 'Check if the required spaces for installation (specified in the installation manual) are provided.']]),
+  };
+  if (pg.cmxv) items.cmxv = [['Diagnose with thermostat indication.', 'Reset Field Setting' + ref(pg.cmxv) + '.']];
+  const syms = [['none', 'None of the units operates.'], ['stops', 'Operation sometimes stops.']].concat(pg.cmxv ? [['cmxv', '(CMXV only) The airflow rate does not match the set airflow.']] : []).concat([['some', 'Some indoor units do not operate.'], ['nocool', 'Units operate but do not cool, or do not heat.'], ['noise', 'Large operating noise and vibrations.']]);
+  const gn = [{id:'S', q:'Which problem does the customer report?', opts:syms.map(([k, l]) => ({a:l, go:k + '1'}))}];
+  for (const [k, l] of syms){ const L = items[k]; L.forEach((it, j) => gn.push({id:k + (j + 1), sym:l, q:it[0] + (it[1] ? ' ' + it[1] : ''), w:it[2] || null, opts:[{a:'Fine', go:j + 1 < L.length ? k + (j + 2) : null, act:j + 1 < L.length ? null : 'Every check item for this symptom is fine. If an error code shows, follow its flowchart.'}, {a:'Not fine', act:`${it[0].replace(/\.$/, '')}: not fine.${it[1] ? ' The manual\'s measure: ' + it[1] : ''}`}]})); }
+  for (const n of gn) n.opts = n.opts.map(o => o.go ? {a:o.a, go:o.go} : {a:o.a, act:o.act});
+  F.GEN = {t:'General problem symptoms and check items', p:String(R.gen), cond:'The manual\'s table of check items for each problem the customer reports, in its order.', gen:true, nodes:gn};
+  for (const [k, f] of Object.entries(F)){ f.key = k; f.multi = true; f.fam = fam; f.idx = {}; for (const n of f.nodes) f.idx[n.id] = n; if (!f.start) f.start = f.nodes[0].id; }
+  return F;
+}
+// logged multi codes → flowchart: outdoor unit (the error byte) and the heads (each zone's error byte)
+const RT_MCODEFLOW = {outdoor:{U0:'U0', F3:'F3', F6:'F6', L4:'L4', A5:'A5o'}, head:{A5:'A5h'}};
 let RT_LINK = null, RT_XC = null;
 function rtCtx(){
   if (RT_LINK) return RT_LINK.X;
   if (!D) return null;
-  const pl = unitPlat(), multi = D.fam === 'multi', sz = sizeInfo();
-  if (RT_XC && RT_XC.D === D && RT_XC.prov === !!S.provisional && RT_XC.size === SIZE) return RT_XC.X;
+  const pl = unitPlat(), multi = D.fam === 'multi', sz = sizeInfo(), mf = multi ? multiFam() : null, mfKey = mf ? mf.cands.join(',') : '';
+  if (RT_XC && RT_XC.D === D && RT_XC.prov === !!S.provisional && RT_XC.size === SIZE && RT_XC.ref === REF.ref && RT_XC.mf === mfKey) return RT_XC.X;
   const u = UNI[pl] || {}, num = D.num, s = D.str, dt = D.interval / 60;
   const med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
-  const X = {live:true, plat:pl, multi, ref:REF.ref || 'R410A', model:D.model ? String(D.model).replace(/^INV_Unitary_/i, '') : '', name:multi ? 'Multi-split' : (u.name || 'no service manual on file for this model'),
-    doc:(RT_DOC[pl] || {}).doc || u.doc || '', out:EQ.out, size:sz ? {t:sz.t, e:!!sz.e} : null, rec:fmtTime(D.t[0], true), chart:{}, chartOut:{}, codes:[], hintFan:{}, hintCfm:{}, hintSv:{}, hintTh:{}};
+  const mname = mf ? (mf.cands.length === 1 ? MULTI[mf.cands[0]].name : 'Multi-split, model not settled: ' + mf.cands.map(f => MULTI[f].short).join(' or ')) : '';
+  const mref = mf ? [...new Set(mf.cands.map(f => MULTI[f].ref))] : null;
+  const X = {live:true, plat:pl, multi, ref:mref ? (mref.length === 1 ? mref[0] : null) : REF.ref || 'R410A', model:!multi && D.model ? String(D.model).replace(/^INV_Unitary_/i, '') : '', name:multi ? mname : (u.name || 'no service manual on file for this model'),
+    doc:multi ? (mf.cands.length === 1 ? (RT_MDOC[mf.cands[0]] || {}).doc || '' : '') : (RT_DOC[pl] || {}).doc || u.doc || '', mfam:mf ? mf.cands.slice() : null,
+    out:EQ.out, size:sz ? {t:sz.t, e:!!sz.e} : null, rec:fmtTime(D.t[0], true), chart:{}, chartOut:{}, codes:[], hintFan:{}, hintCfm:{}, hintSv:{}, hintTh:{}};
   if (!multi && pl && pl !== 'other'){
     const chPl = CHARTS[pl] ? pl : ((pl === 'fit32' || pl === 'dh9') && fieldOn() ? 'fit410' : null);
     if (chPl) for (const m of ['cool', 'heat']){ const o = chartObs(m, chPl); if (!o) continue;
@@ -5134,27 +5261,79 @@ function rtCtx(){
       if (s.svhot && s.svhot.some(v => v != null)){ const on = R.filter(i => s.svhot[i] === 'ON').length; X.hintSv[m] = `The log: the solenoid read open on ${pct(on, R.length)} % of the judged rows` + (pl === 'fit410' && m === 'cool' ? '; the FIT keeps it closed throughout cooling (SiUS612209EA p.10).' : '.'); }
       X.hintTh[m] = {}; for (const [id, th] of Object.entries(RT_THS)){ const v = chById[th.ch] && chById[th.ch].present ? md(th.ch) : null; if (isN(v)) X.hintTh[m][id] = `The log: ${chById[th.ch].label} ${f0(v)} °F (median of the judged stretch).`; }
     }
-    // logged codes, each with the readings its flowchart asks about, taken over the rows where the code showed
-    const seen = {};
-    for (let i = 0; i < D.n; i++) for (const e of rowErrors(i)){ if (!e.key || !e.k) continue; const kind = e.who === 'Indoor' ? 'indoor' : 'outdoor', id = kind + ':' + e.key;
-      (seen[id] = seen[id] || {kind, key:e.key, disp:e.code || e.key, t:e.t, src:e.k.src || '', minor:!!e.k.minor, fk:(RT_CODEFLOW[kind] || {})[e.key] || null, rows:[]}).rows.push(i); }
-    for (const c of Object.values(seen)){ const R = c.rows, md = id => num[id] ? med(R.map(i => num[id][i])) : null, mx = id => { const v = num[id] ? R.map(i => num[id][i]).filter(isN) : []; return v.length ? Math.max(...v) : null; };
+  }
+  if (multi || (pl && pl !== 'other')){
+    // logged codes, each with the readings its flowchart asks about, taken over the rows where the code showed (on a multi, each head's code per zone)
+    const seen = {}, MAP = multi ? RT_MCODEFLOW : RT_CODEFLOW;
+    for (let i = 0; i < D.n; i++) for (const e of rowErrors(i)){ if (!e.key || !e.k) continue; const kind = e.who === 'Indoor' ? 'indoor' : /^Zone/.test(e.who) ? 'head' : 'outdoor', zk = kind === 'head' ? e.zone : null, id = kind + ':' + e.key + (zk != null ? ':' + zk : '');
+      (seen[id] = seen[id] || {kind, key:e.key, zone:zk, disp:(zk != null ? `Zone ${MZ.letters[zk]}: ` : '') + (e.code || e.key), t:e.t, src:e.k.src || '', minor:!!e.k.minor, fk:(MAP[kind] || {})[e.key] || null, rows:[]}).rows.push(i); }
+    for (const c of Object.values(seen)){ const R = c.rows, md = id => num[id] ? med(R.map(i => num[id][i])) : null, vals = id => num[id] ? R.map(i => num[id][i]).filter(isN) : [];
+      const mx = id => { const v = vals(id); return v.length ? Math.max(...v) : null; }, mn = id => { const v = vals(id); return v.length ? Math.min(...v) : null; };
       const cool = R.filter(i => D.mode[i] === 'cool').length, heat = R.filter(i => D.mode[i] === 'heat').length;
       const dl = R.map(i => isN(num.oat[i]) && num.liq && isN(num.liq[i]) ? num.oat[i] - num.liq[i] : null);
-      X.codes.push({kind:c.kind, key:c.key, disp:c.disp, t:c.t, src:c.src, minor:c.minor, fk:c.fk, n:R.length, min:Math.max(1, Math.round(R.length * dt)), first:fmtTime(D.t[R[0]]), mode:heat > cool ? 'heat' : cool ? 'cool' : null,
-        v:{lp:md('lp'), hp:md('hp'), td:mx('disch'), dsh:md('dsh'), fin:mx('fin'), oat:md('oat'), oatLiq:med(dl)}}); }
+      const v = multi ? {td:mx('disch'), fin:mx('fin'), och:mx('ochex'), oat:md('oat'), cur:md('syscur'), spd:md('rps'), fan:md('fan'), coilMin:c.zone != null ? mn('ihx' + c.zone) : null, coilMax:c.zone != null ? mx('ihx' + c.zone) : null, ra:c.zone != null ? md('ra' + c.zone) : null}
+        : {lp:md('lp'), hp:md('hp'), td:mx('disch'), dsh:md('dsh'), fin:mx('fin'), oat:md('oat'), oatLiq:med(dl)};
+      X.codes.push({kind:c.kind, key:c.key, zone:c.zone, disp:c.disp, t:c.t, src:c.src, minor:c.minor, fk:c.fk, n:R.length, min:Math.max(1, Math.round(R.length * dt)), first:fmtTime(D.t[R[0]]), mode:heat > cool ? 'heat' : cool ? 'cool' : null, v}); }
   }
-  RT_XC = {D, prov:!!S.provisional, size:SIZE, X};
+  if (multi){   // each port while the compressor ran: EEV pulses, liquid pipe, the room's coil and return air, with its room calling and with it off or satisfied
+    const run = [...Array(D.n).keys()].filter(i => D.runSec[i] >= 0), zs = [];
+    for (const k of D.zones){ const dd = num['dd' + k], on = run.filter(i => !zoneOff(k, i) && dd && isN(dd[i]) && dd[i] > 0), off = run.filter(i => zoneOff(k, i) || (dd && dd[i] === 0));
+      const pick = (R, id) => num[id + k] ? med(R.map(i => num[id + k][i])) : null;
+      zs.push({L:MZ.letters[k], on:{n:on.length, ev:pick(on, 'pev'), liq:pick(on, 'rmliq'), coil:pick(on, 'ihx'), ra:pick(on, 'ra')}, off:{n:off.length, ev:pick(off, 'pev'), liq:pick(off, 'rmliq'), coil:pick(off, 'ihx'), ra:pick(off, 'ra')}}); }
+    X.mz = {oat:med(run.map(i => num.oat[i])), cur:num.syscur ? med(run.map(i => num.syscur[i])) : null, spd:med(run.map(i => num.rps[i])), fan:num.fan ? med(run.map(i => num.fan[i])) : null, zones:zs};
+  }
+  RT_XC = {D, prov:!!S.provisional, size:SIZE, ref:REF.ref, mf:mfKey, X};
   return X;
+}
+const rtFlowDoc = (X, f) => f.multi ? `${RT_MDOC[f.fam].doc} PDF ${f.p}` : `${(RT_DOC[X.plat] || {}).doc || X.doc} p.${f.p}`;
+const rtByMode = f => typeof f.start === 'object' || f.nodes.some(n => n.when || typeof n.q === 'object' || (n.w && typeof n.w === 'object'));
+// what a multi recording holds for a flowchart step (data only; the manual's step decides)
+function rtMHint(X, w, c){
+  const z = X.mz || {zones:[]}, v = (c && c.v) || {}, F = x => isN(x) ? f0(x) + ' °F' : '—';
+  const room = (q, o) => q.n && isN(q.ev) ? `${o}: EEV ${f0(q.ev)} pulses, liquid pipe ${F(q.liq)}` : '';
+  if (w === 'eev' || w === 'eevall'){ const parts = z.zones.map(r => { const t = [room(r.on, 'calling'), room(r.off, 'off or satisfied')].filter(Boolean).join('; '); return t ? `Port ${r.L} ${t}` : ''; }).filter(Boolean);
+    return parts.length ? `The log while the compressor ran (medians): ${parts.join(' · ')}. Outdoor air ${F(z.oat)}.` : ''; }
+  if (w === 'therm') return [isN(v.td) ? `discharge up to ${F(v.td)}` : '', isN(v.och) ? `outdoor coil up to ${F(v.och)}` : '', isN(v.oat) ? `outdoor air ${F(v.oat)}` : '', isN(v.coilMin) ? `the room's coil ${F(v.coilMin)} to ${F(v.coilMax)}` : '', isN(v.ra) ? `return air ${F(v.ra)}` : ''].filter(Boolean).map((t, k) => (k ? '' : 'The log while the code showed: ') + t).join(', ');
+  if (w === 'fan'){ const f = isN(v.fan) ? v.fan : z.fan; return isN(f) ? `The log: outdoor fan ${f0(f)} rpm (median ${isN(v.fan) ? 'while the code showed' : 'while the compressor ran'}).` : ''; }
+  if (w === 'fin') return isN(v.fin) ? `The log: the radiation fin reached ${F(v.fin)} while the code showed.` : '';
+  if (w === 'u0'){ const cur = isN(v.cur) ? v.cur : z.cur, sp = isN(v.spd) ? v.spd : z.spd; return isN(cur) ? `The log: operation current ${cur.toFixed(1)} A at compressor speed ${isN(sp) ? f0(sp) + ' rps' : '—'} (median ${isN(v.cur) ? 'while the code showed' : 'while the compressor ran'}).` : ''; }
+  return '';
+}
+function rtMFacts(X, f, c){
+  const v = (c && c.v) || {}, z = X.mz || {zones:[]}, F = x => isN(x) ? f0(x) + ' °F' : '—';
+  if (f.w0 === 'u0') return rtMHint(X, 'u0', c);
+  if (f.w0 === 'f3') return isN(v.td) ? `The log: discharge up to ${F(v.td)} while the code showed.` : '';
+  if (f.w0 === 'f6') return isN(v.och) ? `The log: outdoor coil up to ${F(v.och)} while the code showed.` : '';
+  if (f.w0 === 'l4') return rtMHint(X, 'fin', c);
+  if (f.w0 === 'a5h') return isN(v.coilMin) ? `The log: this room's coil ${F(v.coilMin)} to ${F(v.coilMax)}, return air ${F(v.ra)} (median) while the code showed.` : '';
+  if (f.w0 === 'a5o'){ const p = z.zones.filter(r => r.off.n && isN(r.off.coil)).map(r => `Port ${r.L} off or satisfied: coil ${F(r.off.coil)}, return air ${F(r.off.ra)}`); return p.length ? `The log while the compressor ran (medians): ${p.join(' · ')}.` : ''; }
+  return '';
+}
+// a multi flowchart step: the numbered check it calls, as printed, then what the recording shows
+function rtMWidget(X, n, c, f, b){
+  const K = rtMChecks(f.fam), R = RT_MDOC[f.fam], out = [];
+  if (n.chk && K[n.chk]){ const k = K[n.chk], li = a => a.map(t => `<li>${rtE(t)}</li>`).join('');
+    out.push(`<div class="rt-chk"><div class="rt-src">Check No.${n.chk}: ${rtE(k.t)} (${rtE(R.doc)} PDF ${rtE(k.p)})</div>${k.ol === false ? k.steps.map(t => `<div class="rt-how">${rtE(t)}</div>`).join('') : `<ol>${li(k.steps)}</ol>`}${(k.more || []).map(t => `<div class="rt-how">${rtE(t)}</div>`).join('')}${k.note ? `<div class="rt-how rt-note2">${rtE(k.note)}</div>` : ''}</div>`);
+    if (n.chk === '01'){ const rd = (b.rd && b.rd['n:' + n.id]) || {}, e = rtMThermK(rd.t);
+      out.push(`<div class="rt-fs">${rtField('n:' + n.id + '|t', {l:'Temp at the sensor', u:'°F'}, rd.t)}${rtField('n:' + n.id + '|r', {l:'Resistance', u:'kΩ'}, rd.r)}</div>`
+        + (isN(e) ? `<div class="rt-judge">The table: ${e.toFixed(e >= 100 ? 0 : 2)} kΩ at ${f0(rd.t)} °F${isN(rd.r) ? `; your reading is ${f0((rd.r / e - 1) * 100)} % ${rd.r >= e ? 'above' : 'below'}` : ''}${R.tSure ? '' : '. This manual says its data is for reference only.'}</div>` : isN(rd.t) ? '<div class="rt-judge">Outside the table\'s range (−4 to 122 °F)</div>' : '')); } }
+  const h = rtMHint(X, n.w, c); if (h) out.push(`<div class="rt-hint">${rtE(h)}</div>`);
+  return out.join('');
 }
 // ---- persistence: one state per recording (or per shared link)
 const rtKey = () => RT_LINK ? 'dchk.route.link.' + RT_LINK.id : (D ? 'dchk.route.' + (D.sha || D.name) : null);
 function rtLoad(){ const k = rtKey(); const st = (k && loadJSON(k, null)) || (RT_LINK && RT_LINK.st ? JSON.parse(JSON.stringify(RT_LINK.st)) : null) || {}; return Object.assign({src:null, by:{}}, st); }
-function rtSave(st){ const k = rtKey(); if (k) saveJSON(k, st); if (RT_LINK) try { history.replaceState(null, '', '#route=' + rtB64(JSON.stringify({v:1, app:APP_VERSION, X:RT_LINK.X, st}))); } catch(e){} }
+function rtSave(st){ const k = rtKey(); if (k) saveJSON(k, st); if (RT_LINK && !RT_LINK.code) try { history.replaceState(null, '', '#route=' + rtB64(JSON.stringify({v:1, app:APP_VERSION, X:RT_LINK.X, st}))); } catch(e){} }
 const rtBy = (st, id) => st.by[id] || (st.by[id] = {cmp:[], g:{}, res:{}, rd:{}, ans:{}, mode:null});
 // ---- the routes this recording offers: the manual's flowchart for each logged code, then the analysis chart per mode
+// (a multi: each candidate family's flowcharts and its problem checklist; the route shows one family at a time)
 function rtSources(X){
-  const out = []; if (!X || X.multi) return out; const F = rtFlows(X.plat);
+  const out = []; if (!X) return out;
+  if (X.multi){ for (const fam of (X.mfam || [])){ if (!RT_MDOC[fam]) continue; const F = rtMFlows(fam);
+      for (const c of X.codes){ const f = c.fk && F[c.fk]; if (f) out.push({id:`code:${c.kind}:${c.key}:${c.zone != null ? c.zone : ''}:${fam}`, kind:'code', c, f, label:`${c.disp} flowchart`}); }
+      out.push({id:'gen:' + fam, kind:'code', c:{disp:'Problem checklist', t:'General problem symptoms and check items', src:`${RT_MDOC[fam].doc} PDF ${RT_MDOC[fam].gen}`, mode:null, v:{}}, f:F.GEN, label:'Problem checklist'}); }
+    return out; }
+  const F = rtFlows(X.plat);
   for (const c of X.codes){ if (!c.fk) continue; let fl = [];
     if (c.fk === 'E32' && !F.E32){ const t = X.size && X.size.t, e = X.size && X.size.e, small = isN(t) && (X.plat === 'fit32' ? (!e && t <= 3) || (e && t === 2) : !e && t <= 3), big = isN(t) && (X.plat === 'fit32' ? (!e && t >= 3.5) || (e && t >= 3 && t <= 4) : !e && t >= 3.5);
       fl = small ? [F.E32s] : big ? [F.E32l] : [F.E32s, F.E32l].filter(Boolean); }
@@ -5291,22 +5470,31 @@ function rtChartHtml(X, m, b){
 }
 function rtCallHint(){ try { if (!RT_LINK && CALL && CALL.cats && CALL.cats.length) return `<div class="rt-note">The call notes say: ${rtE(CALL.cats.join(', '))}.</div>`; } catch(e){} return ''; }
 function rtFlowHtml(X, src, b){
-  const f = src.f, c = src.c, m = b.mode || c.mode || 'cool', R = RT_DOC[X.plat] || {}, mod = rtFlowModel(f, m, b), pg = `${R.doc || X.doc} p.${f.p}`;
-  const pathIdx = new Map(mod.path.map((p, k) => [p.id, p]));
-  let nn = 0; const nodes = f.nodes.map(n => { const p = pathIdx.get(n.id), cur = mod.cur === n.id, skip = p && p.skip, off = !mod.on.has(n.id); nn++;
+  const f = src.f, c = src.c, m = b.mode || c.mode || 'cool', mod = rtFlowModel(f, m, b), pg = rtFlowDoc(X, f), byMode = rtByMode(f);
+  const pathIdx = new Map(mod.path.map(p => [p.id, p]));
+  // the problem checklist shows its question and the chosen problem's check items only
+  const symKey = f.gen && b.ans && b.ans.S != null && f.idx.S.opts[b.ans.S] ? f.idx.S.opts[b.ans.S].go.replace(/\d+$/, '') : null;
+  const shown = f.gen ? f.nodes.filter(n => n.id === 'S' || (symKey && n.id.replace(/\d+$/, '') === symKey)) : f.nodes;
+  const stepNo = id => { const t = f.idx[id]; if (!t) return ''; return t.label || (shown.indexOf(t) + 1); };
+  let nn = 0; const nodes = shown.map(n => { const p = pathIdx.get(n.id), cur = mod.cur === n.id, skip = p && p.skip, off = !mod.on.has(n.id); nn++;
     const q = rtQ(n.q, m), when = n.when ? (n.when === 'heat' ? 'heating only' : 'cooling only') : '';
     const ans = p && !skip ? p.k : null;
     return `<li class="rt-stop flow${cur ? ' next' : ''}${ans != null ? ' done' : ''}${skip ? ' skip' : ''}${off && !cur ? ' off' : ''}"><span class="rt-dot">${n.label || nn}</span><div class="rt-body">
       <div class="rt-st"><b>${rtE(q)}</b>${when ? `<span class="rt-tag">${when}</span>` : ''}${cur ? '<span class="rt-nexttag rt-noprint">next</span>' : ''}</div>
-      ${skip ? `<div class="rt-how">Not in ${m === 'heat' ? 'heating' : 'cooling'}: the chart goes on down its NO line.</div>` : rtFlowWidget(X, rtW(n.w, m), c, f, b, n.id)}
-      <div class="rt-outs">${n.opts.map((o, k) => `<button type="button" class="${ans === k ? 'on' : ''}" data-ans="${n.id}|${k}">${rtE(o.a)} → ${rtE(o.act || ('step ' + (f.idx[o.go].label || (f.nodes.indexOf(f.idx[o.go]) + 1))))}</button>`).join('')}</div></div></li>`; }).join('');
-  const end = mod.end ? `<div class="rt-end found"><b>The flowchart ends at: ${rtE(mod.end.act)}</b><div class="rt-how">${rtE(pg)}. ${/keep running/i.test(mod.end.act) ? 'Record again to confirm the code does not come back.' : 'After the repair, record again: the code should not come back.'}</div>${X.live && D && D.sha ? '<button type="button" class="btn small rt-noprint" data-rt="callnotes">Put it in the call notes</button>' : ''}</div>`
-    : `<div class="rt-end"><b>Answer step ${(f.idx[mod.cur] && (f.idx[mod.cur].label || f.nodes.indexOf(f.idx[mod.cur]) + 1)) || ''} to go on.</b></div>`;
-  const facts = `<span class="rt-chip code">${rtE(c.disp)} · ${rtE(c.t)}</span><span class="rt-chip none">${c.min} min of the recording, first at ${rtE(c.first)}${c.mode ? ', in ' + (c.mode === 'heat' ? 'heating' : 'cooling') : ''}</span>`;
+      ${skip ? `<div class="rt-how">Not in ${m === 'heat' ? 'heating' : 'cooling'}: the chart goes on down its NO line.</div>` : f.multi ? rtMWidget(X, n, c, f, b) : rtFlowWidget(X, rtW(n.w, m), c, f, b, n.id)}
+      <div class="rt-outs">${n.opts.map((o, k) => `<button type="button" class="${ans === k ? 'on' : ''}" data-ans="${n.id}|${k}">${rtE(o.a)}${f.gen ? '' : ' → ' + rtE(o.act || ('step ' + stepNo(o.go)))}</button>`).join('')}</div></div></li>`; }).join('');
+  const allFine = mod.end && f.gen && /^Every check item/.test(mod.end.act);
+  const callBtn = X.live && D && D.sha && !allFine ? '<button type="button" class="btn small rt-noprint" data-rt="callnotes">Put it in the call notes</button>' : '';
+  const end = mod.end ? `<div class="rt-end${allFine ? '' : ' found'}"><b>${f.gen ? 'The checklist ends at' : 'The flowchart ends at'}: ${rtE(mod.end.act)}</b><div class="rt-how">${rtE(pg)}.${f.gen ? '' : /keep running|completed/i.test(mod.end.act) ? ' Record again to confirm the code does not come back.' : ' After the repair, record again: the code should not come back.'}</div>${callBtn}</div>`
+    : `<div class="rt-end"><b>${f.gen && !symKey ? 'Pick the problem the customer reports.' : `Answer step ${stepNo(mod.cur)} to go on.`}</b></div>`;
+  const facts = f.gen ? '<span class="rt-chip none">No error code needed: the manual\'s table lists what to check for each problem a customer reports.</span>'
+    : `<span class="rt-chip code">${rtE(c.disp)} · ${rtE(c.t)}</span><span class="rt-chip none">${c.min} min of the recording, first at ${rtE(c.first)}${c.mode ? ', in ' + (c.mode === 'heat' ? 'heating' : 'cooling') : ''}</span>`;
+  const mfacts = f.multi && !f.gen ? rtMFacts(X, f, c) : '';
+  const famNote = f.multi && X.mfam && X.mfam.length > 1 ? ` The recording does not settle the model, so this is the ${rtE(MULTI[f.fam].short)} manual's version: pick the manual that matches the outdoor unit's nameplate, or set Model in the toolbar.` : '';
   return {mod, html:`
-    <div class="rt-sec"><div class="rt-lbl">What the log shows</div>${facts}<div class="rt-note">${c.minor ? `Code ${rtE(c.disp)} is the minor (thermostat-only) form of this fault; the manual's error table gives it the same causes, so its flowchart applies. ` : ''}Error decision: ${rtE(f.cond)}${f.box ? ' ' + rtE(f.box) : ''}${f.sizes ? ` Applies to ${rtE(f.sizes)}.` : ''} Code table: ${rtE(c.src)}.</div></div>
-    <div class="rt-sec rt-noprint"><div class="rt-lbl">Mode for the flowchart's [When cooling] / [When heating] steps</div>${['cool', 'heat'].map(x => `<button type="button" class="rt-cmp${m === x ? ' on' : ''}" data-mode="${x}">${x === 'heat' ? 'Heating' : 'Cooling'}</button>`).join('')}</div>
-    <div class="rt-sec"><div class="rt-lbl">The manual's flowchart, step by step: ${rtE(f.t)} (${rtE(pg)})</div><ol class="rt-map">${nodes}</ol>${f.note ? `<div class="rt-note">${rtE(f.note)}</div>` : ''}${end}</div>`};
+    <div class="rt-sec"><div class="rt-lbl">What the log shows</div>${facts}${mfacts ? `<div class="rt-hint">${rtE(mfacts)}</div>` : ''}<div class="rt-note">${c.minor ? `Code ${rtE(c.disp)} is the minor (thermostat-only) form of this fault; the manual's error table gives it the same causes, so its flowchart applies. ` : ''}${f.gen ? '' : 'Error decision: '}${rtE(f.cond)}${f.box ? ' ' + rtE(f.box) : ''}${f.sizes ? ` Applies to ${rtE(f.sizes)}.` : ''}${f.gen ? '' : ` Code table: ${rtE(c.src)}.`}${famNote}</div></div>
+    ${byMode ? `<div class="rt-sec rt-noprint"><div class="rt-lbl">Mode for the flowchart's [When cooling] / [When heating] steps</div>${['cool', 'heat'].map(x => `<button type="button" class="rt-cmp${m === x ? ' on' : ''}" data-mode="${x}">${x === 'heat' ? 'Heating' : 'Cooling'}</button>`).join('')}</div>` : ''}
+    <div class="rt-sec"><div class="rt-lbl">The manual's ${f.gen ? 'check items' : 'flowchart'}, step by step: ${rtE(f.t)} (${rtE(pg)})</div><ol class="rt-map">${nodes}</ol>${f.note ? `<div class="rt-note">${rtE(f.note)}</div>` : ''}${end}</div>`};
 }
 function rtStats(X, m){
   try { const calls = Object.values(LIB_CALLS || {}).map(c => c.found).filter(s => s && s.includes(`Route (${X.doc} ${m === 'heat' ? 'heating' : 'cooling'} chart) found:`)); if (!calls.length) return null;
@@ -5314,12 +5502,13 @@ function rtStats(X, m){
 }
 function buildRoute(){
   const host = $('#routehost'); if (!host) return;
+  if (RT_LINK && !RT_LINK.X){ host.innerHTML = `<div class="rt-linkbar">${RT_LINK.err ? 'That route link could not be opened: the code was not found, or the shop library could not be reached. Try again with a signal, or ask for the route again.' : 'Opening the shared route…'} <button type="button" class="btn small" data-rt="closelink">Close the link</button></div>`; return; }
   const X = rtCtx(); if (!X){ host.innerHTML = '<p class="note" style="padding:14px">Open a recording to build a route.</p>'; return; }
   const st = rtLoad(), srcs = rtSources(X); let src = srcs.find(s => s.id === st.src) || srcs[0];
   const keep = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.rk ? {k:document.activeElement.dataset.rk, s:document.activeElement.selectionStart} : null;
-  const linkBar = RT_LINK ? `<div class="rt-linkbar rt-noprint">Opened from a shared route link (recorded ${rtE(X.rec)}). Changes are kept in this link. <button type="button" class="btn small" data-rt="closelink">Close the link</button></div>` : '';
+  const linkBar = RT_LINK ? `<div class="rt-linkbar rt-noprint">Opened from a shared route link (recorded ${rtE(X.rec)}). ${RT_LINK.code ? 'Changes are kept on this device.' : 'Changes are kept in this link.'} <button type="button" class="btn small" data-rt="closelink">Close the link</button></div>` : '';
   if (!src){
-    const why = X.multi ? 'Multi-split manuals have no analysis chart, and their error-code flowcharts are not in the route builder yet. The Synopsis error cards list each code\'s checks from its manual.'
+    const why = X.multi ? 'No multi-split service manual matches this recording.'
       : !X.doc ? 'No service manual is on file for this model, so there is nothing to route from.'
       : (X.plat === 'fit32' || X.plat === 'dh9') ? `${X.doc} has no analysis chart, and no error code with a flowchart was logged in this recording. With Settings → Field rules on, the R-410A FIT chart can be used, labelled as a field rule.`
       : Object.keys(X.chartOut).length ? `The analysis chart holds only inside its outdoor range (${Object.entries(X.chartOut).map(([mm, o]) => `${mm === 'heat' ? 'heating' : 'cooling'} ${o.range[0]}–${o.range[1]} °F`).join(', ')}); this recording's settled running was outside it.`
@@ -5327,15 +5516,19 @@ function buildRoute(){
     host.innerHTML = linkBar + `<div class="rt-sheet"><div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''}</div></div></div><p class="rt-head2">${rtE(why)}</p></div>`; return; }
   st.src = src.id; const b = rtBy(st, src.id);
   const body = src.kind === 'chart' ? rtChartHtml(X, src.m, b) : rtFlowHtml(X, src, b);
-  const mode = src.kind === 'chart' ? src.m : (b.mode || src.c.mode || 'cool'), R = RT_DOC[X.plat] || {};
-  const docLine = src.kind === 'chart' ? (X.chart[src.m].field ? `SiUS612209EA ${RT_DOC.fit410.chart[src.m]} (R-410A FIT chart, field rule)` : `${R.chartDoc ? R.chartDoc + ' ' : X.doc + ' '}${(R.chart || {})[src.m] || ''} analysis chart`) : `${X.doc} p.${src.f.p} flowchart`;
-  host.innerHTML = linkBar + `<div class="rt-tools rt-noprint">${srcs.length > 1 ? `<div class="rt-srcs">${srcs.map(s => `<button type="button" class="rt-src-b${s === src ? ' on' : ''}" data-src="${rtE(s.id)}">${rtE(s.label)}</button>`).join('')}</div>` : ''}
+  const mode = src.kind === 'chart' ? src.m : rtByMode(src.f) ? (b.mode || src.c.mode || 'cool') : src.c.mode, R = RT_DOC[X.plat] || {};
+  const docLine = src.kind === 'chart' ? (X.chart[src.m].field ? `SiUS612209EA ${RT_DOC.fit410.chart[src.m]} (R-410A FIT chart, field rule)` : `${R.chartDoc ? R.chartDoc + ' ' : X.doc + ' '}${(R.chart || {})[src.m] || ''} analysis chart`) : `${rtFlowDoc(X, src.f)} ${src.f.gen ? 'check items' : 'flowchart'}`;
+  const fam = src.f && src.f.multi ? src.f.fam : null, vis = fam ? srcs.filter(s => s.f && s.f.fam === fam) : srcs, twinOf = id => id.replace(/:[^:]*$/, '');
+  const famRow = fam && X.mfam.length > 1 ? `<div class="rt-srcs rt-fams"><span class="rt-lbl">Manual</span>${X.mfam.map(fm => { const tw = srcs.find(s => s.f && s.f.fam === fm && twinOf(s.id) === twinOf(src.id)) || srcs.find(s => s.f && s.f.fam === fm);
+    return tw ? `<button type="button" class="rt-src-b${fm === fam ? ' on' : ''}" data-src="${rtE(tw.id)}">${rtE(MULTI[fm].short)}</button>` : ''; }).join('')}</div>` : '';
+  const qrUrl = rtShortFor(X, st), qr = qrUrl ? `<div class="rt-qr"><a href="${rtE(qrUrl)}" aria-label="Short link to this route">${qrSvg(qrUrl, 104)}</a><span>Scan to open this route on a phone</span></div>` : '';
+  host.innerHTML = linkBar + `<div class="rt-tools rt-noprint"><div>${vis.length > 1 ? `<div class="rt-srcs">${vis.map(s => `<button type="button" class="rt-src-b${s === src ? ' on' : ''}" data-src="${rtE(s.id)}">${rtE(s.label)}</button>`).join('')}</div>` : ''}${famRow}</div>
       <div class="rt-btns"><button type="button" class="btn small" data-rt="print">Print / PDF</button><button type="button" class="btn small" data-rt="share">Share link</button><button type="button" class="btn small" data-rt="mail">Email</button><button type="button" class="btn small" data-rt="reset">Start over</button></div></div>
     <div class="rt-sheet">
-      <div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''} · ${X.ref === 'R32' ? 'R-32' : 'R-410A'} · ${mode === 'heat' ? 'heating' : 'cooling'} · recorded ${rtE(X.rec)}</div></div><div class="rt-docr">${rtE(docLine)}${src.kind === 'chart' && X.plat === 'dx9vc' ? '<br>tests: RSD6115001r14' : ''}</div></div>
+      <div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''}${X.ref ? ' · ' + (X.ref === 'R32' ? 'R-32' : 'R-410A') : ''}${mode ? ' · ' + (mode === 'heat' ? 'heating' : 'cooling') : ''} · recorded ${rtE(X.rec)}</div></div><div class="rt-docr">${rtE(docLine)}${src.kind === 'chart' && X.plat === 'dx9vc' ? '<br>tests: RSD6115001r14' : ''}</div>${qr}</div>
       ${src.kind === 'chart' && X.chart[src.m].field ? '<div class="rt-fieldbar">Field rule: this unit\'s manual has no analysis chart. The R-410A FIT chart and its lines are used as a guide only; its pressures are R-410A numbers.</div>' : ''}
       ${body.html}
-      <div class="rt-foot">${src.kind === 'chart' ? 'Every line on this sheet is from the service manual named beside it; a borrowed method carries its source. The order of stops is the app\'s, easiest first: looks, then meter checks with the power off, then quick readings, then the long tests (charge mode, a 15-minute shutdown, a leak search); the manual gives none for chart causes.' : 'The steps and their wording are the manual\'s own flowchart, in its order.'} D-Checker Cycle Viewer ${APP_VERSION}.
+      <div class="rt-foot">${src.kind === 'chart' ? 'Every line on this sheet is from the service manual named beside it; a borrowed method carries its source. The order of stops is the app\'s, easiest first: looks, then meter checks with the power off, then quick readings, then the long tests (charge mode, a 15-minute shutdown, a leak search); the manual gives none for chart causes.' : src.f.gen ? 'The check items and their wording are the manual\'s own table, in its order; the Fine / Not fine boxes are the app\'s.' : 'The steps and their wording are the manual\'s own flowchart, in its order.'} D-Checker Cycle Viewer ${APP_VERSION}.
         <span class="rt-sign">Tech ____________________ Date __________ Readings taken with gauges ☐</span></div>
     </div>`;
   rtSave(st);
@@ -5374,29 +5567,118 @@ function rtText(){
   const lines = []; host.querySelectorAll('.rt-title, .rt-sub, .rt-docr, .rt-lbl, .rt-chip, .rt-head2, .rt-su, .rt-stop, .rt-end').forEach(el => {
     if (el.closest('.rt-stop') && !el.classList.contains('rt-stop')) return; if (el.closest('.rt-su') && !el.classList.contains('rt-su')) return;
     if (el.classList.contains('rt-stop')){ const n = el.querySelector('.rt-dot').textContent, t = el.querySelector('.rt-st b').textContent, on = el.querySelector('.rt-outs .on'); lines.push(`  ${n}. ${t}${on ? ' → ' + on.textContent : ''}`); return; }
+    if (el.classList.contains('rt-end')){ lines.push([...el.querySelectorAll('b, .rt-how')].map(x => x.textContent.trim()).filter(Boolean).join(' ')); return; }
     if (el.classList.contains('rt-su')){ lines.push('  ' + el.querySelector('.rt-lt').textContent + ' ' + el.querySelector('.rt-nm').textContent + ' (' + el.querySelector('.rt-why').textContent + ')'); return; }
     lines.push(el.textContent.replace(/\s+/g, ' ').trim()); });
   return lines.join('\n');
 }
+// ---- QR code (ISO/IEC 18004), written for this app: byte mode, error correction level M, the smallest version that holds the text
+// (1–40) and the mask with the lowest penalty. Returns the module grid (true = dark) or null when the text does not fit. forceMask: tests only.
+function qrMatrix(text, forceMask){
+  const data = [...new TextEncoder().encode(text)];
+  const ECW = [0, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28];   // EC codewords per block, level M
+  const NBL = [0, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49];   // blocks, level M
+  const raw = v => { let r = (16 * v + 128) * v + 64; if (v >= 2){ const na = Math.floor(v / 7) + 2; r -= (25 * na - 10) * na - 55; if (v >= 7) r -= 36; } return r; };   // data modules after the function patterns
+  const dcw = v => Math.floor(raw(v) / 8) - ECW[v] * NBL[v];
+  let ver = 1; while (ver <= 40 && 4 + (ver < 10 ? 8 : 16) + data.length * 8 > dcw(ver) * 8) ver++; if (ver > 40) return null;
+  // the bit stream: mode 0100 (byte), the count, the bytes, the terminator, then pad bytes 0xEC 0x11
+  const bits = [], put = (v, k) => { for (let i = k - 1; i >= 0; i--) bits.push((v >>> i) & 1); }, cap = dcw(ver) * 8;
+  put(4, 4); put(data.length, ver < 10 ? 8 : 16); for (const b of data) put(b, 8);
+  put(0, Math.min(4, cap - bits.length)); put(0, (8 - bits.length % 8) % 8); for (let p = 0xEC; bits.length < cap; p ^= 0xEC ^ 0x11) put(p, 8);
+  const cw = []; for (let i = 0; i < bits.length; i += 8){ let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; cw.push(b); }
+  // Reed–Solomon error correction over GF(256) with x^8 + x^4 + x^3 + x^2 + 1
+  const EXP = [], LOG = []; for (let i = 0, x = 1; i < 255; i++){ EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 256) x ^= 0x11D; } for (let i = 255; i < 510; i++) EXP[i] = EXP[i - 255];
+  const mul = (a, b) => a && b ? EXP[LOG[a] + LOG[b]] : 0, ne = ECW[ver];
+  let gen = [1]; for (let i = 0; i < ne; i++){ const g = new Array(gen.length + 1).fill(0); for (let j = 0; j < gen.length; j++){ g[j] ^= gen[j]; g[j + 1] ^= mul(gen[j], EXP[i]); } gen = g; }
+  const rs = d => { const r = new Array(ne).fill(0); for (const b of d){ const f = b ^ r.shift(); r.push(0); if (f) for (let j = 0; j < ne; j++) r[j] ^= mul(gen[j + 1], f); } return r; };
+  // the blocks (the short ones first), interleaved codeword by codeword
+  const nb = NBL[ver], total = Math.floor(raw(ver) / 8), nShort = nb - total % nb, sLen = Math.floor(total / nb), blocks = [];
+  for (let i = 0, k = 0; i < nb; i++){ const len = sLen - ne + (i < nShort ? 0 : 1), d = cw.slice(k, k + len); k += len; blocks.push({d, e:rs(d)}); }
+  const seq = []; for (let i = 0; i <= sLen - ne; i++) for (const b of blocks) if (i < b.d.length) seq.push(b.d[i]);
+  for (let i = 0; i < ne; i++) for (const b of blocks) seq.push(b.e[i]);
+  // the function patterns: timing, finders with their separators, alignment, format and version areas
+  const n = ver * 4 + 17, M = [], F = []; for (let y = 0; y < n; y++){ M.push(new Array(n).fill(false)); F.push(new Array(n).fill(false)); }
+  const set = (x, y, dk) => { M[y][x] = dk; F[y][x] = true; };
+  for (let i = 0; i < n; i++){ set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+  for (const [cx, cy] of [[3, 3], [n - 4, 3], [3, n - 4]]) for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++){ const x = cx + dx, y = cy + dy, d = Math.max(Math.abs(dx), Math.abs(dy)); if (x >= 0 && y >= 0 && x < n && y < n) set(x, y, d !== 2 && d !== 4); }
+  const al = []; if (ver > 1){ const na = Math.floor(ver / 7) + 2, step = ver === 32 ? 26 : Math.ceil((ver * 4 + 4) / (na * 2 - 2)) * 2; al.push(6); for (let p = n - 7; al.length < na; p -= step) al.splice(1, 0, p); }
+  for (let i = 0; i < al.length; i++) for (let j = 0; j < al.length; j++){ if ((!i && !j) || (!i && j === al.length - 1) || (i === al.length - 1 && !j)) continue;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(al[i] + dx, al[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1); }
+  const fmt = mask => { const d = mask; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537); const v = ((d << 10) | r) ^ 0x5412, bit = i => ((v >>> i) & 1) === 1;   // level M = 00
+    for (let i = 0; i <= 5; i++) set(8, i, bit(i)); set(8, 7, bit(6)); set(8, 8, bit(7)); set(7, 8, bit(8)); for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i));
+    for (let i = 0; i < 8; i++) set(n - 1 - i, 8, bit(i)); for (let i = 8; i < 15; i++) set(8, n - 15 + i, bit(i)); set(8, n - 8, true); };
+  fmt(0);
+  if (ver >= 7){ let r = ver; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25); const v = (ver << 12) | r;
+    for (let i = 0; i < 18; i++){ const dk = ((v >>> i) & 1) === 1, a = n - 11 + i % 3, b = Math.floor(i / 3); set(a, b, dk); set(b, a, dk); } }
+  // the codewords, two columns at a time in the zigzag from the bottom right (the leftover remainder modules stay light)
+  for (let right = n - 1, i = 0; right >= 1; right -= 2){ if (right === 6) right = 5;
+    for (let vert = 0; vert < n; vert++) for (let j = 0; j < 2; j++){ const x = right - j, y = ((right + 1) & 2) === 0 ? n - 1 - vert : vert;
+      if (!F[y][x] && i < seq.length * 8){ M[y][x] = ((seq[i >>> 3] >>> (7 - (i & 7))) & 1) === 1; i++; } } }
+  const MASK = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, (x, y) => x % 3 === 0, (x, y) => (x + y) % 3 === 0, (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0,
+    (x, y) => x * y % 2 + x * y % 3 === 0, (x, y) => (x * y % 2 + x * y % 3) % 2 === 0, (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0];
+  const flip = k => { for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!F[y][x] && MASK[k](x, y)) M[y][x] = !M[y][x]; };
+  // penalty: runs of five or more, 2×2 blocks, finder-like 1:1:3:1:1 runs with four light modules beside them, and the dark share
+  const penalty = () => { let p = 0, dark = 0; const at = (x, y, col) => col ? M[x][y] : M[y][x], PAT = [true, false, true, true, true, false, true];
+    for (let col = 0; col < 2; col++) for (let y = 0; y < n; y++){ let run = 1;
+      for (let x = 1; x <= n; x++){ if (x < n && at(x, y, col) === at(x - 1, y, col)) run++; else { if (run >= 5) p += run - 2; run = 1; } }
+      for (let x = 0; x + 7 <= n; x++){ if (!PAT.every((v, k) => at(x + k, y, col) === v)) continue; const light = (a, b) => { for (let k = a; k < b; k++) if (k >= 0 && k < n && at(k, y, col)) return false; return true; };
+        if (light(x - 4, x) || light(x + 7, x + 11)) p += 40; } }
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++){ if (M[y][x]) dark++; if (x < n - 1 && y < n - 1 && M[y][x] === M[y][x + 1] && M[y][x] === M[y + 1][x] && M[y][x] === M[y + 1][x + 1]) p += 3; }
+    return p + Math.max(0, Math.ceil(Math.abs(dark * 20 - n * n * 10) / (n * n)) - 1) * 10; };
+  let best = forceMask, low = Infinity;
+  if (best == null) for (let k = 0; k < 8; k++){ flip(k); fmt(k); const s = penalty(); if (s < low){ low = s; best = k; } flip(k); }
+  flip(best); fmt(best);
+  return M;
+}
+// the grid as an SVG with the standard four-module quiet zone
+function qrSvg(text, px){
+  const M = qrMatrix(text); if (!M) return ''; const n = M.length; let d = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (M[y][x]) d += `M${x + 4} ${y + 4}h1v1h-1z`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n + 8} ${n + 8}" width="${px}" height="${px}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="${n + 8}" height="${n + 8}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
 function rtB64(s){ const u = new TextEncoder().encode(s); let b = ''; for (let i = 0; i < u.length; i += 8192) b += String.fromCharCode(...u.subarray(i, i + 8192)); return btoa(b).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function rtUnB64(s){ const b = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return new TextDecoder().decode(Uint8Array.from(b, c => c.charCodeAt(0))); }
 function rtLinkUrl(){ const X = rtCtx(), st = rtLoad(); return location.origin + location.pathname + '#route=' + rtB64(JSON.stringify({v:1, app:APP_VERSION, X, st})); }
+// ---- short links: Share link, Email and the printed sheet's QR code carry #r=<code>, a snapshot of the route kept in the shop library
+// (routes table). Without the library (a local copy, sharing off, the table not set up, no signal) they fall back to the long #route= link.
+let RT_SHORT = null;   // {h, code}: the snapshot last sent
+function rtHash(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + s.length; }
+const rtSnapJson = (X, st) => JSON.stringify({v:1, app:APP_VERSION, X, st});
+const rtShortLink = code => location.origin + location.pathname + '#r=' + code;
+const rtShortFor = (X, st) => RT_SHORT && X && RT_SHORT.h === rtHash(rtSnapJson(X, st)) ? rtShortLink(RT_SHORT.code) : null;
+const rtTimeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout')), ms))]);
+async function rtShortUrl(ms){
+  const X = rtCtx(), st = rtLoad(), have = rtShortFor(X, st); if (have) return have;
+  if (!X || !shareOn()) return null;
+  const js = rtSnapJson(X, st), h = rtHash(js);
+  try { const r = await rtTimeout(sbAnon('/rest/v1/rpc/route_put', {method:'POST', headers:{'Content-Type':'application/json'}, body:`{"p_snapshot":${js},"p_app":${JSON.stringify(APP_VERSION)},"p_device":${JSON.stringify(DEVICE)}}`}), ms || 4000);
+    const code = await r.json(); if (typeof code !== 'string' || !/^[0-9a-f]{10}$/.test(code)) return null;
+    RT_SHORT = {h, code}; logEvent('route_short', {}); return rtShortLink(code); } catch(e){ return null; }
+}
+async function rtFetchShort(code){
+  let j = null; try { const r = await rtTimeout(sbAnon('/rest/v1/rpc/route_get', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({p_code:code})}), 8000); j = await r.json(); } catch(e){}
+  if (!RT_LINK || RT_LINK.code !== code) return;
+  if (j && j.X){ j.X.live = false; RT_LINK = {id:'r.' + code, code, X:j.X, st:j.st || {}}; RT_SHORT = {h:rtHash(rtSnapJson(j.X, Object.assign({src:null, by:{}}, j.st || {}))), code}; } else RT_LINK.err = true;
+  RT_XC = null; buildRoute();
+}
 async function rtShare(){
-  const url = rtLinkUrl(); logEvent('route_share', {});
+  const url = (await rtShortUrl()) || rtLinkUrl(), short = /#r=/.test(url); logEvent('route_share', {short}); if (short) buildRoute();
   if (navigator.share){ try { await navigator.share({title:'Diagnostic route', text:'Diagnostic route from the D-Checker Cycle Viewer', url}); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(url); toast('Route link copied: paste it into a text or an email'); } catch(e){ window.prompt('Copy this link', url); }
 }
-function rtMail(){ const url = rtLinkUrl(), t = rtText(); location.href = 'mailto:?subject=' + encodeURIComponent('Diagnostic route') + '&body=' + encodeURIComponent(t.slice(0, 1500) + '\n\nOpen it on your phone: ' + url); }
-function rtPrint(){ document.body.classList.add('rt-print'); const done = () => { document.body.classList.remove('rt-print'); window.removeEventListener('afterprint', done); }; window.addEventListener('afterprint', done); setTimeout(() => window.print(), 50); }
+async function rtMail(){ const url = (await rtShortUrl()) || rtLinkUrl(), t = rtText(); if (/#r=/.test(url)) buildRoute(); location.href = 'mailto:?subject=' + encodeURIComponent('Diagnostic route') + '&body=' + encodeURIComponent(t.slice(0, 1500) + '\n\nOpen it on your phone: ' + url); }
+async function rtPrint(){ if (await rtShortUrl(2500)) buildRoute(); document.body.classList.add('rt-print'); const done = () => { document.body.classList.remove('rt-print'); window.removeEventListener('afterprint', done); }; window.addEventListener('afterprint', done); setTimeout(() => window.print(), 50); }
 function rtCallNotes(){
   const L = RT_LAST; if (!L || RT_LINK || !L.X.live || !D || !D.sha || !CALL) return; const X = L.X, src = L.src; let found = '', fix = '';
   if (src.kind === 'chart'){ const mod = L.body.mod; if (!mod.found.length) return; found = `Route (${X.doc} ${src.m === 'heat' ? 'heating' : 'cooling'} chart) found: ${mod.found.map(x => x.nm).join('; ')}`; fix = mod.found.map(x => x.r).filter(Boolean).join('; '); }
-  else { const mod = L.body.mod; if (!mod.end) return; found = `Route (${X.doc} ${src.c.disp} flowchart) found: ${mod.end.act}`; }
+  else { const mod = L.body.mod; if (!mod.end || (src.f.gen && /^Every check item/.test(mod.end.act))) return; found = `Route (${src.f.multi ? RT_MDOC[src.f.fam].doc : X.doc} ${src.f.gen ? 'problem checklist' : src.c.disp + ' flowchart'}) found: ${mod.end.act}`; }
   CALL.found = CALL.found && !CALL.found.includes(found) ? CALL.found + '\n' + found : (CALL.found || found); if (fix && !(CALL.fix || '').includes(fix)) CALL.fix = CALL.fix ? CALL.fix + '\n' + fix : fix;
   callChanged(); toast('Added to the call notes (Synopsis tab)'); logEvent('route_callnotes', {src:src.id});
 }
 function rtFromHash(){
-  const h = location.hash || ''; if (!h.startsWith('#route=')) return false;
+  const h = location.hash || '', sh = /^#r=([0-9a-f]{10})$/.exec(h);
+  if (sh){ if (RT_LINK && RT_LINK.code === sh[1]) return true; RT_LINK = {id:'r.' + sh[1], code:sh[1], pending:true}; RT_XC = null; rtFetchShort(sh[1]); return true; }
+  if (!h.startsWith('#route=')) return false;
   try { const s = rtUnB64(h.slice(7)), j = JSON.parse(s); if (!j || !j.X) return false; let id = 0; for (let i = 0; i < Math.min(s.length, 4000); i++) id = (id * 31 + s.charCodeAt(i)) | 0;
     j.X.live = false; RT_LINK = {id:(id >>> 0).toString(36), X:j.X, st:j.st || {}}; RT_XC = null; return true; } catch(e){ toast('That route link could not be read'); return false; }
 }
@@ -5897,7 +6179,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v103';
+const APP_VERSION = 'v104';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
