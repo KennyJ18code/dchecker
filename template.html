@@ -662,7 +662,7 @@ body.no-cabinet #indoor-var .cab{display:none}
           <option value="ac-multi">Multi split · AC (2–5 zones)</option>
         </select></label>
         <label class="eqtog">Refrigerant <select id="refsel"><option value="auto">Auto</option><option value="R410A">R-410A</option><option value="R32">R-32</option></select></label>
-        <label class="eqtog" hidden>Model <select id="mfsel" title="Which multi-split service manual applies: a Multi_Split export names no model"><option value="auto">Auto</option><option value="mxs">MXS (2MXS18N, 3MXS24R, 4MXS36R)</option><option value="mxl">MXL Aurora (2MXL18Q, 3MXL24Q)</option><option value="mxmS">R-32 small: 2MXM18, 3MXM24, 4MXM36, 2MXT(H)18</option><option value="mxmL">R-32 large: 5MXM48, 3/4/5MXT(H)</option></select></label>
+        <label class="eqtog" hidden>Model <select id="mfsel" title="Which multi-split service manual applies: a Multi_Split export names no model"><option value="auto">Auto</option><option value="mxs">MXS (2MXS18N, 3MXS24R, 4MXS36R)</option><option value="mxl">MXL Aurora (2MXL18Q, 3MXL24Q)</option><option value="mxmS">R-32 small: 2MXM18, 3MXM24, 4MXM36, 2MXT(H)18</option><option value="mxmL">R-32 large: 5MXM48, 3/4/5MXT(H)</option><option value="mxsT">R-410A large: 5MXS48T, 4MXL36T</option></select></label>
         <label class="eqtog" hidden>Unit <select id="sizesel" title="Unit size: for the nameplate comparison and to keep what the app learns about this compressor"></select></label>
         <span class="viewnote" id="viewnote"></span>
         <span class="thermscale" id="thermscale" hidden><i></i><span>0°F</span><span>60</span><span>120</span><span>180°F</span></span>
@@ -929,7 +929,7 @@ const NUM = [
   {id:'reqcfm', lab:/^(Request CFM|Req IDU air vol)/i,col:125,label:'Requested airflow',  short:'Req CFM',    unit:'cfm', scale:10, note:'Requested indoor airflow, logged ×10 (SiUS612412E p.41). The outdoor unit sets it in cooling and heat-pump heating (IOD-4054B p.20–21).'},
   {id:'cfm', lab:/^(Present CFM|Pre IDU air vol)/i,   col:126,label:'Reported airflow',    short:'Airflow',    unit:'cfm', scale:10, note:'The air handler\'s own airflow estimate, logged ×10; not a measurement (SiUS612412E p.41, p.47; IOD-4054B p.15).'},
   {id:'ipress', lab:/^Indoor pressure/i,col:127,label:'Indoor pressure',    short:'ID pressure',unit:'psi', kind:'press', note:'The indoor pressure sensor on the coil\'s gas pipe: the suction side in cooling; the discharge side in heating, where the FIT board uses it as its high pressure (SiUS612412E p.48).'},
-  {id:'tsh', lab:/^(IDU )?Target SH/i,   col:128,label:'Target superheat',   short:'Target SH',  unit:'°F', kind:'dtemp', note:'The indoor EEV\'s superheat target in cooling, shown on the ID coil SH tag. On the R-32 FIT Daikin sets 9 °F, or 14 °F with outdoor air below 70 °F (SiUS612412E p.7); other values do appear in logs and are shown as recorded.'},
+  {id:'tsh', lab:/^(IDU )?Target SH/i,   col:128,label:'Target superheat',   short:'Target SH',  unit:'°F', kind:'dtemp', note:'The indoor EEV\'s superheat target in cooling, shown on the ID coil SH tag. On the R-32 FIT Daikin sets 9 °F, or 14 °F with outdoor air below 70 °F (SiUS612412E p.7); on the DH9VS family 5.4–18 °F, "may vary based on the system status" (SiUS612415E p.9). Other values do appear in logs and are shown as recorded.'},
   {id:'demand',col:53, label:'Demand',             short:'Demand',     unit:'%'},
   {id:'retry', col:52, label:'Retry code',         short:'Retry',      unit:''},
   {id:'ecode', col:38, mcol:3, label:'Error code',         short:'Err',        unit:''},
@@ -940,7 +940,7 @@ const NUM = [
   {id:'fancur2',lab:/^Fan current2/i,      label:'Fan 2 current',       short:'Fan 2 current',unit:'A'},
   {id:'fanfin', lab:/^Fan1 Fin temp/i,     label:'Fan 1 driver fin temp', short:'Fan 1 fin',  unit:'°F', kind:'temp', note:'The fan inverter heat-sink thermistor (DH9VS family only).'},
   {id:'fanfin2',lab:/^Fan2 Fin temp/i,     label:'Fan 2 driver fin temp', short:'Fan 2 fin',  unit:'°F', kind:'temp', note:'The fan inverter heat-sink thermistor (DH9VS family only).'},
-  {id:'tsci',   lab:/^IDU Target SC/i,     label:'IDU Target SC (logged)', short:'ID target SC', unit:'°F', kind:'dtemp', note:'A DH9VS export item. No manual on file describes indoor subcooling control, so it is shown beside the indoor subcooling tag for reference only.'},
+  {id:'tsci',   lab:/^IDU Target SC/i,     label:'IDU Target SC (logged)', short:'ID target SC', unit:'°F', kind:'dtemp', note:'A DH9VS export item: the target of the outdoor EEV\'s subcooling control in heating, indoor SC = saturation at the indoor pressure sensor − indoor liquid, 1.8–9 °F (SiUS612415E p.9). Shown on the SC at ID coil tag.'},
   // ---- multi-zone (2–5 port MXS / MXL / MXM / MXT logs) — outdoor unit ----
   {id:'tdisch', mcol:4,  label:'Target discharge temp', short:'Target Td', unit:'°F', kind:'temp', note:'The target discharge pipe temperature the port EEVs steer to, set from the indoor and outdoor coil temperatures (Daikin\'s "indirect superheat control", SiUS121736EA PDF 121). It can take 20 minutes to appear after a start (SiUS612209EA p.134).'},
   {id:'maxhz',  mcol:10, label:'Max comp speed allowed', short:'rps cap',  unit:'rps', note:'The upper speed limit now in force: the lowest of the protection limits (SiUS121736EA PDF 106). 255 = no limit in force (SiUS612209EA p.134).'},
@@ -985,7 +985,7 @@ const DERIVED = [
   {id:'sh',  label:'Suction superheat', short:'Suction SH', unit:'°F', calc:r => sub(r.suct, r.evap), note:'Suction thermistor Ts − the board\'s Te from the outdoor suction-side sensor. Neither EEV controls this number (SiUS612412E p.7); the analysis charts\' suction superheat is taken with a gauge at the suction service valve. Not available on the Goodman *VZC20 or on multi-splits.'},
   {id:'sc',  label:'Subcooling at the outdoor liquid pipe (Tc − Tl)', short:'Subcooling', unit:'°F', calc:r => sub(r.cond, r.liq), note:m => m === 'heat' ? 'The board\'s Tc (the indoor pressure sensor on a FIT) − Tl: liquid coming back from the indoor coil, before the outdoor EEV.' : 'The board\'s Tc (the coil thermistor Tm on FIT and Goodman units) − Tl at the liquid stop valve. Close to, but not the same as, the gauge subcooling the manuals charge by at the stop valve (SiUS612412E p.70, p.73).'},
   {id:'scerr',label:'SC − logged Target SC', short:'SC − tgt', unit:'°F', calc:r => sub(sub(r.cond, r.liq), r.tsc), note:'A plain difference. The service manuals describe no subcooling control, so it is not a control error.'},
-  {id:'scid', label:'Subcooling at indoor coil', short:'SC at ID coil', unit:'°F', calc:(r,m) => m === 'heat' ? (isN(r.ipress) && r.ipress > 20 ? sub(satF(r.ipress, REF.ref), r.iliq) : sub(r.cond, r.iliq)) : null, note:'Heating: saturation at the indoor pressure sensor (the condenser inlet) − Tli (the coil\'s liquid outlet), the indoor subcooling the Goodman AVPEC shows (RS6215002r10 p.91); the board\'s Tc where there is no indoor sensor.'},
+  {id:'scid', label:'Subcooling at indoor coil', short:'SC at ID coil', unit:'°F', calc:(r,m) => m === 'heat' ? (isN(r.ipress) && r.ipress > 20 ? sub(satF(r.ipress, REF.ref), r.iliq) : sub(r.cond, r.iliq)) : null, note:'Heating: saturation at the indoor pressure sensor (the condenser inlet) − Tli (the coil\'s liquid outlet), the indoor subcooling the Goodman AVPEC shows (RS6215002r10 p.91); the board\'s Tc where there is no indoor sensor. On the DH9VS family the outdoor EEV holds this at the IDU Target SC in heating (SiUS612415E p.9).'},
   {id:'linedt', label:'Liquid line ΔT (indoor → outdoor)', short:'Line ΔT', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.iliq, r.liq) : null, note:'ID liquid − liquid pipe in heating: the drop along the line set, through the fully open indoor EEV, its filters and the field drier (SiUS612412E p.7, p.9).'},
   {id:'dsh', label:'Discharge superheat', short:'Disch SH', unit:'°F', calc:r => sub(r.disch, r.cond), note:'Discharge − the board\'s Tc (the coil thermistor Tm in FIT and Goodman cooling). The analysis charts mark it abnormal under 20 °F and over 70 °F (80 °F in R-410A FIT heating) (SiUS612209EA p.12–13; RS6215002r10 p.95–96).'},
   {id:'cr',  label:'Compression ratio', short:'Comp ratio', unit:'', dec:2, calc:r => (isN(r.hp)&&isN(r.lp)&&r.lp>-14) ? (r.hp+14.7)/(r.lp+14.7) : null, note:'(HP+14.7)/(LP+14.7). In FIT cooling the HP is the board\'s figure from Tm, not a measured pressure.'},
@@ -1431,10 +1431,11 @@ function refrigerantFrom(str, num, model, fam, mfp){
   const mdl = (model || '').replace(/^INV_Unitary_/i, '');
   if (/^D[CH]\d/i.test(mdl)) return {ref:'R32', why:`model ${mdl}`};
   if (/^D[XZ]\d/i.test(mdl)) return {ref:'R410A', why:`model ${mdl}`};
-  if (fam === 'multi' && num.pev4 && num.pev4.some(v => isN(v) && v > 0)) return {ref:'R32', why:'port E in use: of the Daikin multis only the 5-port MXM / MXT units have one, and they are R-32 (SiUS122410EC)'};
-  if (fam === 'multi' && mfp && mfp.over450) return {ref:'R32', why:`a running port valve reached ${mfp.over450} pulses: the R-410A MXS and MXL hold an operating room at 450 or less (SiUS121736EA PDF 119), the R-32 MXM / MXT at up to 480 (SiUS122410EC PDF 162)`};
-  if (fam === 'multi' && mfp && [32, 27, 48].includes(mfp.minCool)) return {ref:'R32', why:`the cooling start-up speed floor read ${mfp.minCool} rps, a value from the R-32 MXM / MXT table (SiUS122410EC PDF 145); check the nameplate`};
-  return {ref:'R410A', why: fam === 'multi' ? 'assumed: the MXS and MXL Aurora multis are R-410A (SiUS121736EA, SiUS121632EA); pick R-32 for an MXM / MXT / MXTH' : 'assumed'};
+  // only the small R-32 platform's floors (27 / 48 rps) are unique; a fifth port, a port valve above 450 pulses and the 32 rps floor occur on
+  // the R-32 5MXM / 3-5MXT(H) and on the R-410A 5MXS48T / 4MXL36T alike (SiUS122410EC PDF 145, 162; SiUS121827E PDF 113, 124)
+  if (fam === 'multi' && mfp && [27, 48].includes(mfp.minCool)) return {ref:'R32', why:`the cooling start-up speed floor read ${mfp.minCool} rps, a value only the R-32 2MXM / 3-4MXM / 2MXT(H) table has (SiUS122410EC PDF 145)`};
+  const large = fam === 'multi' && mfp && (mfp.ports > 4 || mfp.over450 || mfp.minCool === 32);
+  return {ref:'R410A', why: !(fam === 'multi') ? 'assumed' : large ? 'not shown by the recording: this is a large-platform multi, which Daikin built in R-410A (5MXS48T, 4MXL36T) and R-32 (5MXM48, 3-5MXT(H)); R-410A is assumed until set from the nameplate' : 'assumed: the MXS and MXL multis are R-410A (SiUS121736EA, SiUS121632EA); pick R-32 for an MXM / MXT / MXTH'};
 }
 function applyRefrigerant(){
   const saved = D ? loadJSON('dchk.ref.' + D.name, 'auto') : 'auto';
@@ -1449,8 +1450,9 @@ function applyRefrigerant(){
 /* ---------- error codes: one table per platform, every entry from that platform's own service manual ----------
    FIT, DH9VS-type, Goodman and air-handler logs store the code byte, and Daikin's own PC app prints it as two hex digits ({0:X2}):
    the byte IS the code (0x15 = E15, 0xB0 = Eb0, indoor 0x73 = 73; the shop recording's indoor 0xE7 is printed "E7" in sample.csv).
-   Multi-split logs store a decimal byte; no manual, Daikin file or recording shows how it maps to a letter code, so the letter reading
-   (high nibble A C E F H J L P U, low nibble 0–9 A C E F H J) is labelled unconfirmed and the raw byte is always shown beside it.
+   Multi-split logs store the code byte (Daikin conversion 204); Daikin's PC D-Checker turns it into the letter code with two tables,
+   first character ' ACEHFJLPU987654'[byte >> 4], second '0123456789AHCJEF'[byte & 15] (Dchecker.exe 3.8.0.7, LabelConverter
+   convertTable204), and its CSV export prints the letters (" 0" = no error). The app decodes the same way and shows the raw byte beside it.
    A code that is not in the platform's manual is shown as its byte: A5, UA, C4/C5, F6, 70 and others mean different things on
    different platforms, so a meaning is never borrowed from another family's list. Built from audit/rules/errcodes-tables.js. */
 const ERR_TABLES = {
@@ -1481,7 +1483,7 @@ const ERR_TABLES = {
       '27': {led:'E27', tstat:'27', t:'Outdoor coil defrost thermistor out of range', u:'outdoor', d:'Defrost thermistor (Tb) reading out of range.', ch:['ochex'], c:['Check the defrost thermistor connection and resistance; replace if bad.'], src:'SiUS612209EA p.46 · SiUS612412E p.45'},
       '28': {led:'E28', tstat:'28', t:'Outdoor coil (heat exchanger) thermistor out of range', u:'outdoor', d:'Outdoor coil thermistor (Tm) reading out of range.', ch:['ocmid','cond'], c:['Check the outdoor coil thermistor connection and resistance; replace if bad. In cooling this sensor is the source of the logged high pressure.'], src:'SiUS612209EA p.46 · SiUS612412E p.45'},
       '29': {led:'E29', tstat:'29', t:'Liquid thermistor out of range', u:'outdoor', d:'Outdoor liquid thermistor reading out of range.', ch:['liq','sc'], c:['Check the liquid thermistor connection and resistance; replace if bad.'], src:'SiUS612209EA p.46 · SiUS612412E p.45'},
-      '30': {led:'E30', tstat:'30', t:'Outdoor control board may need replacing', u:'outdoor', d:'Board fault; causes listed are disconnected wiring, the board, noise.', ch:[], c:['Check the wiring to the control board.', 'Replace the board if it repeats.'], src:'SiUS612209EA p.46 · SiUS612412E p.45'},
+      '30': {led:'E30', tstat:'30', t:'Outdoor control board may need replacing', u:'outdoor', d:'Board fault; causes listed are disconnected wiring, the board, noise. Daikin later changed the board software\'s undervoltage detection because E30 tripped as a nuisance during brownouts and power failures (TSB C-SP-0043, 2024-03-18).', ch:['syscur'], c:['Check whether the supply dipped or failed just before the code: on the original software that alone raises E30.', 'Check the wiring to the control board.', 'If E30 keeps coming back, fit the updated service board: part 2545136 is replaced by 2545136S (TSB C-SP-0043).'], src:'SiUS612209EA p.46 · SiUS612412E p.45 · TSB C-SP-0043'},
       '32': {led:'E32', tstat:'32', t:'Outdoor board high temperature (critical)', u:'outdoor', d:'1.5-3 ton (R-32 also 2-ton Enhanced/High Efficiency): inverter fin thermistor at or near 95 °C (203 °F) on R-410A, 101 °C (214 °F) on R-32. 3.5-5 ton (R-32 also 3-4 ton Enhanced/HE): cooling-plate thermistor R7T at or near 110 °C (230 °F).', ch:['fin','oat','liq','sc','sh'], c:['Compare the logged INV fin temperature with the criterion; look for discharge-air recirculation or air above 115 °F (46 °C) at the coil inlet.', '1.5-3 ton: clean the fin and clear the air path. 3.5-5 ton: liquid tube in full contact with the cooling plate, all four nails hooked, cover screws at 1.59 N·m (1.17 lb·ft), fresh thermal grease, R7T plugged in.', 'Check charge and superheat, stop valves and any restriction: the cooling plate needs refrigerant flow.'], src:'SiUS612209EA p.46, 53-54 · SiUS612412E p.45, 52-53'},
       '33': {tstat:'33', minor:true, t:'Outdoor board high temperature (minor, unit keeps running)', u:'outdoor', d:'Same as 32 below the shutdown count; thermostat only.', ch:['fin','oat','liq'], c:['Same checks as 32: ambient and recirculation, fin or cooling-plate mounting and grease, charge and restrictions.'], src:'SiUS612209EA p.46 · SiUS612412E p.45'},
       '34': {led:'E34', tstat:'34', t:'High current spike (possible short circuit)', u:'outdoor', d:'Board saw a high-current condition; no threshold given.', ch:['inv1','syscur','rps'], c:['Check the supply for in-rush current at start-up and while running.', 'Stop valves fully open; check the compressor leads from the board (lost phase).', 'Check the compressor; replace the board if needed.'], src:'SiUS612209EA p.46 · SiUS612412E p.45'},
@@ -1517,24 +1519,24 @@ const ERR_TABLES = {
   },
   dh9Outdoor: {
     name: 'DH9VS / DH7VS / DC9VS outdoor (R-32, two fans, injection EEV); same log layout as Goodman GXV7S / GZV7S',
-    manual: 'DH9VS/DH7VS/DC9VS Installation & Service Reference (dh9vs-dh7vs-dc9vs-install.pdf), troubleshooting p.32-35',
+    manual: 'SiUS612415E service instructions (11/2024, double-fan models; flowcharts p.50-59) and the DH9VS/DH7VS/DC9VS Installation & Service Reference (code table p.32-35)',
     field: 'outdoor byte: column 38 "OU Error code" (DH9-type layout), Daikin conversion 215',
     keying: 'hex',
-    decode: 'Same as fitOutdoor: the cell is the byte in hex and the byte is the code (0x64 = 64 / E64). This manual is an installation and service reference: it has the code table but no detection flowcharts, so no trip numbers are given for these models. Do not borrow the FIT service-manual numbers for this platform.',
+    decode: 'Same as fitOutdoor: the cell is the byte in hex and the byte is the code (0x64 = 64 / E64). Detection values come from this family\'s own service manual SiUS612415E; several differ from the FIT (E15 11 psig, E32 226 °F, E41 153 °F), so never borrow the FIT numbers here.',
     missing: 'not in the DH9VS/DH7VS/DC9VS installation manual',
     codes: {
       '11': {led:'E11', tstat:'11', t:'System start-up test required or running (thermostat message)', u:'outdoor', d:'Shown until the SYSTEM START-UP TEST has been run; also while it runs.', ch:[], c:['Run the SYSTEM START-UP TEST from the thermostat menu (installation manual, Step 3).'], src:'DH9VS install p.35'},
       '12': {led:'E12', tstat:'12', t:'Outdoor control board memory error', u:'outdoor', d:'General memory error; noise or the board.', ch:[], c:['Power-cycle; replace the A1P control board if it repeats.'], src:'DH9VS install p.32'},
-      '13': {led:'E13', tstat:'13', t:'Frequent high-pressure faults (critical)', u:'outdoor', d:'Repeated high-pressure faults; no threshold given in this manual. Causes include the high pressure sensor.', ch:['hp','cond','fan','fan2','cfm','oat'], c:['Clean the outdoor coil; check both outdoor fans; check for overcharge.', 'Stop valves fully open; check the HPS and the high pressure sensor connection.', 'Check the indoor and outdoor EEVs and coils; then the A1P board.'], src:'DH9VS install p.32'},
+      '13': {led:'E13', tstat:'13', t:'Frequent high-pressure faults (critical)', u:'outdoor', d:'Detected by the high pressure switch: it opens at 605 psig (4.2 MPa) and cuts in at 465 psig, manual reset (SiUS612415E p.15, p.50).', ch:['hp','cond','fan','fan2','cfm','oat'], c:['Clean the outdoor coil; check both outdoor fans; check for overcharge.', 'Stop valves fully open; check the HPS and the high pressure sensor connection.', 'Check the indoor and outdoor EEVs and coils; then the A1P board.'], src:'DH9VS install p.32'},
       '14': {tstat:'14', minor:true, t:'Frequent high-pressure faults (minor)', u:'outdoor', d:'Same as 13 below the shutdown count; thermostat only.', ch:['hp','cond','fan','fan2'], c:['Same checks as 13.'], src:'DH9VS install p.32'},
-      '15': {led:'E15', tstat:'15', t:'Frequent low-pressure faults (critical)', u:'outdoor', d:'Repeated low-pressure faults; no threshold given. Causes include the low pressure sensor.', ch:['lp','evap','ipress','sh','ev','evinj','iev','cfm'], c:['Stop valves fully open; look for restrictions in the lines.', 'Check the charge and leak-test.', 'Check the low pressure sensor connection, the EEVs and coils, and the indoor blower.'], src:'DH9VS install p.32'},
+      '15': {led:'E15', tstat:'15', t:'Frequent low-pressure faults (critical)', u:'outdoor', d:'Outdoor low pressure sensor below 11 psig (0.08 MPa) for 5 minutes (SiUS612415E p.51). Causes listed: stop valve not fully open, restriction, low charge or leak, the pressure sensor, the indoor fan, the indoor or outdoor EEV coil.', ch:['lp','evap','ipress','sh','ev','evinj','iev','cfm'], c:['Stop valves fully open; look for restrictions in the lines.', 'Check the charge and leak-test.', 'Check the low pressure sensor connection, the EEVs and coils, and the indoor blower.'], src:'DH9VS install p.32'},
       '16': {tstat:'16', minor:true, t:'Frequent low-pressure faults (minor)', u:'outdoor', d:'Same as 15 below the shutdown count; thermostat only.', ch:['lp','evap','sh','cfm'], c:['Same checks as 15.'], src:'DH9VS install p.32'},
       '17': {led:'E17', tstat:'17', t:'Frequent compressor faults', u:'outdoor', d:'Repeated compressor faults.', ch:['rps','trps','inv1','syscur'], c:['Stop valves fully open.', 'Check the compressor leads from the board (lost phase), then the compressor.'], src:'DH9VS install p.32'},
       '18': {led:'E18', tstat:'18', t:'Outdoor control board may need replacing', u:'outdoor', d:'Fan motor connection, board or noise.', ch:['fan','tfan'], c:['Check the outdoor fan motor wiring to the board; replace A1P if needed.'], src:'DH9VS install p.32'},
       '19': {led:'E19', tstat:'19', t:'Frequent board / upper fan motor (M1F) faults', u:'outdoor', d:'Repeated board or upper-fan faults.', ch:['fan','tfan','fancur','fanfin'], c:['Clear the grille; make sure the upper fan turns freely.', 'Check the M1F motor wiring and the motor; then the board.'], src:'DH9VS install p.32'},
-      '20': {led:'E20', tstat:'20', t:'Outdoor EEV fault: upper EEV Y1E not connected', u:'outdoor', d:'Y1E coil not detected.', ch:['ev','evpct'], c:['Check the Y1E coil plug and coil; replace the board if they are good.'], src:'DH9VS install p.32'},
-      '21': {led:'E21', tstat:'21', t:'Frequent low discharge superheat', u:'outdoor', d:'Repeated low discharge superheat; no threshold given. Causes include the high pressure sensor or indoor pressure sensor.', ch:['dsh','disch','cond','ev','evinj','iev','sh','hp','ipress'], c:['Check the charge (overcharge is listed).', 'Check the EEVs and coils Y1E and Y3E.', 'Check the thermistors and the pressure sensors.'], src:'DH9VS install p.32'},
-      '22': {led:'E22', tstat:'22', t:'Frequent high discharge temperature', u:'outdoor', d:'Repeated high discharge temperature; no threshold given. Causes include a blocked liquid-injection circuit.', ch:['disch','dsh','evinj','sh','sc'], c:['Check the discharge thermistor: resistance, connection, position.', 'Check the charge.', 'Check EEV Y3E (injection); then the compressor.'], src:'DH9VS install p.32'},
+      '20': {led:'E20', tstat:'20', t:'Outdoor EEV fault: main EEV Y1E not connected', u:'outdoor', d:'Y1E coil not detected. Y1E is the lower, main EEV and Y3E the upper, injection EEV (SiUS612415E p.75 wiring note); the code table\'s "upper Y1E" is a misprint.', ch:['ev','evpct'], c:['Check the Y1E coil plug and coil; replace the board if they are good.'], src:'DH9VS install p.32'},
+      '21': {led:'E21', tstat:'21', t:'Frequent low discharge superheat', u:'outdoor', d:'Discharge superheat below 9 °F (5 °C) with the EEV at its minimum pulse (SiUS612415E p.52). Causes listed: thermistors, the indoor and outdoor EEVs and coils, overcharge, a pressure sensor, the board.', ch:['dsh','disch','cond','ev','evinj','iev','sh','hp','ipress'], c:['Check the charge (overcharge is listed).', 'Check the EEVs and coils Y1E and Y3E.', 'Check the thermistors and the pressure sensors.'], src:'DH9VS install p.32'},
+      '22': {led:'E22', tstat:'22', t:'Frequent high discharge temperature', u:'outdoor', d:'Discharge above 248 °F (120 °C), or the compressor overload Q1E open (opens at 257 ±5.4 °F, closes at 230 ±10.8 °F) (SiUS612415E p.53). Causes include a blocked liquid-injection circuit (installation manual p.32).', ch:['disch','dsh','evinj','sh','sc'], c:['Check the discharge thermistor: resistance, connection, position.', 'Check the charge.', 'Check EEV Y3E (injection); then the compressor.'], src:'DH9VS install p.32'},
       '23': {led:'E23', tstat:'23', t:'Discharge thermistor out of range', u:'outdoor', d:'Discharge sensor out of range.', ch:['disch'], c:['Check the discharge thermistor resistance and connection.'], src:'DH9VS install p.32'},
       '24': {led:'E24', tstat:'24', t:'High pressure switch open', u:'outdoor', d:'HPS open.', ch:['hp','cond'], c:['Check HPS resistance; replace if open.'], src:'DH9VS install p.32'},
       '25': {led:'E25', tstat:'25', t:'Outdoor air thermistor open or shorted', u:'outdoor', d:'Outdoor air sensor open or shorted.', ch:['oat'], c:['Inspect and test the sensor; replace if bad.'], src:'DH9VS install p.33'},
@@ -1542,7 +1544,7 @@ const ERR_TABLES = {
       '27': {led:'E27', tstat:'27', t:'Outdoor coil defrost thermistor out of range', u:'outdoor', d:'Defrost sensor out of range.', ch:['ochex'], c:['Check the defrost thermistor connection; repair or replace.'], src:'DH9VS install p.33'},
       '29': {led:'E29', tstat:'29', t:'Liquid thermistor out of range', u:'outdoor', d:'Liquid sensor out of range.', ch:['liq','sc'], c:['Check the liquid thermistor connection; repair or replace.'], src:'DH9VS install p.33'},
       '30': {led:'E30', tstat:'30', t:'Control board A1P may need replacing', u:'outdoor', d:'Wiring, board or noise.', ch:[], c:['Check wiring to the board; replace A1P if needed.'], src:'DH9VS install p.33'},
-      '32': {led:'E32', tstat:'32', t:'Control board A1P high temperature (critical)', u:'outdoor', d:'Repeated high-temperature faults on A1P; no threshold given.', ch:['fin','oat','liq'], c:['Cycle power; retry within the usable ambient range.', 'Check the grease and screw tightening on the cooling bracket.', 'Check for a restriction, the charge and the stop valves.'], src:'DH9VS install p.33'},
+      '32': {led:'E32', tstat:'32', t:'Control board A1P high temperature (critical)', u:'outdoor', d:'Inverter cooling-plate thermistor (R10T) at or near 226 °F (108 °C); keep the outdoor intake air under 115 °F (SiUS612415E p.54).', ch:['fin','oat','liq'], c:['Cycle power; retry within the usable ambient range.', 'Check the grease and screw tightening on the cooling bracket.', 'Check for a restriction, the charge and the stop valves.'], src:'DH9VS install p.33'},
       '33': {tstat:'33', minor:true, t:'Control board A1P high temperature (minor)', u:'outdoor', d:'Same as 32 below the shutdown count; thermostat only.', ch:['fin','oat'], c:['Same checks as 32.'], src:'DH9VS install p.33'},
       '34': {led:'E34', tstat:'34', t:'High current spike (possible short circuit)', u:'outdoor', d:'High-current condition.', ch:['inv1','syscur','rps'], c:['Check the supply for in-rush current.', 'Stop valves open; compressor leads; then A1P or the compressor.'], src:'DH9VS install p.33'},
       '35': {led:'E35', tstat:'35', t:'High current', u:'outdoor', d:'High-current condition.', ch:['inv1','syscur','rps','hp'], c:['Check installation clearances.', 'Stop valves open; check the charge.', 'Then A1P or the compressor.'], src:'DH9VS install p.33'},
@@ -1551,10 +1553,10 @@ const ERR_TABLES = {
       '38': {led:'E38', tstat:'38', t:'Compressor voltage problem', u:'outdoor', d:'Voltage-related issue at the compressor.', ch:['inv1','syscur'], c:['Correct high or low supply voltage.', 'Check the compressor leads; replace A1P if needed.'], src:'DH9VS install p.33'},
       '39': {led:'E39', tstat:'39', t:'Control board A1P: inverter-module thermistor', u:'outdoor', d:'Thermistor for the inverter module, or the board.', ch:['fin'], c:['Check the thermistor connection; replace A1P if needed.'], src:'DH9VS install p.33'},
       '40': {led:'E40', tstat:'40', t:'Compressor mismatch', u:'outdoor', d:'Shared data or board does not match the compressor.', ch:[], c:['Check the flashed data against the outdoor model.', 'Check the board part number; replace if wrong.'], src:'DH9VS install p.33'},
-      '41': {led:'E41', tstat:'41', t:'Low refrigerant', u:'outdoor', d:'Low refrigerant condition detected; no threshold given.', ch:['lp','evap','sc','dsh','disch','sh'], c:['Leak-test.', 'Check the charge.', 'Check the thermistor connections.'], src:'DH9VS install p.33'},
+      '41': {led:'E41', tstat:'41', t:'Low refrigerant', u:'outdoor', d:'Cooling: evaporating pressure excessively low. Heating: discharge temperature − condensing temperature above 153 °F (85 °C), or the liquid pipe more than 3.6 °F below outdoor air: insulate liquid tubing exposed outdoors (SiUS612415E p.55).', ch:['lp','evap','sc','dsh','disch','sh'], c:['Leak-test.', 'Check the charge.', 'Check the thermistor connections.'], src:'DH9VS install p.33'},
       '42': {led:'E42', tstat:'42', t:'Low supply voltage', u:'outdoor', d:'Low line voltage.', ch:['syscur'], c:['Check breakers and fuses; confirm supply matches the rating plate; correct the voltage.'], src:'DH9VS install p.33'},
       '43': {led:'E43', tstat:'43', t:'High supply voltage', u:'outdoor', d:'High line voltage.', ch:['syscur'], c:['Confirm supply matches the rating plate; correct the voltage.'], src:'DH9VS install p.33'},
-      '44': {led:'E44', tstat:'44', t:'Outdoor temperature outside the operating range', u:'outdoor', d:'Ambient too high or low; no range given in this manual.', ch:['oat'], c:['Cycle power and retry within the usable ambient range; compare the logged outdoor air with a measurement.'], src:'DH9VS install p.33'},
+      '44': {led:'E44', tstat:'44', t:'Outdoor temperature outside the operating range', u:'outdoor', d:'Outdoor air outside the operating range: cooling above 131 °F or below −6 °F, heating above 81 °F or below −26 °F (SiUS612415E p.56).', ch:['oat'], c:['Cycle power and retry within the usable ambient range; compare the logged outdoor air with a measurement.'], src:'DH9VS install p.33'},
       '47': {led:'E47', tstat:'47', t:'System verification test blocked: indoor heat is on', u:'outdoor', d:'Indoor heat on at the thermostat.', ch:[], c:['Turn off the furnace or heater at the thermostat first.'], src:'DH9VS install p.33'},
       '48': {led:'E48', tstat:'48', t:'Pump-down blocked: indoor heat is on', u:'outdoor', d:'Indoor heat on at the thermostat.', ch:[], c:['Turn off the heat at the thermostat, then enter pump-down.'], src:'DH9VS install p.33'},
       '49': {led:'E49', tstat:'49', t:'Charge mode blocked: indoor heat is on', u:'outdoor', d:'Indoor heat on at the thermostat.', ch:[], c:['Turn off the heat at the thermostat, then enter charge mode.'], src:'DH9VS install p.34'},
@@ -1565,7 +1567,7 @@ const ERR_TABLES = {
       '54': {tstat:'54', minor:true, t:'Frequent low discharge superheat (minor)', u:'outdoor', d:'Thermostat only.', ch:['dsh','disch','iev','ev'], c:['Thermistor connections; indoor EEV (cooling) or outdoor EEV (heating); board.'], src:'DH9VS install p.34'},
       '55': {tstat:'55', minor:true, t:'Frequent high discharge temperature (minor)', u:'outdoor', d:'Thermostat only; blocked liquid-injection circuit is listed.', ch:['disch','dsh','evinj'], c:['Discharge thermistor; charge; injection EEV Y3E; compressor.'], src:'DH9VS install p.34'},
       '56': {led:'E56', tstat:'56', t:'Suction thermistor out of range', u:'outdoor', d:'Suction sensor out of range; faulty reversing valve also listed.', ch:['suct','sh'], c:['Check the suction thermistor connection; check the reversing valve.'], src:'DH9VS install p.34'},
-      '57': {tstat:'57', minor:true, t:'Sweating on the board\'s refrigerant cooling loop (minor)', u:'outdoor', d:'Thermostat only; no threshold given.', ch:['liq','oat','sc','iev'], c:['Leak-test and check the charge; check the indoor EEV and coil; check thermistor connections.'], src:'DH9VS install p.34'},
+      '57': {tstat:'57', minor:true, t:'Sweating on the board\'s refrigerant cooling loop (minor)', u:'outdoor', d:'Thermostat only. Heating: liquid pipe more than 3.6 °F below outdoor air for 420 s, or more than 9 °F below for 100 s (SiUS612415E p.57).', ch:['liq','oat','sc','iev'], c:['Leak-test and check the charge; check the indoor EEV and coil; check thermistor connections.'], src:'DH9VS install p.34'},
       '58': {led:'E58', tstat:'58', t:'Compressor overload (OL) sensor open', u:'outdoor', d:'OL protection sensor open.', ch:['disch'], c:['Check OL resistance, position on the compressor and connection.'], src:'DH9VS install p.34'},
       '61': {led:'E61', tstat:'61', t:'Frequent board / lower fan motor (M2F) faults', u:'outdoor', d:'Repeated board or lower-fan faults.', ch:['fan2','tfan2','fancur2','fanfin2'], c:['Clear the grille; make sure the lower fan turns freely.', 'Check the M2F wiring and motor; then the board.'], src:'DH9VS install p.34'},
       '62': {tstat:'62', minor:true, t:'Frequent board / lower fan M2F faults (minor)', u:'outdoor', d:'Thermostat only.', ch:['fan2','tfan2','fancur2'], c:['Same checks as 61.'], src:'DH9VS install p.34'},
@@ -1655,7 +1657,7 @@ const ERR_TABLES = {
     manual: 'SiUS612209EA p.30-31, 60-71 (R-410A); SiUS612412E p.29-30, 59-69 (R-32); IOD-4054B DFVE P1300 p.23-26 (R-32); IOD-4039B DFVE/DMVE p.20-22 (R-410A); RS6215002r10 AVPEC p.41, 46-47 and MBVC p.34-38',
     field: 'indoor byte: column 116 "Error code" (FIT), 118 "Indoor err code" (DH9-type), 107 "Error code" (VC/VZC); Daikin conversion 215',
     keying: 'hex',
-    decode: 'The cell is the byte as two hex digits and the byte is the indoor board\'s 2-digit code: 0x73 = 73, 0xB9 = b9, 0x9B = 9b, 0xEB = Eb, 0xED = Ed, 0xD0 = d0, 0xA0 = A0. Show the code the way the board writes it (b and d lower-case), as "E_xx" on the board display. 0xE7 was logged by the shop recording (HP + gas furnace + EEV cased coil) and printed "E7" by Daikin\'s own PC app: it is not in any air-handler or cased-coil list, so it shows as "not in this family\'s manual". Coverage differs by model: b4/b6/b7 are in the R-410A FIT, DFVE/DMVE and AVPEC lists but not the R-32 ones; 76/78 only in the FIT service manuals; A0/A1/AF only on R-32 (A2L) indoor units; Ec and b5 only on the Goodman MBVC (TXV) blower, whose other displays C1, C2, P1, P2, h1, h2 are operating states, not error codes.',
+    decode: 'The cell is the byte as two hex digits and the byte is the indoor board\'s 2-digit code: 0x73 = 73, 0xB9 = b9, 0x9B = 9b, 0xEB = Eb, 0xED = Ed, 0xD0 = d0, 0xA0 = A0. Show the code the way the board writes it (b and d lower-case), as "E_xx" on the board display. 0xE7 was logged by the shop recording (HP + gas furnace + EEV cased coil) and printed "E7" by Daikin\'s own PC app: it is in no air-handler or cased-coil list, but on Daikin communicating gas furnaces E7 is the igniter fault (RSD6620001r1 p.40, p.45). Coverage differs by unit: EEV cased coils report only EE, d0, d4, 70 and 73-78 (CAPEA/CAPE installation manual p.18-19), so a b- or E-code beside a cased coil comes from the furnace or blower (inference); b4/b6/b7 are in the R-410A FIT, DFVE/DMVE and AVPEC lists but not the R-32 ones; A0/A1/AF only on R-32 (A2L) indoor units; b5 (locked rotor) and Ec (heater kit) appear on air handlers in the Daikin One+ ClimateTalk fault list as well as on the Goodman MBVC (TXV) blower, whose other displays C1, C2, P1, P2, h1, h2 are operating states, not error codes.',
     missing: 'not in the air-handler / cased-coil / MBVC lists (SiUS612209EA, SiUS612412E, IOD-4054B, IOD-4039B, RS6215002r10)',
     codes: {
       'EE': {disp:'EE', t:'Emergency mode (display "EE"); no display at all = no 24 V or internal fault', u:'indoor', d:'No display: no 24 V to the board, blown fuse or breaker, internal fault, disconnect off. "EE" shown: the unit is in emergency mode.', ch:['cfm'], c:['Confirm line voltage and 24 V at the board; check fuse F2U.', 'Look for a short in the line or 24 V circuits; replace the board if it has an internal fault.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
@@ -1663,7 +1665,7 @@ const ERR_TABLES = {
       'ED': {disp:'Ed', t:'Heater kit DIP switches not set properly', u:'indoor', d:'Invalid heater kit selected.', ch:[], c:['Set the heater kit DIP switches correctly.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
       'E5': {disp:'E5', t:'Fuse open', u:'indoor', d:'Fuse F1U blown or connector TB10 open. IOD-4054B: E5 stays on the board about 30 s after recovery; the thermostat clears within 45 s.', ch:[], c:['Replace the fuse.', 'Check the wiring to the AUX alarm, heater kit and communication connection; replace the board if needed.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
       'EF': {disp:'EF', t:'Auxiliary (condensate / alarm) switch open', u:'indoor', d:'TB4-TB5 open: high water in the drain pan or an alarm device tripped. Blower and outdoor unit stop; normal operation resumes once the switch is closed for 30 s.', ch:['cfm'], c:['Check the drain pan water level and the condensate switch.', 'Check the connected alarm device; jumper TB4-TB5 if unused.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.17, 23 · RS6215002r10 p.46'},
-      'EC': {disp:'Ec', t:'Heater kit too large, too small or no match (Goodman MBVC TXV blower)', u:'indoor', d:'Heater kit set by the DIP switches is larger or smaller than, or does not match, the kits in the shared data. MBVC only (used with a TXV on the VZC20).', ch:[], c:['Check the electric heat DIP switch settings.', 'Check the installed heater is allowed for this blower (nameplate or spec sheet).', 'Verify the shared data for the model and repopulate.'], src:'RS6215002r10 p.34-35'},
+      'EC': {disp:'Ec', t:'Heater kit too large, too small or no match', u:'indoor', d:'Heater kit set by the DIP switches is larger or smaller than, or does not match, the kits in the shared data (Goodman MBVC, RS6215002r10 p.34-35). The Daikin One+ ClimateTalk fault list gives it for air handlers too: a kit too small or mismatched is minor, one too large is critical.', ch:[], c:['Check the electric heat DIP switch settings.', 'Check the installed heater is allowed for this blower (nameplate or spec sheet).', 'Verify the shared data for the model and repopulate.'], src:'RS6215002r10 p.34-35'},
       'D0': {disp:'d0', t:'Shared data not on the network', u:'indoor', d:'No shared data on the network.', ch:[], c:['Populate the shared data (memory card / BTSDL01).'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
       'D1': {disp:'d1', t:'Invalid shared data on the network', u:'indoor', d:'Wrong shared data on the network.', ch:[], c:['Populate the correct shared data.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
       'D4': {disp:'d4', t:'Invalid memory card / shared-data loader data', u:'indoor', d:'Wrong memory card (BTSDL01) data.', ch:[], c:['Rewrite with the correct memory card; replace the board if needed.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
@@ -1672,18 +1674,19 @@ const ERR_TABLES = {
       'B2': {disp:'b2', t:'Blower motor HP mismatch', u:'indoor', d:'Wrong motor size or invalid shared data.', ch:[], c:['Check the correct motor is fitted.', 'Repopulate the shared data.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
       'B3': {disp:'b3', t:'Blower motor in power, temperature or speed limit', u:'indoor', d:'Motor running limited: obstruction, blocked filters, low voltage, restrictive or undersized duct.', ch:['cfm','reqcfm'], c:['Check the blower and duct for obstructions; clean or replace filters.', 'Check motor input voltage and wiring.'], src:'SiUS612209EA p.30 · SiUS612412E p.29 · IOD-4054B p.23 · RS6215002r10 p.46'},
       'B4': {disp:'b4', t:'Blower motor current trip or lost rotor', u:'indoor', d:'Motor sets its status flags bit 5 (lost-rotor trip) or bit 6 (current trip). Not in the R-32 lists.', ch:['cfm','reqcfm'], c:['Look for anything touching the blower or blocked filters.', 'Check for blocked or undersized duct: external static above 0.5 in. w.c. (124.5 Pa) is too high.', 'Replace the board or the motor.'], src:'SiUS612209EA p.31, 60 · IOD-4039B p.21 · RS6215002r10 p.47'},
-      'B5': {disp:'b5', t:'Blower motor rotor locked (Goodman MBVC TXV blower)', u:'indoor', d:'Circulator blower motor fails to start 10 times in a row. MBVC only.', ch:['cfm'], c:['Check the blower housing for an obstruction.', 'Check for seized motor bearings; repair or replace the wheel or motor.'], src:'RS6215002r10 p.34, 38'},
+      'B5': {disp:'b5', t:'Blower motor rotor locked', u:'indoor', d:'Circulator blower motor fails to start 10 times in a row (Goodman MBVC, RS6215002r10 p.34, 38); the Daikin One+ ClimateTalk fault list gives it for air handlers too (critical).', ch:['cfm'], c:['Check the blower housing for an obstruction.', 'Check for seized motor bearings; repair or replace the wheel or motor.'], src:'RS6215002r10 p.34, 38'},
       'B6': {disp:'b6', t:'Blower stopped on over/under voltage or board over-temperature', u:'indoor', d:'Line voltage to the blower out of range, high ambient, or blocked airflow. Not in the R-32 lists.', ch:['cfm'], c:['Check the blower line voltage against its rating plate.', 'Check for obstruction or blocked airflow; check wiring; replace the motor.'], src:'SiUS612209EA p.31 · IOD-4039B p.21 · RS6215002r10 p.47'},
       'B7': {disp:'b7', t:'Blower motor missing parameters / failed to start 40 times', u:'indoor', d:'Motor status flag bit 10 set; wrong or missing shared data or a locked rotor. Not in the R-32 lists.', ch:['cfm'], c:['Check for a locked rotor (obstruction).', 'Rewrite the shared data; replace the board or motor.'], src:'SiUS612209EA p.31, 61 · IOD-4039B p.21 · RS6215002r10 p.47'},
       'B9': {disp:'b9', t:'Low indoor airflow, no electric heat (minor)', u:'indoor', d:'No electric-heat demand and blower feedback between 50 and 150 rpm (its minimum) 10 checks in a row, or 360 of 720 checks.', ch:['cfm','reqcfm'], c:['Look for obstructions at the blower and blocked filters.', 'Check the duct: external static above 0.5 in. w.c. (R-410A manual) / 0.9 in. w.c. (R-32 manual) means the duct is undersized.', 'Check motor connections, rotation and voltage; replace the board or motor.'], src:'SiUS612209EA p.31, 62 · SiUS612412E p.30, 59 · IOD-4054B p.24 · RS6215002r10 p.47'},
       '9B': {disp:'9b', t:'Low indoor airflow with electric heat (major)', u:'indoor', d:'Electric heat demanded and blower feedback between 50 and 150 rpm 10 checks in a row, or 360 of 720 checks.', ch:['cfm','reqcfm'], c:['Same checks as b9: blower obstruction, filters, duct static.', 'Check the indoor/outdoor combination is correct; then motor or board.'], src:'SiUS612209EA p.31, 63 · SiUS612412E p.30, 60 · IOD-4054B p.24 · RS6215002r10 p.47'},
-      '70': {disp:'70', t:'Indoor EEV disconnected', u:'indoor', d:'EEV connector (X3A) not detected.', ch:['iev','ievpct','ish','coildt'], c:['Check the EEV coil plug at the board and the junction connector; check the wiring.', 'Check coil resistance: 40-50 Ω from each of pins 1-4 to pin 6 (common).', 'Replace the coil, then the board.'], src:'SiUS612209EA p.31, 64 · SiUS612412E p.30, 61 · IOD-4054B p.24 · RS6215002r10 p.47'},
+      '70': {disp:'70', t:'Indoor EEV disconnected', u:'indoor', d:'EEV connector (X3A) not detected.', ch:['iev','ievpct','ish','coildt'], c:['Check the EEV coil plug at the board and the junction connector; check the wiring.', 'On DV**FEC / DV**PEC air handlers and CAPE(A) / CHPE coils: check the indoor EEV harness extension in the blower compartment is plugged in and not corroded (RS6215002r13 p.95).', 'Check coil resistance: 40-50 Ω from each of pins 1-4 to pin 6 (common).', 'Replace the coil, then the board.'], src:'SiUS612209EA p.31, 64 · SiUS612412E p.30, 61 · IOD-4054B p.24 · RS6215002r10 p.47 · RS6215002r13 p.95'},
       '73': {disp:'73', t:'Indoor liquid thermistor abnormal', u:'indoor', d:'Open or shorted: reads below about -43.6 °C (-46.5 °F) or above 90 °C (194 °F) for 20 s, or resistance below 1342 Ω or above 1.7 MΩ (20 kΩ at 77 °F).', ch:['iliq','coildt','scid'], c:['Check the liquid thermistor plug at the board and junction connector (X5A).', 'Resistance-check against the table (20 kΩ at 77 °F); replace the thermistor, then the board.'], src:'SiUS612209EA p.31, 65 · SiUS612412E p.30, 62 · IOD-4054B p.24 · RS6215002r10 p.47'},
       '74': {disp:'74', t:'Indoor gas thermistor abnormal', u:'indoor', d:'Open or shorted: reads below about -43.6 °C (-46.5 °F) or above 165 °C (329 °F) for 20 s, output below about 0.04 VDC, or resistance below 309 Ω or above 1.7 MΩ. A wrong reading inside that window raises no code.', ch:['igas','ish','coildt'], c:['Check the gas thermistor plug at the board and junction connector (X5A).', 'Resistance-check against the table; replace the thermistor, then the board.'], src:'SiUS612209EA p.31, 66 · SiUS612412E p.30, 63 · IOD-4054B p.24 · RS6215002r10 p.47'},
       '75': {disp:'75', t:'Indoor pressure sensor abnormal', u:'indoor', d:'Reads below -0.049 MPa (-7.11 psig) or above 4.41 MPa (640 psig) for 5 minutes, or output below about 0.13 VDC or above 4.63 VDC.', ch:['ipress','ish','hpip'], c:['Check the sensor plug at the board and junction connector.', 'Measure the output voltage against the pressure curve with a gauge on; replace the sensor, then the board.'], src:'SiUS612209EA p.31, 67 · SiUS612412E p.30, 64 · IOD-4054B p.24 · RS6215002r10 p.47'},
-      '76': {disp:'76', t:'Indoor to outdoor / furnace / blower communication lost during operation', u:'comm', d:'Outdoor or indoor drops off the node list after the system matched. Only in the FIT service manuals.', ch:[], c:['Check the communication circuit is connected and wired right.', 'Check power to the outdoor unit, furnace or blower; then the board. R-32 cased coil with a Dragonfly board: read its LED (leak, mitigation, sensor faults).'], src:'SiUS612209EA p.31, 68 · SiUS612412E p.30, 65'},
+      'E7': {disp:'E7', t:'Not an air-handler or EEV-coil code; on a Daikin communicating gas furnace E7 = igniter fault', u:'indoor', d:'In no air-handler or cased-coil list. Daikin communicating gas furnaces show E7 for an igniter fault: igniter circuit, an improperly connected or shorted igniter, poor unit ground, or the igniter relay (RSD6620001r1 p.40, p.45). With a furnace behind an EEV coil this byte is probably the furnace\'s (inference: the log does not name the furnace).', ch:[], c:['Read the furnace control\'s status LED.', 'Check the igniter and its connection, the unit ground, then the igniter relay on the furnace control (RSD6620001r1 p.45).'], src:'RSD6620001r1 p.40, p.45 (DM80VC / DC80VC communicating furnaces)'},
+      '76': {disp:'76', t:'Indoor to outdoor / furnace / blower communication lost during operation', u:'comm', d:'Outdoor or indoor drops off the node list after the system matched. EEV cased coils report it too (CAPEA/CAPE installation manual p.18-19).', ch:[], c:['Check the communication circuit is connected and wired right.', 'Check power to the outdoor unit, furnace or blower; then the board. R-32 cased coil with a Dragonfly board: read its LED (leak, mitigation, sensor faults).'], src:'SiUS612209EA p.31, 68 · SiUS612412E p.30, 65'},
       '77': {disp:'77', t:'Indoor to thermostat communication error', u:'comm', d:'Thermostat not on the node list 60 s after a node list is received (the 60 s restart on each new list). Emergency mode is allowed with this code (AVPEC).', ch:[], c:['Check the indoor-to-thermostat wiring.', 'Check power to the units.', 'Hold LEARN on the board for more than 5 s; replace the thermostat or board if it returns.'], src:'SiUS612209EA p.31, 69 · SiUS612412E p.30, 66 · IOD-4054B p.24 · RS6215002r10 p.47, 51'},
-      '78': {disp:'78', t:'Indoor to outdoor / furnace / blower communication error at start-up', u:'comm', d:'The system never reaches "system matching" after power-on (5 min after the latest node list). Only in the FIT service manuals.', ch:[], c:['Check the communication circuit wiring.', 'Check power to the outdoor unit, furnace or blower; then the board.'], src:'SiUS612209EA p.31, 70 · SiUS612412E p.30, 67'},
+      '78': {disp:'78', t:'Indoor to outdoor / furnace / blower communication error at start-up', u:'comm', d:'The system never reaches "system matching" after power-on (5 min after the latest node list). EEV cased coils report it too (CAPEA/CAPE installation manual p.18-19).', ch:[], c:['Check the communication circuit wiring.', 'Check power to the outdoor unit, furnace or blower; then the board.'], src:'SiUS612209EA p.31, 70 · SiUS612412E p.30, 67'},
       'A0': {disp:'A0', t:'A2L refrigerant leak (R-32 indoor units)', u:'indoor', d:'A2L sensor reads more than 7 % LFL; the unit runs the fan and energizes relay K4R (5-minute mitigation).', ch:['cfm'], c:['Ventilate; no ignition sources.', 'If the code persists past the 5-minute mitigation or cycles every 5 minutes, leak-check the coil and tubing.', 'If no leak is found, replace the A2L sensor, then the board.'], src:'SiUS612412E p.30, 68 · IOD-4054B p.18, 24, 26'},
       'A1': {disp:'A1', t:'A2L sensor internal error (R-32 indoor units)', u:'indoor', d:'A2L sensor failure; fan runs and K4R energizes as for A0.', ch:['cfm'], c:['Replace the A2L sensor, then the board.'], src:'SiUS612412E p.30 · IOD-4054B p.18, 24, 26'},
       'AF': {disp:'AF', t:'A2L sensor communication error (R-32 indoor units)', u:'indoor', d:'A2L sensor not connected or wired wrong; fan runs and K4R energizes as for A0.', ch:['cfm'], c:['Check the A2L sensor connection (X9A) and wiring.', 'Replace the sensor, then the board.'], src:'SiUS612412E p.30 · IOD-4054B p.18, 24, 26, 29'},
@@ -1694,7 +1697,7 @@ const ERR_TABLES = {
     manual: 'SiUS121736EA (2MXS-N, 3/4MXS-R, 06/2020; PDF pages); list unchanged from SiUS121502E (3/4MXS-N, PDF p.127)',
     field: 'outdoor byte: column 3 "Error code" (multi layout), Daikin conversion 204 (decimal)',
     keying: 'letter',
-    decode: 'The cell is the byte in DECIMAL (Daikin conversion 204). No manual, no Daikin software file and no recording shows how that byte maps to a letter code. The app\'s nibble reading (high nibble 0-8 = A C E F H J L P U, low nibble 0-9 then A C E F H J) can express every code in this table, but it is unconfirmed: always show the raw byte (decimal and hex) beside the decoded code and label the decode as unconfirmed. Look the decoded code up here (outdoor table), never in the head table: A5 and UA mean different things on the two.',
+    decode: 'Daikin\'s PC D-Checker decodes this byte with two tables: first character " ACEHFJLPU987654"[byte >> 4], second "0123456789AHCJEF"[byte & 15] (Dchecker.exe 3.8.0.7, conversion 204); its CSV export prints the letters, " 0" = no error. The app does the same and shows the raw byte beside the code. No recording with a non-zero multi code has been seen yet. Look the decoded code up here (outdoor table), never in the head table: A5 and UA mean different things on the two. The R-410A 5MXS48T / 4MXL36T use this code list too (SiUS121827E PDF 168-169); their F6 trips at about 62.5 °C, U2 below 180 V DC and L4 at 70 °C (PDF 223, 204, 233).',
     missing: 'not in SiUS121736EA',
     codes: {
       'UA': {t:'Unspecified voltage / mismatched indoor and outdoor units', u:'comm', d:'Wrong combination of indoor and outdoor units (pair-type head, wrong PCB) or unspecified internal/external voltage. Shares the all-red-off LED pattern with normal and UH.', ch:['volt'], c:['Check every head is a multi-compatible model for this outdoor unit and the right PCBs are fitted.', 'Check the supply voltage.'], src:'SiUS121736EA p.163, 197'},
@@ -1730,7 +1733,7 @@ const ERR_TABLES = {
     manual: 'SiUS121736EA (PDF p.162 lists; details p.164-191); SiUS121502E PDF p.126 (older RA/FFQ list)',
     field: 'per-head byte: "Error code" in each indoor block (columns 100, 128, 156, ...), Daikin conversion 204 (decimal)',
     keying: 'letter',
-    decode: 'Same unconfirmed decimal-to-letter reading as mxsOutdoor. Look the decoded code up in this head table: here A5 is freeze-up / heating peak-cut and UA is a pair/multi mismatch. C5 exists only on SA heads (FDMQ/FFQ). The log does not say which head model is fitted, so entries note where a code applies.',
+    decode: 'Same Daikin decode as mxsOutdoor. Look the decoded code up in this head table: here A5 is freeze-up / heating peak-cut and UA is a pair/multi mismatch. C5 exists only on SA heads (FDMQ/FFQ). The log does not say which head model is fitted, so entries note where a code applies.',
     missing: 'not in SiUS121736EA\'s indoor lists',
     codes: {
       'A1': {t:'Indoor PCB abnormality', u:'indoor', d:'RA: internal settings cannot be set. SA: EEPROM data not read correctly.', ch:[], c:['Check the connectors (terminal strip to control PCB H1/H2/H3) and the supply voltage.', 'Check the indoor/outdoor combination is compatible.', 'Replace the indoor PCB if it repeats.'], src:'SiUS121736EA p.162, 164-165, 176'},
@@ -1756,7 +1759,7 @@ const ERR_TABLES = {
     manual: 'SiUS121632EA (03/2017; PDF pages = printed + 12)',
     field: 'outdoor byte: column 3 "Error code" (multi layout), Daikin conversion 204 (decimal)',
     keying: 'letter',
-    decode: 'Same unconfirmed decimal-to-letter reading as mxsOutdoor; always show the raw byte. The MXL code list and LED table are the MXS ones; the numbers differ in places (F3 clear, F6 clear, EA timing, H8, U0 constants).',
+    decode: 'Same Daikin decode as mxsOutdoor. The MXL code list and LED table are the MXS ones; the numbers differ in places (F3 clear, F6 clear, EA timing, H8, U0 constants).',
     missing: 'not in SiUS121632EA',
     codes: {
       'UA': {t:'Unspecified voltage / mismatched indoor and outdoor units', u:'comm', d:'Wrong unit combination or PCB, or unspecified internal/external voltage. Same all-red-off LED pattern as normal and UH.', ch:['volt'], c:['Check every head is a compatible multi model and the PCBs are right.', 'Check the supply voltage.'], src:'SiUS121632EA p.146, 177'},
@@ -1792,7 +1795,7 @@ const ERR_TABLES = {
     manual: 'SiUS121632EA (PDF p.145 lists; details p.147-171)',
     field: 'per-head byte: "Error code" in each indoor block, Daikin conversion 204 (decimal)',
     keying: 'letter',
-    decode: 'Same unconfirmed decimal-to-letter reading as mxsHead. Head A5 = freeze-up / peak-cut; head UA = mismatch of indoor and outdoor unit. C5 only on FFQ.',
+    decode: 'Same Daikin decode as mxsHead. Head A5 = freeze-up / peak-cut; head UA = mismatch of indoor and outdoor unit. C5 only on FFQ.',
     missing: 'not in SiUS121632EA\'s indoor lists',
     codes: {
       'A1': {t:'Indoor PCB abnormality', u:'indoor', d:'Wall/ducted/floor: internal settings cannot be set. FFQ: EEPROM data not read.', ch:[], c:['Check connectors and supply voltage; check the combination is compatible.', 'Replace the indoor PCB if it repeats.'], src:'SiUS121632EA p.145, 147-148, 159'},
@@ -1817,7 +1820,7 @@ const ERR_TABLES = {
     manual: 'SiUS122410EC (06/2026; PDF pages = printed + 8)',
     field: 'outdoor byte: column 3 "Error code" (multi layout), Daikin conversion 204 (decimal)',
     keying: 'letter',
-    decode: 'Same unconfirmed decimal-to-letter reading as mxsOutdoor; always show the raw byte. This family adds E3, E9, F8, H3 and JA (large platform only) and has no H8. Its F6 and EA rules differ from the MXS / MXL ones. Thresholds below are in °C/°F and rps as the manual prints them.',
+    decode: 'Same Daikin decode as mxsOutdoor. This family adds E3, E9, F8, H3 and JA (large platform only) and has no H8. Its F6 and EA rules differ from the MXS / MXL ones. Thresholds below are in °C/°F and rps as the manual prints them.',
     missing: 'not in SiUS122410EC',
     codes: {
       'UA': {t:'Unspecified voltage / mismatched indoor and outdoor units', u:'comm', d:'Wrong unit combination or PCB, or unspecified internal/external voltage. Same LED pattern as UH.', ch:['volt'], c:['Check every head is a compatible model (ducted, floor and air-handler heads cannot go on 2/3/4MXM or 2MXT(H)18); check the PCBs.', 'Check the supply voltage.'], src:'SiUS122410EC p.201, 289, 21'},
@@ -1857,7 +1860,7 @@ const ERR_TABLES = {
     manual: 'SiUS122410EC (PDF p.200 list; details p.202-282)',
     field: 'per-head byte: "Error code" in each indoor block, Daikin conversion 204 (decimal)',
     keying: 'letter',
-    decode: 'Same unconfirmed decimal-to-letter reading as mxsHead. Sub-codes such as A0-01, CH-11 or C1-07 are shown on the remote; whether the logged byte carries them is unknown, so they are listed under their main code. Head A5 = freeze-up / peak-cut (peak-cut trips above 59-60 °C here, not 65 °C).',
+    decode: 'Same Daikin decode as mxsHead. Sub-codes such as A0-01, CH-11 or C1-07 are shown on the remote; whether the logged byte carries them is unknown, so they are listed under their main code. Head A5 = freeze-up / peak-cut (peak-cut trips above 59-60 °C here, not 65 °C).',
     missing: 'not in SiUS122410EC\'s indoor list',
     codes: {
       'A0': {t:'Refrigerant leak / external protection device', u:'indoor', d:'FVXV: leak sensor sees gas at or above its threshold for 4 s (not in the first 180 s after power-on). FDMA / CMXV: A0-01 external input terminals open (TB4-TB5, external protection device); A0-19 leak concentration above the limit in short sampling; A0-17 A0-19 repeated or continuous.', ch:['ifan#'], c:['Leak-check the head and its piping; ventilate.', 'FDMA / CMXV A0-01: check the device on TB4-TB5, the 24 VAC supply and fuse F1U.', 'If no leak is found: check for other gases, then replace the leak sensor or PCB.'], src:'SiUS122410EC p.200, 211-214, 234-235, 251-253'},
@@ -1931,23 +1934,44 @@ const ERR_TABLES = {
 };
 // FIT / DH9 / Goodman cells: "00" = no error; anything else is the code byte in hex
 function errKeyHex(cell){ const s = String(cell == null ? '' : cell).trim().toUpperCase(); return /^[0-9A-F]{1,2}$/.test(s) && parseInt(s, 16) ? s.padStart(2, '0') : null; }
-// multi cells: decimal byte → candidate letter code (UNCONFIRMED: always shown with the raw byte)
-function errNibble(cell){ const n = parseInt(String(cell == null ? '' : cell).trim(), 10); if (!(n > 0 && n < 256)) return null; const hi = n >> 4, lo = n & 15; return hi < 9 ? 'ACEFHJLPU'[hi] + '0123456789ACEFHJ'[lo] : null; }
+// multi cells: the code byte → letter code with Daikin's own two tables (PC D-Checker conversion 204, Dchecker.exe 3.8.0.7). A PC export
+// (and this app's decoder since v101) already prints the letters (" 0" = none); a CSV from an older app version holds the decimal byte.
+// A code whose first character is a digit (bytes 0xA0 and up) would be ambiguous with a decimal byte; none is in the multi tables.
+const ERR_L1 = ' ACEHFJLPU987654', ERR_L2 = '0123456789AHCJEF';
+const errLetters = n => (ERR_L1[n >> 4] + ERR_L2[n & 15]).trim();
+function errNibble(cell){ const s = String(cell == null ? '' : cell).trim().toUpperCase(); if (!s) return null;
+  if (/^\d+$/.test(s)){ const n = parseInt(s, 10); return n > 0 && n < 256 ? errLetters(n) : null; }
+  return /^[ACEHFJLPU]?[0-9AHCJEF]$/.test(s) ? s : null; }
+const errByteOf = code => { const s = String(code || '').trim().toUpperCase(), a = s.length === 2 ? ERR_L1.indexOf(s[0]) : 0, b = ERR_L2.indexOf(s[s.length - 1]); return a >= 0 && b >= 0 && s.length ? a * 16 + b : NaN; };
+// Daikin's "Error type" (conversion 203): 0 Normal, 1 Error, 2 Warning, 3 Caution; older app decodes wrote "Error n"
+const ERR_CLASS = {1:'Error', 2:'Warning', 3:'Caution'};
+function errClass(cell){ const s = String(cell == null ? '' : cell).trim(); if (!s || /^(normal|0+|---|-)$/i.test(s)) return null;
+  const m = /^error\s+(\d+)$/i.exec(s); if (m) return ERR_CLASS[+m[1]] ? `${ERR_CLASS[+m[1]]} (type ${m[1]})` : `type ${m[1]}`;
+  return /^(error|warning|caution)$/i.test(s) ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s; }
 // which service manual a unitary log belongs to: the model name first, then the export layout (a PC CSV names no model)
 function unitPlat(){
   if (!D || D.fam === 'multi') return '';
   const mdl = String(D.model || '').replace(/^INV_Unitary_/i, '');
-  if (/[GA]VZC/i.test(mdl)) return 'vzc';
-  if (/DH9VS|D[HC][79]VS(?!A)|G[XZ]V[79]S/i.test(mdl)) return 'dh9';
-  if (/D[HC]6VS|D[HC][79]VSA/i.test(mdl)) return 'fit32';
-  if (/D[XZ]6VS/i.test(mdl)) return 'fit410';
-  if (/DX9VC/i.test(mdl)) return 'dx9vc';
-  if (mdl) return 'other';   // a named model with no service manual in hand (DX20VC, DZ20VC, DX17VSS …)
-  if (D.dh9Layout) return 'dh9';
+  // one Goodman top-discharge platform under three names (research/vc-findings.md §0): heat pumps *VZC20 = DZ20VC = DZ9VC = *SZV9,
+  // air conditioners *VXC20 = DX20VC = DX9VC = *SXV9. The older 18-SEER DZ18VC / AVZC18 is a different circuit (it has Ts): no manual in hand.
+  if (/[GA]VZC20|DZ20VC|DZ9VC|[GA]SZV9/i.test(mdl)) return 'vzc';
+  if (/[GA]VXC20|DX20VC|DX9VC|[GA]SXV9/i.test(mdl)) return 'dx9vc';
+  // D-Checker label families (Dchecker 3.8 label files): DH9VS = DH7VS = GZV7S = GZV9S, DC9VS = GXV9S, DC7VS = GXV7S;
+  // R-32 FIT DH6VS / DH7VSA / DC9VSA = GZV6S / GZV7SA / AZV6S / AZV7SA, DC6VS = GXV6S / GXV9SA / AXV6S / AXV9SA;
+  // R-410A FIT DZ6VS = GSZS6S / ASZS6S, DX6VS = GSXS6S / ASXS6S
+  // the 5-ton DH7VSA6010 / DC9VSA6010 (and their Goodman twins) are DH9-family hardware: two fans, high and low pressure sensors, two EEVs,
+  // no Tm (DH9VS installation manual p.21, p.29; spec sheets SS-DH7VS-R32 p.3, p.31 and SS-DC9VS-R32 p.3); the R-32 FIT covers 2-4 ton only
+  if (/DH9VS|D[HC][79]VS(?!A)|[GA][XZ]V[79]S(?!A)|D[HC][79]VSA?60|[GA][XZ]V[79]SA?60/i.test(mdl)) return D.singleFan ? 'fit32' : 'dh9';
+  if (/D[HC]6VS|D[HC][79]VSA|[GA][XZ]V6S|[GA][XZ]V[79]SA/i.test(mdl)) return 'fit32';
+  if (/D[XZ]6VS|[GA]S[XZ]S6S/i.test(mdl)) return 'fit410';
+  if (mdl) return 'other';   // a named model with no service manual in hand (DX17VSS, DZ18VC / AVZC18 …)
+  if (D.dh9Layout) return D.singleFan ? 'fit32' : 'dh9';
   if (D.vcLayout) return 'vzc';
   return REF.ref === 'R32' ? 'fit32' : 'fit410';
 }
 const platName = () => { const u = unitPlat(); return u === 'other' ? 'a model with no service manual in hand' : (UNI[u] || {}).name || ''; };
+// a head switched off at its remote: "Stop" in older app decodes, or Daikin's "Fan Only" with the 0 °C placeholders (D.zoneStop)
+const zoneOff = (k, i) => /^stop/i.test((D.str['zmode'+k] && D.str['zmode'+k][i]) || '') || !!(D.zoneStop && D.zoneStop[k] && D.zoneStop[k].has(i));
 // the error table for a log's outdoor unit, its indoor unit (unitary) or its heads (multi)
 function errFam(who){
   if (!D) return null;
@@ -1955,19 +1979,19 @@ function errFam(who){
   if (who !== 'outdoor') return 'ahIndoor';
   return {fit410:'fitOutdoor', fit32:'fitOutdoor', dh9:'dh9Outdoor', vzc:'goodmanOutdoor'}[unitPlat()] || null;
 }
-// one logged cell → {code (as the board or thermostat shows it), key, raw, rawTxt, k (the table entry), t (meaning), type (board error type n)}
+// one logged cell → {code (as the board or thermostat shows it), key, raw, rawTxt, k (the table entry), t (meaning), cls (Daikin error type: Error / Warning / Caution)}
 function errInfo(cell, fam){
   const raw = String(cell == null ? '' : cell).trim(); if (!raw || /^(0+|normal|---|-)$/i.test(raw)) return null;
-  const m = /^error\s+(\d+)$/i.exec(raw); if (m) return {code:null, raw, rawTxt:raw, type:+m[1], t:`board error type ${m[1]} (not defined in any manual)`};
+  if (/^(error\s+\d+|error|warning|caution)$/i.test(raw)) return {code:null, raw, rawTxt:raw, cls:errClass(raw), t:`the board reports "${errClass(raw)}" (Daikin D-Checker error type) with no code in this cell`};
   const T = fam && ERR_TABLES[fam];
   if (!T) return {code:null, raw, rawTxt:`raw ${raw}`, t:'no service manual in hand for this model: look the code up on the unit'};
-  const hex = T.keying === 'hex', byte = hex ? parseInt(raw, 16) : parseInt(raw, 10);
+  const hex = T.keying === 'hex', byte = hex ? parseInt(raw, 16) : (/^\d+$/.test(raw) ? parseInt(raw, 10) : errByteOf(raw));
   const key = hex ? errKeyHex(raw) : errNibble(raw), k = key ? T.codes[key] : null;
   const bx = Number.isFinite(byte) ? '0x' + byte.toString(16).toUpperCase().padStart(2, '0') : null;
   const rawTxt = !bx ? `raw ${raw}` : hex ? `byte ${bx}` : `byte ${byte} (${bx})`;
   const code = k ? (k.led || k.disp || (k.tstat ? k.tstat + (k.minor ? ' (minor)' : '') : key)) : (hex ? null : key);
   const t = k ? k.t : key ? T.missing : 'not decodable';
-  return {code, key, raw, rawTxt, byte, k, fam, t:!hex && key ? `${t} (letter reading unconfirmed)` : t};
+  return {code, key, raw, rawTxt, byte, k, fam, t};
 }
 function errLabel(cell, fam){ const e = errInfo(cell, fam); if (!e) return null; return (e.code || e.raw) + ' · ' + e.t; }
 // the readings a code's entry names: '#' = the reporting head's zone, '*' = every zone with data
@@ -1977,8 +2001,8 @@ function errChs(k, zone){ if (!k || !k.ch || !D) return []; const out = [];
 // the unit's error state on a row: the outdoor code (a hex byte on unitary logs, a decimal on a multi), the indoor code, each head's code
 function rowErrors(i){
   const s = D.str, out = [], multi = D.fam === 'multi';
-  const oc = multi ? s.etype[i] : (s.ecodes ? s.ecodes[i] : null); const e = errInfo(oc, errFam('outdoor')); const tp = !multi && s.etype[i] && /^error\s+(\d+)$/i.exec(s.etype[i]); if (e){ if (tp) e.type = +tp[1]; out.push(Object.assign({who:'Outdoor'}, e)); }
-  if (!multi && !e && s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim())) out.push({who:'Outdoor', code:null, raw:s.etype[i], rawTxt:s.etype[i], t:'the board reports an error type with no code logged (error type is not defined in any manual)'});
+  const oc = multi ? s.etype[i] : (s.ecodes ? s.ecodes[i] : null); const e = errInfo(oc, errFam('outdoor')); const cls = !multi ? errClass(s.etype[i]) : null; if (e){ if (cls) e.cls = cls; out.push(Object.assign({who:'Outdoor'}, e)); }
+  if (!multi && !e && cls) out.push({who:'Outdoor', code:null, raw:s.etype[i], rawTxt:s.etype[i], cls, t:`the board reports "${cls}" (Daikin D-Checker error type) with no code logged`});
   if (s.ierr){ const ie = errInfo(s.ierr[i], errFam('indoor')); if (ie) out.push(Object.assign({who:'Indoor'}, ie)); }
   if (multi) for (const k of D.zones){ const ze = errInfo(s['zerr'+k][i], errFam('head')); if (ze) out.push(Object.assign({who:'Zone ' + MZ.letters[k], zone:k}, ze)); }
   return out;
@@ -2006,7 +2030,7 @@ function buildErrRef(){
   const sel = host.dataset.fam && ERR_TABLES[host.dataset.fam] ? host.dataset.fam : (mine[0] || 'fitOutdoor'), T = ERR_TABLES[sel];
   const shown = (key, k) => k.led || k.disp || (k.tstat ? k.tstat + (k.minor ? ' (minor)' : '') : key);
   const rows = Object.entries(T.codes).map(([key, k]) => `<tr><td class="code">${synEsc(shown(key, k))}</td><td>${synEsc(k.t)}${k.d ? `<br><small>${synEsc(k.d)}</small>` : ''}</td><td class="u">${k.u}</td><td>${k.c.map(x => synEsc(x)).join('<br>')}<br><small>${synEsc(k.src)}</small></td></tr>`).join('');
-  host.innerHTML = `<p class="note">Error codes as each platform's own service manual lists them. On FIT, DH9VS-type, Goodman and air-handler logs the logged byte is the code itself, which Daikin's PC app prints as two hex digits (0x15 = E15, 0xB0 = Eb0, indoor 0x73 = 73). On multi-split logs the byte is a decimal number and nothing published shows how it maps to a letter code, so the app's letter reading is marked unconfirmed and the raw byte is always shown. A code that is not in the platform's manual is shown as its byte, never with a meaning borrowed from another family.${D && D.fam !== 'multi' && !errFam('outdoor') ? ' This log\'s outdoor model has no service manual in hand, so its outdoor codes are shown raw.' : ''}</p>
+  host.innerHTML = `<p class="note">Error codes as each platform's own service manual lists them. On FIT, DH9VS-type, Goodman and air-handler logs the logged byte is the code itself, which Daikin's PC app prints as two hex digits (0x15 = E15, 0xB0 = Eb0, indoor 0x73 = 73). On multi-split logs the byte is turned into its letter code with the same two tables Daikin's PC D-Checker uses (its CSV export prints the letters; " 0" = no error), and the raw byte is shown beside it. The board's "Error type" column reads Normal, Error, Warning or Caution (Daikin's names). A code that is not in the platform's manual is shown as its byte, never with a meaning borrowed from another family.${D && D.fam !== 'multi' && !errFam('outdoor') ? ' This log\'s outdoor model has no service manual in hand, so its outdoor codes are shown raw.' : ''}</p>
     <label class="errfam">Table <select id="errfam">${Object.keys(ERR_TABLES).map(f => `<option value="${f}"${f === sel ? ' selected' : ''}>${synEsc(ERR_TABLES[f].name)}${mine.includes(f) ? ' · this log' : ''}</option>`).join('')}</select></label>
     <p class="note">${synEsc(T.manual)}. ${synEsc(T.decode)}</p>
     <input class="errsearch" id="errsearch" placeholder="Filter: code or words, e.g. E15, b9, U4, fan" aria-label="Filter error codes">
@@ -2032,8 +2056,8 @@ let FAM = 'unitary';   // 'unitary' (one head) or 'multi' (2–5 heads on ports 
 function detectEquipment(){
   // 1) model file named in the phone recording's header.txt (INV_Unitary_DZ6VS → DZ = heat pump)
   const mdl = (D.model || '').replace(/^INV_Unitary_/i, '');
-  const mm = /^(?:D([XCZH])|[GA]S?([XZ]))/i.exec(mdl);
-  if (mm){ const hp = /[ZH]/i.test(mm[1] || mm[2]); return {out: hp ? 'hp' : 'ac', why: `model ${mdl}`}; }
+  const mm = /^(?:D([XCZH])|[GA]S?([XZ])|[GA]V([XZ])C)/i.exec(mdl);
+  if (mm){ const hp = /[ZH]/i.test(mm[1] || mm[2] || mm[3]); return {out: hp ? 'hp' : 'ac', why: `model ${mdl}`}; }
   // 2) otherwise the data: a live 4-way valve column or heating rows mean a heat pump
   const fw = STAT.find(x => x.id === 'fourway');
   const hp = (fw && fw.present && D.str.fourway.some(v => v != null)) || D.mode.some(m => m === 'heat') || (D.fam === 'multi' && D.str.fwmode.some(v => v != null));
@@ -2103,8 +2127,9 @@ function parseDate(s){
 // a high pressure sensor and no Tm (installation manual p.30, p.43). Goodman *VZC20: one high/low transducer on the gas line before the
 // reversing valve, reading suction pressure in cooling and discharge pressure in heating (RS6215002r10 p.12–13, p.15, p.89).
 // The recording decides first; a model name only when it is unambiguous.
-const MODEL_TM = /D[XZ]6VS|D[HC]6VS|D[HC][79]VSA/i, MODEL_HPS = /DH9VS|D[HC][79]VS(?!A)/i;
-function pressureSource(num, str, mode, model, vc){
+// FIT (no high-side sensor) vs DH9VS family (HP sensor); the 5-ton DH7VSA6010 / DC9VSA6010 and the Goodman 6010s are DH9 hardware
+const MODEL_TM = /D[XZ]6VS|D[HC]6VS|D[HC][79]VSA(?!60)|[GA]S[XZ]S6S|[GA][XZ]V6S|[GA][XZ]V[79]SA(?!60)/i, MODEL_HPS = /DH9VS|D[HC][79]VS(?!A)|D[HC][79]VSA?60|[GA][XZ]V[79]S(?!A)|[GA][XZ]V[79]SA?60/i;
+function pressureSource(num, str, mode, model, vc, singleFan){
   const out = {cool:'unknown', heat:'unknown', why:{}}, n = mode.length, has = id => !!num[id] && num[id].some(isN);
   if (!has('hp')) return out;
   if (vc || /[GA]VZC/i.test(String(model || ''))){ out.heat = 'hlpt'; out.why.heat = 'Goodman *VZC20: its one outdoor transducer reads the discharge side in heating (RS6215002r10 p.15, p.89)'; out.lpHeat = 'calc'; }
@@ -2114,11 +2139,14 @@ function pressureSource(num, str, mode, model, vc){
     if (d.length >= 10 && med(d) <= 0.3 && ok >= 0.9 * d.length){ out.cool = 'tm'; out.why.cool = `the board's condensing temperature equalled the coil thermistor Tm on ${ok} of ${d.length} cooling rows`; } }
   if (has('ipress')){ const d = heatR.map(i => isN(num.hp[i]) && isN(num.ipress[i]) ? Math.abs(num.hp[i] - num.ipress[i]) : null).filter(isN), ok = d.filter(x => x <= 3).length;
     if (d.length >= 10 && med(d) <= 1 && ok >= 0.8 * d.length){ out.heat = 'ips'; out.why.heat = `the logged high pressure equalled the indoor pressure sensor on ${ok} of ${d.length} heating rows`; } }
-  const mdl = String(model || '').replace(/^INV_Unitary_/i, ''), dh9 = has('evinj') || (str.svdrain || []).some(v => v != null);
-  if (MODEL_TM.test(mdl)){
+  const mdl = String(model || '').replace(/^INV_Unitary_/i, ''), dh9 = !singleFan && (has('evinj') || (str.svdrain || []).some(v => v != null));
+  if (singleFan){   // R-32 FIT hardware: no high-side sensor; cooling HP from the coil thermistor, heating HP = the indoor sensor (SiUS612412E p.48)
+    if (out.cool === 'unknown'){ out.cool = 'tm'; out.why.cool = 'a single-fan R-32 FIT unit in the DH9VS log layout: it has only a suction pressure sensor (SS-GZV7S-R32 p.28), so the board works the cooling high pressure out from its coil thermistor (SiUS612412E p.48)'; }
+    if (out.heat === 'unknown'){ out.heat = 'ips'; out.why.heat = 'a single-fan R-32 FIT unit: in heating the high pressure is the indoor pressure sensor (SiUS612412E p.48)'; } }
+  else if (MODEL_TM.test(mdl)){
     if (out.cool === 'unknown'){ out.cool = 'tm'; out.why.cool = `${mdl}: no high-side pressure sensor per its service manual, so the board works the cooling high pressure out from the coil thermistor Tm`; }
     if (out.heat === 'unknown'){ out.heat = 'ips'; out.why.heat = `${mdl}: in heating the high pressure is the indoor pressure sensor per its service manual`; } }
-  else if (MODEL_HPS.test(mdl) || dh9){ for (const m of ['cool', 'heat']) if (out[m] === 'unknown'){ out[m] = 'sensor'; out.why[m] = `${dh9 ? 'DH9VS-type unit' : mdl}: outdoor high-pressure sensor on the discharge (DH9VS / DH7VS / DC9VS manual)`; } }
+  else if (MODEL_HPS.test(mdl) || dh9){ for (const m of ['cool', 'heat']) if (out[m] === 'unknown'){ out[m] = 'sensor'; out.why[m] = `${dh9 ? 'DH9VS-type unit' : mdl}: outdoor high-pressure sensor on the discharge (SiUS612415E p.10, p.16)`; } }
   for (const m of ['cool', 'heat']) if (out[m] === 'unknown') out.why[m] = 'not confirmed for this model';
   return out;
 }
@@ -2152,8 +2180,12 @@ function evFullOpen(num, str, mode, model, ref, lay){
   const held = []; for (let i = 0; i < mode.length; i++) if (mode[i] === 'cool' && isN(num.rps[i]) && num.rps[i] > 0 && isN(ev[i])) held.push(ev[i]);
   let top = null; if (held.length >= 10){ const cnt = {}; for (const v of held) cnt[v] = (cnt[v] || 0) + 1; const t = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]; if (t[1] >= 0.6 * held.length) top = +t[0]; }
   if (L.vcLayout || /[GA]VZC/i.test(mdl)) return {full:null, how:'shown as pulses only: the Goodman *VZC20 manual gives no pulse count, and in cooling a check valve bypasses this valve (RS6215002r10 p.12–13)', sure:false, source:'none'};
-  if (/^D[XC]6VS|^DC9VSA/i.test(mdl)) return {full:null, how:`shown as pulses only: a ${mdl.slice(0, 5)} air conditioner has no outdoor EEV in its service manual (SiUS612209EA p.8; SiUS612412E p.8)`, sure:false, source:'none'};
-  const r32fit = /D[HC]6VS|D[HC][79]VSA/i.test(mdl) || (!mdl && !L.dh9Layout && ref === 'R32' && num.ocmid && num.ocmid.some(isN));
+  if (/^D[XC]6VS|^DC9VSA(?!60)/i.test(mdl)) return {full:null, how:`shown as pulses only: a ${mdl.slice(0, 5)} air conditioner has no outdoor EEV in its service manual (SiUS612209EA p.8; SiUS612412E p.8)`, sure:false, source:'none'};
+  // DH9VS family (double fan): "Outdoor EEV … Cooling: Fully open (480 pls)" (SiUS612415E p.9)
+  const dh9hw = !L.singleFan && (L.dh9Layout || MODEL_HPS.test(mdl));
+  if (dh9hw){ if (top != null && top !== 480) return {full:null, how:`shown as pulses only: the DH9VS manual gives fully open as 480 pulses in cooling (SiUS612415E p.9), but this recording holds ${top} through cooling`, sure:false, source:'conflict', manual:480, held:top};
+    return {full:480, how:'fully open = 480 pulses in cooling (SiUS612415E p.9)', sure:true, source:'manual'}; }
+  const r32fit = L.singleFan || MODEL_TM.test(mdl) && !/D[XZ]6VS|[GA]S[XZ]S6S/i.test(mdl) || (!mdl && !L.dh9Layout && ref === 'R32' && num.ocmid && num.ocmid.some(isN));
   if (r32fit){ if (top != null && top !== 480) return {full:null, how:`shown as pulses only: the R-32 FIT manual gives fully open as 480 pulses in cooling (SiUS612412E p.7), but this recording holds ${top} through cooling`, sure:false, source:'conflict', manual:480, held:top};
     return {full:480, how:'fully open = 480 pulses (SiUS612412E p.7)', sure:true, source:'manual'}; }
   const src = L.dh9Layout || /DH9VS|D[HC][79]VS(?!A)/i.test(mdl) ? 'the DH9VS manual' : 'the R-410A FIT manual';
@@ -2227,9 +2259,11 @@ function buildDataset(text, name, model){
   // p.134); 255 on a limit means "not active" (p.134). A 0 rps floor is a real value: no lower limit active (SiUS121736EA PDF 106), and a ΔD of 0
   // is the thermostat-off signal (PDF 107). placeRows keeps the rows so the chip can say what the blank means.
   const placeholders = {}, placeRows = {};
+  const zoneStop = {};   // per head: rows where it was switched off at its remote
   if (fam === 'multi'){ const isZ = v => isN(v) && Math.abs(v - 32) < 0.05; let stopped = 0;
     for (let k = 0; k < MZ.ports; k++){ const ra = num['ra'+k], hx = num['ihx'+k], sp = num['sp'+k], dd = num['dd'+k], zm = str['zmode'+k] || []; if (!ra || !hx || !sp) continue;
-      for (let i = 0; i < n; i++) if ((!zm[i] || /^stop/i.test(zm[i])) && isZ(ra[i]) && isZ(hx[i]) && isZ(sp[i])){ ra[i] = hx[i] = sp[i] = null; stopped++; } }
+      // the head's mode byte is 0 then, which Daikin's tables name "Fan Only" (older app decodes wrote "Stop"); the 0 °C placeholders decide it
+      for (let i = 0; i < n; i++) if ((!zm[i] || /^(stop|fan only)$/i.test(zm[i])) && isZ(ra[i]) && isZ(hx[i]) && isZ(sp[i])){ ra[i] = hx[i] = sp[i] = null; stopped++; (zoneStop[k] = zoneStop[k] || new Set()).add(i); } }
     if (stopped) placeholders.stopped = stopped;
     const ph = (id, test, word) => { const a = num[id]; if (!a) return; let k = 0; for (let i = 0; i < n; i++) if (isN(a[i]) && test(a[i])){ a[i] = null; k++; if (word) (placeRows[id] = placeRows[id] || {word, rows:new Set()}).rows.add(i); } if (k) placeholders[id] = (placeholders[id] || 0) + k; };
     ph('volt', v => v === 0); ph('tdisch', isZ, 'not yet'); ph('maxhz', v => v >= 255, 'none');
@@ -2250,10 +2284,35 @@ function buildDataset(text, name, model){
   // which manual the export belongs to when no model is named: the DH9VS layout (two fans, injection EV) and the Goodman *VZC20 layout (no suction thermistor)
   const dh9Layout = fam !== 'multi' && labels.some(l => /^(O_fan2|EV \(injection\)|OU Error code|Indoor err code)/i.test(l));
   const vcLayout = fam !== 'multi' && !dh9Layout && !labels.some(l => /^Suction temp/i.test(l)) && labels.some(l => /^ODU hex mid temp/i.test(l));
+  // The Goodman GZV7S / GXV7S label files are the DH9VS layout, but the 2-4 ton units behind them are single-fan R-32 FIT hardware: one suction
+  // pressure sensor, a coil thermistor, one fan, no injection valve (Goodman SD guide PM-GDMNSD p.8; SS-GZV7S-R32 p.28; SiUS612415E covers
+  // "double fans models" only, p.1). In such a log the injection column is "---" throughout, fan 2 never runs and both fan-fin thermistors sit
+  // at the 0 °C placeholder.
+  const singleFan = dh9Layout && labels.some(l => /^EV \(injection\)/i.test(l)) && !(num.evinj || []).some(isN) && !(num.fan2 || []).some(v => isN(v) && v > 0)
+    && !(num.tfan2 || []).some(v => isN(v) && v > 0) && !!placeholders.fanfin && !!placeholders.fanfin2;
+  // Goodman / Amana *VZC20: Daikin's label file for this model is one byte short in the 0x30 group, so from "Comp op command" on each
+  // column holds its neighbour's byte (D-Checker label files Goodman_Amana_GVZC_AVZC20 vs INV_Unitary_DZ6VS and Daikin's own DZ20VC0601CA,
+  // research/dchecker-findings.md 1.13): "Trgt comp." = the command flags (bit 7 compressor, bit 6 fan: 192 = both on), "Target OU_fan" =
+  // the target compressor speed × 5, "OU Fan" = the target fan rpm; the actual fan rpm is not in the export. Realigned only when the
+  // data has that shape (flag values only, and Target OU_fan ÷ 5 tracking the compressor speed), so a corrected export is left alone.
+  let vcShift = false;
+  if (vcLayout && num.trps && num.tfan && num.fan && num.rps){
+    const run = []; for (let i = 0; i < n; i++) if (isN(num.rps[i]) && num.rps[i] > 15 && isN(num.tfan[i])) run.push(i);
+    const flagsOnly = num.trps.every(v => !isN(v) || [0, 64, 128, 192].includes(v)), track = run.filter(i => Math.abs(num.tfan[i] / 5 - num.rps[i]) <= Math.max(3, 0.1 * num.rps[i])).length;
+    if (flagsOnly && run.length >= 10 && track / run.length >= 0.8){ vcShift = true;
+      const flags = num.trps; num.trps = num.tfan.map(v => isN(v) ? v / 5 : null); num.tfan = num.fan.slice(); num.fan = new Array(n).fill(null);
+      str.compcmd = flags.map(v => isN(v) ? (v & 128 ? 'ON' : 'OFF') : ''); if (str.fancmd) str.fancmd = flags.map(v => isN(v) ? (v & 64 ? 'ON' : 'OFF') : '');
+      const cm = id => colmap.find(x => x.id === id), cT = cm('trps'), cF = cm('tfan'), cA = cm('fan'), cC = cm('compcmd'), cFC = cm('fancmd');
+      const sT = cT ? {at:cT.at, hdr:cT.hdr} : null, sF = cF ? {at:cF.at, hdr:cF.hdr} : null, sA = cA ? {at:cA.at, hdr:cA.hdr} : null;
+      if (cT && sF) Object.assign(cT, {at:sF.at, hdr:`${sF.hdr} ÷ 5 (realigned)`});
+      if (cF && sA) Object.assign(cF, {at:sA.at, hdr:`${sA.hdr} (realigned)`});
+      if (cA) cA.how = 'absent';
+      if (cC && sT) Object.assign(cC, {at:sT.at, hdr:`${sT.hdr} bit 7 (realigned)`, how:'label'});
+      if (cFC && sT) Object.assign(cFC, {at:sT.at, hdr:`${sT.hdr} bit 6 (realigned)`, how:'label'}); } }
   // settled before any calculated reading uses them: the refrigerant (its saturation table), where the pressures come from, the EEV's full-open count
   { const det = refrigerantFrom(str, num, model, fam), saved = loadJSON('dchk.ref.' + name, 'auto'); REF = saved === 'auto' ? {ref:det.ref, auto:true, why:det.why} : {ref:saved, auto:false, why:'set by hand'}; }
-  PSRC = fam === 'multi' ? {cool:'', heat:'', why:{}} : pressureSource(num, str, mode, model, vcLayout);
-  const evInfo = evFullOpen(num, str, mode, model, REF.ref, {vcLayout, dh9Layout}); EVMAX = evInfo.full; { const ec = NUM.find(c => c.id === 'ev'); if (ec) ec.max = EVMAX; }
+  PSRC = fam === 'multi' ? {cool:'', heat:'', why:{}} : pressureSource(num, str, mode, model, vcLayout, singleFan);
+  const evInfo = evFullOpen(num, str, mode, model, REF.ref, {vcLayout, dh9Layout, singleFan}); EVMAX = evInfo.full; { const ec = NUM.find(c => c.id === 'ev'); if (ec) ec.max = EVMAX; }
   VC_NOW = vcLayout || /[GA]VZC/i.test(String(model || ''));
   for (const d of DERIVED) num[d.id] = new Array(n).fill(null);
   for (let i = 0; i < n; i++){ const r = {}; for (const c of NUM) r[c.id] = num[c.id][i]; for (const d of DERIVED){ let v = null; try { v = d.calc(r, mode[i]); } catch(e){ v = null; } num[d.id][i] = isN(v) ? v : null; r[d.id] = num[d.id][i]; } }
@@ -2276,7 +2335,7 @@ function buildDataset(text, name, model){
       targetsOff[tgt] = {act:med(rows.map(i => num[act][i])), tgt:med(rows.map(i => num[tgt][i])), rows:rows.length}; num[tgt] = new Array(n).fill(null); } }
   if (targetsOff.trps && num.rpserr) num.rpserr = new Array(n).fill(null);
   // timers the app's own phone decoder wrote with the 0x8000 flag bit still set (32828 for 60): the PC export of the same recording shows the count
-  { const tk = labels.map((l, k) => /timer/i.test(l) ? k : -1).filter(k => k > 0); for (const k of tk) for (let i = 1; i < rows.length; i++){ const v = +rows[i][k]; if (Number.isInteger(v) && v >= 32768 && v < 65536) rows[i][k] = String(v & 0x7fff); } }
+  { const tk = labels.map((l, k) => /timer/i.test(l) ? k : -1).filter(k => k > 0); for (const k of tk) for (let i = 1; i < rows.length; i++){ const v = +rows[i][k]; if (Number.isInteger(v) && v >= 16384 && v < 65536) rows[i][k] = String(v & 0x3fff); } }
   const bound = new Set(colmap.filter(x => x.how !== 'absent' && x.at != null).map(x => String(x.at)));
   const unbound = head.map((h, k) => ({k, h})).filter(({k, h}) => k > 0 && !bound.has(h.replace(/\s*:.*$/, ''))).map(({k, h}) => {
     const seen = new Set(); let any = false; for (let i = 1; i < rows.length; i++){ const v = (rows[i][k] || '').trim(); if (!v || v === '---' || v === '-') continue; any = true; seen.add(v); if (seen.size > 6) break; }
@@ -2287,7 +2346,7 @@ function buildDataset(text, name, model){
   if (fam === 'multi'){ mfp = {ports:zones.length ? Math.max(...zones) + 1 : 0, over450:0, minCool:null};
     for (let i = 0; i < n; i++){ if (!(runSec[i] >= 2 * interval) || str.defrost[i] === 'ON') continue; for (const k of zones){ const v = num['pev'+k][i]; if (isN(v) && v > 450) mfp.over450 = Math.max(mfp.over450, v); } }
     for (let i = 1; i < n; i++) if (runSec[i] >= 0 && mode[i] === 'cool' && isN(num.minhz[i]) && num.minhz[i] > 0 && !(isN(num.minhz[i - 1]) && num.minhz[i - 1] > 0)){ mfp.minCool = num.minhz[i]; break; } }
-  return {name, n, t, num, str, mode, modeReq, flowFlip, runSec, interval, head, fam, zones, colmap, targetsOff, unbound, placeholders, placeRows, pcFixed, evInfo, psrc:PSRC, dh9Layout, vcLayout, vcLayoutNow:VC_NOW, mfp};
+  return {name, n, t, num, str, mode, modeReq, flowFlip, runSec, interval, head, fam, zones, colmap, targetsOff, unbound, placeholders, placeRows, pcFixed, evInfo, psrc:PSRC, dh9Layout, vcLayout, vcLayoutNow:VC_NOW, zoneStop, vcShift, singleFan, mfp};
 }
 
 /* ---------- capacity: BTU/h and COP from the compressor's own power draw ---------- */
@@ -2566,7 +2625,7 @@ function evalRow(i){
     if (st === 'warn' || st === 'alarm') out.hits.push({ch:r.ch, st, v, rule:r});
   }
   const s = D.str, ev = [];
-  for (const e of rowErrors(i)) if (e.who === 'Outdoor' || e.who === 'Indoor') ev.push({label:`${e.who} ${e.code || e.raw} · ${e.t}`, st:e.k && e.k.minor ? 'warn' : 'alarm', title:`${e.rawTxt}${e.type != null ? ' · board error type ' + e.type : ''}${e.k ? ' · ' + e.k.src : ''}`});
+  for (const e of rowErrors(i)) if (e.who === 'Outdoor' || e.who === 'Indoor') ev.push({label:`${e.who} ${e.code || e.raw} · ${e.t}`, st:e.k && e.k.minor ? 'warn' : 'alarm', title:`${e.rawTxt}${e.cls ? ' · error type ' + e.cls : ''}${e.k ? ' · ' + e.k.src : ''}`});
   for (const id of ['dropDisch','dropInv','dropHp','dropLp','dropFin']) if (s[id][i] === 'ON') ev.push({label:STAT.find(x=>x.id===id).label+' active', st:'warn'});
   if (s.dropOther[i] === 'ON') ev.push({label:'Other drop ctrl', st:'info'});
   if (s.defrost[i] === 'ON') ev.push({label:'Defrost', st:'info'});
@@ -2605,17 +2664,20 @@ const UNI = {
     ssh:{hiCool:20, loCool:4, p:'analysis chart p.12 (OD SSV SH)'}, hp:{hi:490, loCool:255, loHeat:270, p:'analysis charts p.12–13', trip:605, tripP:'E13, p.49'},
     lp:{hiCool:185, loCool:100, loHeat:40, p:'analysis charts p.12–13', trip:17, tripMin:5, tripP:'E15, p.50'}, fin:{small:203, large:230, p:'E32, p.53–54'},
     iEevMin:50, iEevP:'p.10–11', defrostMax:120, defrostP:'p.44', offDelayMax:120, offDelayP:'p.43'},
-  fit32:{name:'Daikin FIT R-32 (DC6VS / DH6VSA / DC9VSA / DH7VSA)', doc:'SiUS612412E',
+  fit32:{name:'Daikin FIT R-32 (DC6VS / DH6VSA; DC9VSA / DH7VSA 2-4 ton)', doc:'SiUS612412E',
     disch:{trip:248, tripP:'E22, p.51'}, dsh:{e21:9, e21P:'E21 (indoor EEV at its 50-pulse minimum), p.50', e41Heat:135, e41P:'E41, p.54'},
     hp:{trip:605, tripP:'E13, p.48'}, lp:{trip:17, tripMin:5, tripP:'E15, p.49'}, fin:{small:214, large:230, p:'E32, p.52–53'},
     sh1:{ge70:9, lt70:14.4, p:'p.7'}, sh2Heat:7.2, sh2P:'p.7', oEevFull:480, iEevFull:480, iEevMin:50, iEevP:'p.7, p.10–11',
-    defrostMax:120, defrostP:'installation manual p.32', offDelayMax:120, offDelayP:'p.42'},
-  dh9:{name:'DH9VS / DH7VS / DC9VS', doc:'DH9VS installation & service reference', defrostMax:120, defrostP:'p.27', offDelayMax:120, offDelayP:'p.44'},
-  vzc:{name:'Goodman / Amana *VZC20', doc:'RS6215002r10', noTs:true, chart:{cool:{oat:[67,115], p:'p.95'}, heat:{oat:[17,62], p:'p.96'}},
+    defrostMax:null, defrostP:'installation manual p.32 (30-120 min) / Daikin One+ menu v3.9 p.2 (2, 6, 12 or 24 h on R-32 heat pumps from mid-2025)', offDelayMax:120, offDelayP:'p.42'},
+  dh9:{name:'DH9VS / DH7VS / DC9VS double-fan (incl. the 5-ton DH7VSA6010 / DC9VSA6010)', doc:'SiUS612415E',
+    disch:{trip:248, tripP:'E22, p.53'}, dsh:{e21:9, e21P:'E21 (EEV at its minimum), p.52', e41Heat:153, e41P:'E41, p.55'}, liqVsOatAllSizes:true,
+    hp:{trip:605, tripP:'HPS, p.15; E13, p.50'}, lp:{trip:11, tripMin:5, tripP:'E15, p.51'}, fin:{small:226, large:226, p:'E32, p.54'}, iEevMin:50, iEevP:'p.11–12',
+    defrostMax:null, defrostP:'set on the thermostat: 30–120 min (installation manual p.27), or 2, 6, 12 or 24 h on software from mid-2025 (SiUS612417EA p.9, p.45)', offDelayMax:120, offDelayP:'installation manual p.44'},
+  vzc:{name:'Goodman / Amana *VZC20 (also DZ20VC, DZ9VC, *SZV9)', doc:'RS6215002r10', noTs:true, chart:{cool:{oat:[67,115], p:'p.95'}, heat:{oat:[17,62], p:'p.96'}},
     disch:{hi:200, lo:105, p:'analysis charts p.95–96'}, dsh:{hiCool:70, hiHeat:70, lo:20, p:'analysis charts p.95–96'},
     hp:{hi:490, loCool:255, loHeat:270, p:'analysis charts p.95–96', trip:605, tripP:'HPS, p.15'}, lp:{hiCool:185, loCool:100, loHeat:40, p:'analysis charts p.95–96'},
     sc:{hi:12, lo:4, p:'analysis charts p.95–96 (LSV SC)'}, defrostMax:30, defrostP:'factory setting, p.64'},
-  dx9vc:{name:'Daikin DX9VC', doc:'DX9VC installation & service reference', chart:{cool:{oat:[67,115], p:'p.21'}},
+  dx9vc:{name:'Daikin DX9VC (also DX20VC, *VXC20, *SXV9)', doc:'DX9VC installation & service reference', chart:{cool:{oat:[67,115], p:'p.21'}},
     disch:{hi:200, lo:105, p:'analysis chart p.21'}, dsh:{hiCool:70, lo:20, p:'analysis chart p.21'}, hp:{hi:490, loCool:255, p:'analysis chart p.21'},
     lp:{hiCool:185, loCool:100, p:'analysis chart p.21'}, sc:{hi:12, lo:4, p:'analysis chart p.21 (LSV SC)'}, ssh:{hiCool:20, loCool:4, p:'analysis chart p.21 (OD SSV SH)'}},
 };
@@ -2639,7 +2701,13 @@ const MULTI = {
     disch:{drop:111, stop:120, p:'PDF 147'}, f6:{trip:59, clear:50, p:'PDF 305'}, fin:{l4:70, l4clear:64, p:'PDF 318'}, preheatOn:20, preheatP:'PDF 145',
     dd:{off:-1.0, low:[-0.75, -0.5, -0.25], p:'PDF 144'}, defrostAccum:30, defrostP:'PDF 152–153', tdDiscP:'PDF 163'},
 };
-const MF_ORDER = ['mxs', 'mxl', 'mxmS', 'mxmL'];
+// R-410A large platform: 5MXS48TVJU (5 ports) and 4MXL36TVJU (4 ports), SiUS121827E (12/2018). Its tables print "Hz"; the numbers equal the
+// R-32 large platform's rps tables line for line (start-up staircase, four-way floor, input-current limits), so they are read as rps.
+MULTI.mxsT = {name:'R-410A large platform (5MXS48TVJU, 4MXL36TVJU)', short:'MXS-T/MXL-T', doc:'SiUS121827E', ref:'R410A', ports:5, evMax:480, evMin:60, evP:'PDF 124', startS:930, startP:'PDF 125',
+  freeze:{up:9.5, keep:7.5, drop:5.5, stop:0, reset:13, p:'PDF 117'}, peak:{up:51, keep:53, drop:54, stop:62.5, reset:49, p:'PDF 119'},
+  disch:{drop:111, stop:120, p:'PDF 115'}, f6:{trip:62.5, clear:49.5, p:'PDF 223'}, fin:{l4:70, l4clear:64, p:'PDF 233'}, preheatOn:6, preheatP:'PDF 113',
+  dd:{off:-2.0, low:[-1.5, -1.0, -0.5], p:'PDF 112'}, defrostAccum:30, defrostP:'PDF 120–121', tdDiscP:'PDF 125'};
+const MF_ORDER = ['mxs', 'mxl', 'mxmS', 'mxmL', 'mxsT'];
 const cToF = c => c * 9 / 5 + 32, dcToF = c => c * 9 / 5;
 // Which multi-split manual applies. A Multi_Split export names no model, so every family the recording does not rule out stays a
 // candidate (the tech can set it): the highest port in use, a running port valve above 450 pulses (the MXS and MXL hold an operating room
@@ -2654,8 +2722,8 @@ function multiFam(){
   else {
     if (fp.ports > 3) keep(cands.filter(f => MULTI[f].ports >= fp.ports), `port ${MZ.letters[fp.ports - 1]} in use`);
     if (!REF.auto) keep(cands.filter(f => MULTI[f].ref === REF.ref), `refrigerant set to ${REFNAME[REF.ref]}`);
-    if (fp.over450) keep(cands.filter(f => MULTI[f].evMax > 450), `a running port valve reached ${fp.over450} pulses (the MXS and MXL stop an operating room at 450)`);
-    if (fp.minCool === 32) keep(cands.filter(f => f === 'mxmL'), 'the cooling start-up speed floor read 32 rps, the R-32 large-platform value (SiUS122410EC PDF 145)');
+    if (fp.over450) keep(cands.filter(f => MULTI[f].evMax > 450), `a running port valve reached ${fp.over450} pulses (the 2-4 port MXS and MXL stop an operating room at 450)`);
+    if (fp.minCool === 32) keep(cands.filter(f => f === 'mxmL' || f === 'mxsT'), 'the cooling start-up speed floor read 32 rps, the large-platform value: R-32 5MXM / 3-5MXT(H) (SiUS122410EC PDF 145) or R-410A 5MXS48T / 4MXL36T (SiUS121827E PDF 113); the nameplate settles which');
     else if (fp.minCool === 27 || fp.minCool === 48) keep(cands.filter(f => f === 'mxmS'), `the cooling start-up speed floor read ${fp.minCool} rps, the R-32 small-platform value (SiUS122410EC PDF 145)`);
   }
   return (D._mf = {cands, primary:cands[0], why, fixed:set !== 'auto'});
@@ -2804,8 +2872,8 @@ const RULEBOOK = [
   test:c => c.cool && c.run ? c.freezeMin >= RT.freezeMin : null, detail:c => `indoor coil saturation ${f1s(c.tCoilIn)}°F for ${f0(c.freezeMin)} min`},
  {id:'S7', fam:'unitary', src:'field', sev:'major', title:'High head: recirculation or dirty coil', why:'The FIT blows horizontally; a fence, wall or shrub inside the clearance throws hot air back into the intake. Head climbs and the board derates. (Condensing more than 25 °F over outdoor air at speed is a field rule, not a manual line; the analysis-chart card is the manual\'s test.)', fix:['Restore the installation-manual clearances.','Clean the coil inside out; check fan speed against command; rule out overcharge.'],
   test:c => c.cool && c.run && isN(c.approach) && isN(c.rpsSeen) ? (c.approach > RT.approachHi && c.rps >= 0.8 * c.rpsSeen) : null, detail:c => `condensing ${f1s(c.approach)}°F over outdoor air at ${f0(c.rps)} rps`},
- {id:'S8', fam:'unitary', src:'field', sev:'major', title:'Indoor airflow short of request', why:'Too little air makes a cold coil, freezing and floodback; too much makes a warm coil and a humid house. The reported airflow is the blower\'s own estimate (IOD-4054B p.15); the board\'s own low-airflow fault is b9 / Eb9.', fix:['Filter, duct restrictions, blower configuration in the Daikin One+ installer settings.'],
-  test:c => c.run && isN(c.cfm) && isN(c.reqcfm) && c.reqcfm > 0 ? c.cfm < 0.9 * c.reqcfm : null, detail:c => `${f0(c.cfm)} of ${f0(c.reqcfm)} CFM requested`},
+ {id:'S8', fam:'unitary', src:'field', sev:'major', minMin:3, title:'Indoor airflow short of request', why:'Too little air makes a cold coil, freezing and floodback; too much makes a warm coil and a humid house. The reported airflow is the blower\'s own estimate (IOD-4054B p.15); the board\'s own low-airflow fault is b9 / Eb9.', fix:['Filter, duct restrictions, blower configuration in the Daikin One+ installer settings.'],
+  test:c => c.run && c.airOk && isN(c.cfm) && isN(c.reqcfm) && c.reqcfm > 0 ? c.cfm < 0.9 * c.reqcfm : null, detail:c => `${f0(c.cfm)} of ${f0(c.reqcfm)} CFM requested (request held 2+ min, not in defrost)`},
  {id:'S9w', rid:'S9', fam:'unitary', src:'field', sev:'major', title:'Heating: outdoor coil split too wide', why:'The outdoor coil is the evaporator in heating; more than ~28°F colder than outdoor air means frost or lost airflow.', fix:['Look for ice, check the outdoor fan, defrost initiation and the coil sensor position.'],
   test:c => c.heat && c.locked && isN(c.splitHeat) ? c.splitHeat > RT.splitWide : null, detail:c => `ambient − coil ${f1s(c.splitHeat)}°F`},
  {id:'S9n', rid:'S9', fam:'unitary', src:'field', sev:'major', title:'Heating: outdoor coil not picking up heat', why:'Less than ~5°F between outdoor air and the outdoor coil at speed means low charge or a metering problem.', fix:['Confirm charge — verify in cooling when weather allows, otherwise weigh in or use the manufacturer\'s heating data.'],
@@ -2843,6 +2911,11 @@ const RULEBOOK = [
   test:c => c.cool ? c.reevap.length > 0 : null, detail:c => `zone ${c.reevap.join(', ')}: port closed, fan on, coil at room temperature`},
 ];
 // per-row context for the rulebook
+// The requested airflow steps by design (default cooling profile D: 50 % for ½ min, then 82 % for about 7½ min; DH9VS installation manual p.29,
+// RS6215002r13 p.9), the blower trails each step by about a minute, and in defrost the indoor airflow is 0 unless defrost heat is on
+// (SiUS612412E / SiUS612209EA p.11): compare airflow with the request only after 2 min running and 2 min of an unchanged request, outside defrost
+function airSettled(i){ if (!(D.runSec[i] >= 120) || (D.str.defrost && D.str.defrost[i] === 'ON')) return false; const rq = D.num.reqcfm; if (!rq || !isN(rq[i])) return false;
+  const back = Math.max(1, Math.round(120 / D.interval)); for (let k = Math.max(0, i - back); k < i; k++) if (rq[k] !== rq[i]) return false; return true; }
 function ruleCtx(i){
   const v = id => D.num[id] ? D.num[id][i] : null, s = D.str, m = D.mode[i], multi = D.fam === 'multi';
   const run = D.runSec[i] >= 0, rs = D.runSec[i] / 60, cool = m === 'cool', heat = m === 'heat';
@@ -2850,7 +2923,7 @@ function ruleCtx(i){
   const ochex = isN(v('ochex')) ? v('ochex') : v('ocmid'), oat = v('oat');
   // heads switched on at their remote; of those the ones whose port is open carry refrigerant (in heating an idle head's valve stays open on purpose,
   // SiUS121736EA PDF 118); "calling" = ΔD signal 5 or more, i.e. the room above its target (PDF 107)
-  const zones = multi ? D.zones : [], onR = zones.filter(k => !/^stop/i.test((s['zmode'+k] && s['zmode'+k][i]) || ''));
+  const zones = multi ? D.zones : [], onR = zones.filter(k => !zoneOff(k, i));
   const active = onR.filter(k => isN(v('pev'+k)) && v('pev'+k) > 0), closed = onR.filter(k => isN(v('pev'+k)) && v('pev'+k) === 0);
   const ihxAct = active.map(k => v('ihx'+k)).filter(isN);
   const ihxMin = ihxAct.length ? Math.min(...ihxAct) : null, ihxMax = ihxAct.length ? Math.max(...ihxAct) : null;
@@ -2866,7 +2939,7 @@ function ruleCtx(i){
   const unmet = multi ? zones.some(k => isN(v('dd'+k)) && v('dd'+k) >= 5) : (s.therm[i] === 'ON');
   const uni = multi ? null : uniP(), w = uni && uni.chart && uni.chart[m] ? uni.chart[m].oat : null;
   const c = {i, run, rs, cool, heat, multi, rps, trps, rpsMax, rpsMin, rpsSeen, rpsLow, disch, dsh, tEvap, tCond, oat, ochex, ssh:v('sh'), sc:v('sc'), scErr:v('scerr'), approach:(cool && isN(tCond) && isN(oat)) ? tCond - oat : null,   // condensing − outdoor air, the same as the Approach tag
-          splitHeat:(heat && isN(ochex) && isN(oat)) ? oat - ochex : null, cfm:v('cfm'), reqcfm:v('reqcfm'), fin:v('fin'), fan:v('fan'), tfan:v('tfan'), ihxMax, ihxMin,
+          splitHeat:(heat && isN(ochex) && isN(oat)) ? oat - ochex : null, cfm:v('cfm'), reqcfm:v('reqcfm'), airOk:airSettled(i), fin:v('fin'), fan:v('fan'), tfan:v('tfan'), ihxMax, ihxMin,
           evMax:evs.length ? Math.max(...evs) : (multi ? null : v('evpct')), evMin:evs.length ? Math.min(...evs) : (multi ? null : v('evpct')), limits, limBind, hiFanWarm, reevap, unmet,
           locked:D.locked[i], sinceDefrost:D.sinceDefrost[i], pinnedMin:D.pinnedMin[i], heldMin:D.heldMin[i], reversals:D.reversals[i], freezeMin:D.freezeMin[i], offSec:D.offSec ? D.offSec[i] : 0,
           uni, inWin:!!w && isN(oat) && oat >= w[0] && oat <= w[1], oilret:s.oilret[i] === 'ON', iev:v('iev'), tCoilIn:D.tCoilIn ? D.tCoilIn[i] : null, tderr:v('tderr')};
@@ -3024,7 +3097,7 @@ function evChecks(){
   const valves = [];
   if (!multi){
     // heating: the outdoor EEV holds suction − Tm on the R-32 FIT (SiUS612412E p.7); in cooling it is bypassed by its check valve. Not on the Goodman (no Ts).
-    if (chById.ev.present && !VC_NOW && EQ.out !== 'ac') valves.push({id:'V1', name:'Outdoor EV', pls:'ev', thr:XT.evMove.ev, modes:{heat:{ch:D.num.osh && D.num.osh.some(isN) ? 'osh' : 'sh', sign:-1, what:D.num.osh && D.num.osh.some(isN) ? 'suction − coil middle superheat' : 'suction superheat'}}});
+    if (chById.ev.present && !VC_NOW && EQ.out !== 'ac') valves.push({id:'V1', name:'Outdoor EV', pls:'ev', thr:XT.evMove.ev, modes:{heat:unitPlat() === 'dh9' ? {ch:'scid', sign:-1, what:'indoor subcooling (SiUS612415E p.9)'} : {ch:D.num.osh && D.num.osh.some(isN) ? 'osh' : 'sh', sign:-1, what:D.num.osh && D.num.osh.some(isN) ? 'suction − coil middle superheat' : 'suction superheat'}}});
     // the indoor EEV controls coil superheat in cooling and sits fully open in heating (SiUS612412E p.7)
     if (chById.iev.present) valves.push({id:'V2', name:'Indoor EV', pls:'iev', thr:XT.evMove.iev, modes:{cool:{ch:'ish', sign:-1, what:'indoor coil superheat'}}});
   } else for (const k of D.zones) valves.push({id:'V1', name:`Port ${MZ.letters[k]} EV`, pls:'pev'+k, thr:XT.evMove.pev, zone:k, call:'dd'+k, modes:{cool:{ch:'rmgas'+k, sign:-1, what:`port ${MZ.letters[k]} gas pipe`}, heat:{ch:'rmliq'+k, sign:+1, what:`port ${MZ.letters[k]} liquid pipe`}}});   // the board steers each port on its gas pipe in cooling and its liquid pipe in heating (SiUS121736EA PDF 120–121)
@@ -3087,6 +3160,12 @@ function analyze(){
   // compressor runs
   D.runs = []; let curRun = null;
   for (let i = 0; i < n; i++){ const on = D.runSec[i] >= 0; if (on && !curRun){ curRun = {start:i, end:i}; D.runs.push(curRun); } if (on) curRun.end = i; if (!on) curRun = null; }
+  // the board takes the compressor to "0 frequency" just before and just after a defrost (SiUS612209EA / SiUS612412E p.11; the multis stop it
+  // for about 60 s either side, SiUS121827E PDF 121): a stop that short beside a defrost flag is part of the defrost, not a new run
+  for (let k = D.runs.length - 1; k > 0; k--){ const a = D.runs[k - 1], b = D.runs[k], gap = b.start - a.end - 1;
+    if (gap > Math.max(3, Math.round(90 / D.interval))) continue;
+    let df = false; for (let i = Math.max(0, a.end - 2); i <= Math.min(n - 1, b.start + 2); i++) if (s.defrost && s.defrost[i] === 'ON'){ df = true; break; }
+    if (df){ a.end = b.end; D.runs.splice(k, 1); } }
   D.runOf = new Array(n).fill(-1); D.runs.forEach((r, k) => { for (let i = r.start; i <= r.end; i++) D.runOf[i] = k; });
   D.runs.forEach((r, k) => {
     const rows = []; for (let i = r.start; i <= r.end; i++) rows.push(i);
@@ -3356,7 +3435,7 @@ const PARTS = {
 //   · a drain pan heater: hot gas from the discharge → strainer → solenoid → pan loop → check valve → capillary → the coil's liquid end;
 //   · a refrigerant-cooled PCB heatsink on the liquid line; mufflers on the discharge; service port and fusible plug on the suction.
 // The variant is chosen from the log itself: it carries an injection EV or a drain pan valve column.
-function uniVar(){ return FAM !== 'multi' && EQ.out === 'hp' && D && (chById.evinj.present || (STAT.find(x => x.id === 'svdrain') || {}).present) ? 'dh9' : 'std'; }
+function uniVar(){ return FAM !== 'multi' && EQ.out === 'hp' && D && !D.singleFan && (chById.evinj.present || (STAT.find(x => x.id === 'svdrain') || {}).present) ? 'dh9' : 'std'; }
 const VAR_PIPES = {
   port: [{id:'inj', d:'M190 572 H420 V783', hi:true, cls:'thin', gate:i => D.num.evinj[i] > 0},
          {id:'pan', d:'M460 915 H250 V824 H220', hi:true, cls:'thin', gate:i => D.str.svdrain[i] === 'ON'}],
@@ -3667,10 +3746,11 @@ function renderCycle(i){
     if (se){
       if (drg){ se.textContent = 'wet … dry coil'; se.hidden = false; }
       else if (tgtId && isN(D.num[tgtId][i]) && isN(v)){
-        const t = D.num[tgtId][i], d = v - t, dec = (Math.abs(d) >= 100 ? 0 : 1), ref = /^logged/.test(pick(tg.targetLabel, m) || '');   // a logged target no manual describes: the difference, uncoloured
+        // a logged target no manual describes: the difference, uncoloured (on the DH9VS family the IDU Target SC is the manual's own target, SiUS612415E p.9)
+        const dh9Sc = tgtId === 'tsci' && unitPlat() === 'dh9', lab0 = pick(tg.targetLabel, m) || 'target', t = D.num[tgtId][i], d = v - t, dec = (Math.abs(d) >= 100 ? 0 : 1), ref = !dh9Sc && /^logged/.test(lab0);
         const cls = ref ? 'ref' : Math.abs(d) < 0.05 ? 'off' : d > 0 ? 'up' : 'dn';
         const txt = ref ? (Math.abs(d) < 0.05 ? '=' : (d > 0 ? '+' : '−') + Math.abs(d).toFixed(dec)) : cls === 'off' ? '✓' : (d > 0 ? '▲+' : '▼−') + Math.abs(d).toFixed(dec);
-        se.innerHTML = `${pick(tg.targetLabel, m) || 'target'} ${fmt(t, chById[tgtId])} <span class="dv ${cls}">${txt}</span>`; se.hidden = false;
+        se.innerHTML = `${dh9Sc ? 'target' : lab0} ${fmt(t, chById[tgtId])} <span class="dv ${cls}">${txt}</span>`; se.hidden = false;
       } else { const parts = [];
         if (subId && isN(D.num[subId][i])){ const sc = chById[subId]; const sl = pick(tg.subLabel, m); parts.push(((sl != null ? sl : sc.short) + ' ' + fmt(D.num[subId][i], sc) + (tg.subUnit && sc.unit ? ' ' + sc.unit : '')).trim()); }
         if (tg.sub2 && isN(D.num[tg.sub2][i])){ const v2 = D.num[tg.sub2][i]; parts.push(`${tg.sub2Label}${D.mode[i] === 'cool' ? '~' : ''}${v2 > 0 ? '+' : '−'}${Math.abs(v2).toFixed(0)}`); }
@@ -3784,7 +3864,7 @@ function narrateRow(i){
       if (D.runSec[i] >= ((D._mfr || {}).startS || 1150) && isN(num.tderr[i]) && Math.abs(num.tderr[i]) >= 10) parts.push(`discharge ${f0(Math.abs(num.tderr[i]))}°F ${num.tderr[i] < 0 ? 'under' : '<span class="w">over</span>'} target`);
       const on = [], off = [], stopped = [];
       for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k][i], fan = num['ifan'+k][i], dd = num['dd'+k][i], hx = num['ihx'+k][i], zm = s['zmode'+k] ? s['zmode'+k][i] : null;
-        if (/^stop/i.test(zm || '')) stopped.push(L);   // switched off at its remote: not part of the call, whatever its port valve is doing
+        if (zoneOff(k, i)) stopped.push(L);   // switched off at its remote: not part of the call, whatever its port valve is doing
         else if (isN(dd) && dd === 0) off.push(L + (isN(fan) && fan > 0 ? '' : '·fan off') + (isN(ev) && ev > 0 && m === 'heat' ? '·valve open (idle-head control)' : ''));   // ΔD 0 = thermostat off (SiUS121736EA PDF 107)
         else on.push(`${L}${isN(dd) ? ' ΔD ' + f0(dd) + (dd === 4 ? ' (at target)' : dd < 4 ? ' (past target)' : '') : ''}${isN(hx) ? ' coil ' + f0(hx) + '°' : ''}`); }
       if (on.length) parts.push(`thermostat on: <b>${synEsc(on.join(', '))}</b>`);
@@ -3901,7 +3981,8 @@ const CHAIN_DEFS = [
   absorb:[/^Suction superheat high/, /^Discharge superheat under/, /^Liquid returning to the compressor/]},
  {id:'A9', fam:'unitary', cats:['crit'], cause:['ochex'], effect:['evap', 'lp', 'appr', 'cfm'],
   when:c => { if (c.heat.length < 10 || !c.has('ochex')) return null; const oat = c.med(c.heat, 'oat'), appr = c.med(c.heat, 'appr'), odsat = c.med(c.heat, 'odsat');
-    if (c.heat.length * c.dt >= ((uniP() || {}).defrostMax || 120) && !c.defrosts && isN(appr) && appr >= 30 && isN(odsat) && odsat >= 15) return {rows:c.span(c.heat), kind:'warm', appr, odsat, min:c.heat.length * c.dt};
+    const dMax = (uniP() || {}).defrostMax;   // no fixed maximum where the interval is a setting with a wide range (R-32 FIT)
+    if (isN(dMax) && c.heat.length * c.dt >= dMax && !c.defrosts && isN(appr) && appr >= 30 && isN(odsat) && odsat >= 15) return {rows:c.span(c.heat), kind:'warm', appr, odsat, min:c.heat.length * c.dt};
     if (c.defrosts && c.defrosts / c.hrs >= 3 && isN(oat) && oat >= 40) return {rows:c.span(c.heat), kind:'cold', oat, d:c.defrosts, hrs:c.hrs};
     return null; },
   text:e => e.kind === 'warm' ? ({title:'Outdoor coil thermistor reading warm → defrost never triggers → coil icing over → evaporating temperature falling, capacity gone',
@@ -4363,12 +4444,18 @@ function tripFindings(){
     if (ep.length) add('alarm', `Low pressure under ${p.lp.trip} psig for ${p.lp.tripMin}+ minutes (the E15 condition)`, `${ep.length} stretch${ep.length > 1 ? 'es' : ''}, first at ${fmtTime(D.t[ep[0].a])}.`, ['Gauge the low side. Cooling: charge, a restriction, indoor airflow. Heating: the outdoor coil and defrost.'], `${p.doc} ${p.lp.tripP}`); }
   if (p.dsh && p.dsh.e21){ const r = rowsWhere(i => D.mode[i] === 'cool' && isN(num.iev[i]) && num.iev[i] <= p.iEevMin && isN(num.dsh[i]) && num.dsh[i] < p.dsh.e21 && s.oilret[i] !== 'ON'); if (r.length >= 3) add('alarm', `Discharge superheat under ${p.dsh.e21}°F with the indoor EEV at its ${p.iEevMin}-pulse minimum (the E21 condition)`, `${r.length} rows, first at ${fmtTime(D.t[r[0]])}: the valve cannot close any further and liquid is still reaching the compressor.`, ['Overcharge, low indoor airflow, or an indoor EEV that passes refrigerant when closed.'], `${p.doc} ${p.dsh.e21P}`); }
   if (p.dsh && p.dsh.e41Heat){ const r = rowsWhere(i => D.mode[i] === 'heat' && D.locked[i] && isN(num.dsh[i]) && num.dsh[i] > p.dsh.e41Heat); if (r.length >= 3) add('alarm', `Discharge superheat over ${p.dsh.e41Heat}°F in heating (the E41 refrigerant-shortage check)`, `${r.length} locked-speed rows, first at ${fmtTime(D.t[r[0]])}, peak ${f0(peak(r, 'dsh', true))}°F.`, ['Leak search, repair, evacuate, weigh in the charge.'], `${p.doc} ${p.dsh.e41P}`);
-    const sz = sizeInfo(); if (!sz || sz.t >= 3.5){ const r2 = rowsWhere(i => D.mode[i] === 'heat' && D.locked[i] && isN(num.liq[i]) && isN(num.oat[i]) && num.oat[i] - 3.6 > num.liq[i]); if (r2.length >= 6) add('warn', `Liquid pipe more than 3.6°F below outdoor air in heating (part of the E41 check on 3.5–5 ton units)`, `${r2.length} locked-speed rows, first at ${fmtTime(D.t[r2[0]])}${sz ? '' : '; the unit size is not set, and the manual applies this check to the 3.5–5 ton units only'}.`, ['The board reads this as a refrigerant shortage: leak search and weigh in the charge.'], `${p.doc} ${p.dsh.e41P}`); } }
+    const sz = sizeInfo(); if (p.liqVsOatAllSizes || !sz || sz.t >= 3.5){ const r2 = rowsWhere(i => D.mode[i] === 'heat' && D.locked[i] && isN(num.liq[i]) && isN(num.oat[i]) && num.oat[i] - 3.6 > num.liq[i]); if (r2.length >= 6) add('warn', `Liquid pipe more than 3.6°F below outdoor air in heating (part of the E41 check on 3.5–5 ton units)`, `${r2.length} locked-speed rows, first at ${fmtTime(D.t[r2[0]])}${sz ? '' : '; the unit size is not set, and the manual applies this check to the 3.5–5 ton units only'}.`, ['The board reads this as a refrigerant shortage: leak search and weigh in the charge.'], `${p.doc} ${p.dsh.e41P}`); } }
   if (p.fin && chById.fin.present){ const sz = sizeInfo(), big = !!(sz && sz.t >= 3.5), lim = big ? p.fin.large : p.fin.small; const r = rowsWhere(i => isN(num.fin[i]) && num.fin[i] >= lim); if (r.length) add('warn', `Inverter fin reached ${f0(peak(r, 'fin', true))}°F, at the E32 line of ${lim}°F${sz ? '' : ' (the 1.5–3 ton line)'}`, `${r.length} rows, first at ${fmtTime(D.t[r[0]])}.`, ['Check the outdoor intake air (under 115 °F per the manual), the heat-sink and its cooling loop, and the outdoor fan.'], `${p.doc} ${p.fin.p}`); }
   // the manual's charge figure, shown for reference: it applies only in the manual's own charge test, which the recording does not mark
-  const ct = {dh9:{v:11, p:'CVT, installation manual p.26'}, vzc:{v:8, p:'CHARGE MODE at 100 %, p.23–24'}, dx9vc:{v:8, p:'charge mode, p.10–12'}}[unitPlat()];
-  if (ct && chById.sc.present){ const r = rowsWhere(i => D.mode[i] === 'cool' && D.locked[i] && D.runSec[i] >= 1200 && isN(num.oat[i]) && num.oat[i] >= 65 && num.oat[i] <= 105 && isN(num.sc[i]));
-    if (r.length >= 6){ const v = r.map(i => num.sc[i]).sort((a, b) => a - b), mv = v[Math.floor(v.length / 2)]; add('info', `Subcooling ${f1s(mv)}°F here; the manual's charge figure is ${ct.v} ±1°F in its charge test`, `Median of ${r.length} locked-speed cooling rows at 65–105 °F outdoors. The manual's figure is measured with a gauge at the liquid stop valve during its own charge test, which this recording does not mark, so it is not judged here; the app's figure is the board's Tc − the liquid-pipe thermistor.`, ['Run the manual\'s charge test and read subcooling with a gauge before adjusting the charge.'], `${unitPlat() === 'vzc' ? 'RS6215002r10' : (uniP() || {}).doc} ${ct.p}`); } }
+  // R-410A FIT: CHARGE MODE (about 2 h at full capacity, outdoor 65-105 °F), ±1 °F, by size; Enhanced models differ (installation manual
+  // 3P731493-1 p.29-30; the spec sheet SS-DZ6VS p.3-4 agrees). *VZC20 5-ton: its own manual says 8 °F, its Daikin twin DZ20VC0601 and its
+  // successor DZ9VC / *SZV9 say 10 °F (RSD6215002r9 p.32; RSD6215002r11 p.32; RS6215002r13 p.23)
+  const sz = sizeInfo(), szT = sz && isN(sz.t) ? sz.t : null;
+  const fit410Sc = () => { if (!isN(szT)) return null; if (sz.e) return {2:14, 3:8, 3.5:9, 4:9}[szT] || null; if (szT === 3 && EQ.out === 'ac') return '13 (DX6VSA) or 15 (DX6VSS)'; return {1.5:10, 2:12, 2.5:14, 3:15, 3.5:8, 4:9, 5:9}[szT] || null; };
+  const ct = {dh9:{v:11, p:'CVT, installation manual p.26'}, vzc:{v:szT === 5 ? '8 (this manual) or 10 (DZ20VC0601 / DZ9VC / *SZV9 manuals)' : 8, p:'CHARGE MODE at 100 %, p.23–24'}, dx9vc:{v:8, p:'charge mode, p.10–12'},
+    fit410:{v:fit410Sc() || (isN(szT) ? null : 'by size (set the unit size above: 1.5 t 10, 2 t 12, 2.5 t 14, 3 t 15, 3.5 t 8, 4 t 9, 5 t 9)'), p:'CHARGE MODE, installation manual 3P731493-1 p.29–30'}}[unitPlat()];
+  if (ct && ct.v != null && chById.sc.present){ const r = rowsWhere(i => D.mode[i] === 'cool' && D.locked[i] && D.runSec[i] >= 1200 && isN(num.oat[i]) && num.oat[i] >= 65 && num.oat[i] <= 105 && isN(num.sc[i]));
+    if (r.length >= 6){ const v = r.map(i => num.sc[i]).sort((a, b) => a - b), mv = v[Math.floor(v.length / 2)]; add('info', `Subcooling ${f1s(mv)}°F here; the manual's charge figure is ${ct.v} ±1°F in its charge test`, `Median of ${r.length} locked-speed cooling rows at 65–105 °F outdoors. The manual's figure is measured with a gauge at the liquid stop valve during its own charge test, which this recording does not mark, so it is not judged here; the app's figure is the board's Tc − the liquid-pipe thermistor.`, ['Run the manual\'s charge test and read subcooling with a gauge before adjusting the charge.'], `${unitPlat() === 'vzc' ? 'RS6215002r10' : unitPlat() === 'fit410' ? 'SiUS612209EA family' : (uniP() || {}).doc} ${ct.p}`); } }
   return out;
 }
 function synopsisFindings(){
@@ -4380,14 +4467,14 @@ function synopsisFindings(){
   const share = (arr, pred) => arr.length ? arr.filter(pred).length / arr.length : 0;
   { const d = []; for (let i = 1; i < n; i++) d.push((D.t[i] - D.t[i-1]) / 1000); const step = med(d);
     if (isN(step) && step > 0){ let missing = 0, gaps = 0, worst = 0, at = 0; d.forEach((x, k) => { const miss = Math.round(x / step) - 1; if (miss >= 1){ missing += miss; gaps++; if (x > worst){ worst = x; at = k; } } });
-      if (missing >= 3 && missing / (n + missing) >= 0.03) F.push({rid:'L1', sev:'law', st:'warn', dq:true, dqShort:`${missing} of ${n + missing} samples missing`, title:`Recording has gaps: ${missing} of ${n + missing} samples missing`, why:`${gaps} stretches with no data at a ${f0(step)} s sample rate, the longest ${(worst / 60).toFixed(1)} min starting ${fmtTime(D.t[at])}. Nothing was written during them, so trends jump across and anything that happened inside is not in the log.`, fix:['Keep the D-Checker app open on screen for the whole recording; a phone pauses an app that is in the background or locked.', 'Stay within Bluetooth range of the adapter and keep the phone from sleeping.']}); } }
+      if (missing >= 3 && missing / (n + missing) >= 0.03) F.push({rid:'L1', sev:'law', st:'warn', dq:true, dqShort:`${missing} of ${n + missing} samples missing`, title:`Recording has gaps: ${missing} of ${n + missing} samples missing`, why:`${gaps} stretches with no data at a ${f0(step)} s sample rate, the longest ${(worst / 60).toFixed(1)} min starting ${fmtTime(D.t[at])}. Nothing was written during them, so trends jump across and anything that happened inside is not in the log.` + (D.fam === 'multi' && multiFam().cands.includes('mxmS') ? ' Small-platform R-32 multis (2MXM18, 2MXT(H)18, 3MXM24, 4MXM36) built before April 1, 2025 have a known D-Checker connection problem (TSB D-GN-OT-0080, 2025-07-23).' : ''), fix:['Keep the D-Checker app open on screen for the whole recording; a phone pauses an app that is in the background or locked.', 'Stay within Bluetooth range of the adapter and keep the phone from sleeping.']}); } }
   const modes = [...new Set(D.mode.filter(m => m !== 'other'))];
   const runMin = runRows.length * dt, spanMin = n * dt;
   // errors and controls
   const errRows = rows.filter(i => s.etype[i] && !/^(normal|0+)$/i.test(s.etype[i].trim()));
   { const seen = {}; for (const i of rows) for (const e of rowErrors(i)){ if (D.fam === 'multi' && /^Zone/.test(e.who)) continue; const key = e.who + '|' + (e.code || e.raw); (seen[key] = seen[key] || {e, rows:[]}).rows.push(i); }
     for (const {e, rows:er} of Object.values(seen)){ const chs = errChs(e.k, e.zone).map(id => chById[id].short);
-      F.push({st:e.k && e.k.minor ? 'warn' : 'alarm', src:e.k ? e.k.src : null, title:`${e.who} error ${e.code || e.raw}: ${e.t}`, why:`${er.length} rows (${f0(er.length * dt)} min), first at ${fmtTime(D.t[er[0]])} · ${e.rawTxt}${e.type != null ? ` · board error type ${e.type}` : ''}${e.k && e.k.d ? ` · detection: ${e.k.d}` : ''}${chs.length ? ` · readings that bear on it: ${chs.join(', ')}` : ''}${e.k ? ` · ${e.k.src}` : ''}`,
+      F.push({st:(e.k && e.k.minor) || /^(Caution|Warning)/.test(e.cls || '') ? 'warn' : 'alarm', src:e.k ? e.k.src : null, title:`${e.who} error ${e.code || e.raw}: ${e.t}`, why:`${er.length} rows (${f0(er.length * dt)} min), first at ${fmtTime(D.t[er[0]])} · ${e.rawTxt}${e.cls ? ` · error type ${e.cls} (Daikin D-Checker)` : ''}${e.k && e.k.d ? ` · detection: ${e.k.d}` : ''}${chs.length ? ` · readings that bear on it: ${chs.join(', ')}` : ''}${e.k ? ` · ${e.k.src}` : ''}`,
         fix:e.k ? e.k.c : ['Look the code up on the unit\'s own display and in its service manual.'], do:'Clear this before judging anything else in the recording.'}); } }
   const retry = rows.filter(i => isN(num.retry[i]) && num.retry[i] !== 0);
   if (retry.length) F.push({st:'info', title:`Retry codes ${[...new Set(retry.map(i => num.retry[i]))].join(', ')}`, why:`${retry.length} rows`, do:'The board\'s retry code is a D-Checker item the service manuals do not define; noted as recorded.'});
@@ -4451,7 +4538,7 @@ function synopsisFindings(){
     if (dshLow >= 0.3) F.push({rid:'S1', st:'alarm', field:true, title:`Discharge superheat under ${SIG.dshLow}°F for ${pct(dshLow, 1)}% of the time at speed`, why:`Discharge − Tc at ≥${Math.round(SIG.rpsFrac * 100)}% of the highest speed in this log`, do:'Liquid floodback signature. Find why the evaporator is not boiling it all off before it damages the compressor.'});
     // capacity delivery
     if (runRows.length){ const under = share(settled, i => isN(num.rpserr[i]) && num.rpserr[i] <= -SIG.rpsHold); if (under >= 0.2) F.push({rid:'L5', st:'warn', field:true, title:`Compressor held ≥${SIG.rpsHold} rps under its target ${pct(under, 1)}% of the settled time`, why:`see the drop-control findings for what held it`, do:'Capacity is being limited by a protection, not by the thermostat.'}); }
-    if (chById.cfm.present && chById.reqcfm.present){ const shortA = share(runRows, i => isN(num.cfm[i]) && isN(num.reqcfm[i]) && num.reqcfm[i] > 0 && num.cfm[i] < 0.9 * num.reqcfm[i]); if (shortA >= 0.2) F.push({rid:'S8', st:'warn', field:true, title:`Indoor airflow short of request ${pct(shortA, 1)}% of the run time`, why:`present CFM under 90% of requested`, do:'Dirty filter, closed registers or a duct restriction. Fix airflow before judging refrigerant numbers.'}); }
+    if (chById.cfm.present && chById.reqcfm.present){ const shortA = share(runRows.filter(airSettled), i => isN(num.cfm[i]) && isN(num.reqcfm[i]) && num.reqcfm[i] > 0 && num.cfm[i] < 0.9 * num.reqcfm[i]); if (shortA >= 0.2) F.push({rid:'S8', st:'warn', field:true, title:`Indoor airflow short of request ${pct(shortA, 1)}% of the run time`, why:`present CFM under 90% of requested`, do:'Dirty filter, closed registers or a duct restriction. Fix airflow before judging refrigerant numbers.'}); }
     // sensor disagreements from the signature pass
     const cnt = code => rows.filter(i => (D.sig[i] || []).some(x => x.code === code && sigOk(x))).length;
     for (const [code, title, doTxt] of [['hp-ip','Outdoor and indoor pressure sensors disagree','One of the two pressure sensors is wrong, or the indoor sensor is on a restricted line; compare both to a gauge.'],['order','Thermistor order violated','A thermistor is reading wrong or misplaced; check the flagged pair.']]){ const c = cnt(code); if (c >= Math.max(3, 0.05 * n)) F.push({rid:code === 'hp-ip' ? 'S5' : 'L2', st:'warn', field:true, title:`${title} on ${c} rows`, why:`signature '${code}'`, do:doTxt}); }
@@ -4462,14 +4549,21 @@ function synopsisFindings(){
   if (!F.some(f => !f.field || fieldOn())) F.push({st:'ok', title:'Nothing stood out in this recording', why:`${f0(runMin)} min of run time, ${steadyRows.length ? f0(steadyRows.length * dt) + ' min steady' : 'never reached steady state'}`, do:'If there is a complaint, record longer, through a full cycle, or in the complaint conditions.'});
   { const mf = D.fam === 'multi' ? multiFam() : null, u = unitPlat();
     if (mf) F.push({st:'info', dq:true, title:`Manual applied: ${mf.cands.length === 1 ? MULTI[mf.cands[0]].name + ' (' + MULTI[mf.cands[0]].doc + ')' : 'not settled: ' + mfName()}`, why:mf.cands.length === 1 ? (mf.fixed ? 'Set by hand.' : `Narrowed by: ${mf.why.join('; ')}.`) : `A Multi_Split export names no model and nothing in this recording rules these out${mf.why.length ? ' (' + mf.why.join('; ') + ')' : ''}. Each family's own lines are used only where they all agree.`, do:'Set the model beside Refrigerant (Model) from the nameplate so the right manual\'s lines are used.'});
-    else if (u) F.push({st:'info', dq:true, title:`Manual applied: ${u === 'other' ? 'none in hand for this model' : `${UNI[u].name} (${UNI[u].doc})`}`, why:u === 'other' ? 'No service manual for this model is on file, so no manual lines are judged; the readings are shown as recorded.' : D.model ? `From the model in the log, ${String(D.model).replace(/^INV_Unitary_/i, '')}.` : `This export names no model; ${D.dh9Layout ? 'its columns are the DH9VS layout' : D.vcLayout ? 'it has no suction thermistor column, the Goodman *VZC20 layout' : `its refrigerant (${REFNAME[REF.ref]}) and FIT layout`} decide${D.dh9Layout || D.vcLayout ? 's' : ''} it.`, do:'Check the outdoor nameplate if this looks wrong.'});
-    if (D.flowFlip) F.push({st:'info', dq:true, title:`${D.flowFlip} running row${D.flowFlip > 1 ? 's' : ''} with the 4-way valve the other way from the requested mode`, why:'The refrigerant flows the way the valve is set (SiUS121736EA PDF 108; SiUS612412E p.7), so those rows are drawn and judged in the valve\'s direction; the requested mode is still shown above the drawing.', do:'Normal around defrost and some start-up sequences; on a multi, a heating call running in the cooling direction for minutes is worth a look.'}); }
+    else if (u) F.push({st:'info', dq:true, title:`Manual applied: ${u === 'other' ? 'none in hand for this model' : `${UNI[u].name} (${UNI[u].doc})`}`, why:u === 'other' ? 'No service manual for this model is on file, so no manual lines are judged; the readings are shown as recorded.' : D.singleFan ? 'The export uses the DH9VS label layout, but its injection valve, second fan and fan-fin thermistors are absent in every row: a single-fan R-32 FIT unit (Goodman SD guide PM-GDMNSD p.8; SS-GZV7S-R32 p.28), so the R-32 FIT manual applies and its high pressure is the board\'s figure, not a sensor.' : D.model ? `From the model in the log, ${String(D.model).replace(/^INV_Unitary_/i, '')}.` : `This export names no model; ${D.dh9Layout ? 'its columns are the DH9VS layout' : D.vcLayout ? 'it has no suction thermistor column, the Goodman *VZC20 layout' : `its refrigerant (${REFNAME[REF.ref]}) and FIT layout`} decide${D.dh9Layout || D.vcLayout ? 's' : ''} it.`, do:'Check the outdoor nameplate if this looks wrong.'});
+    if (D.fam !== 'multi' && D.modeReq){ const ep = episodes(i => D.runSec[i] >= 0 && D.modeReq[i] === 'cool' && D.mode[i] === 'heat', Math.max(2, Math.round(120 / D.interval)));
+      if (ep.length){ const rowsN = ep.reduce((a, e) => a + e.b - e.a + 1, 0), plat = unitPlat();
+        F.push({st:'warn', mode:'cool', src:plat === 'fit410' ? 'SiUS612209EA p.7; TSB C-GN-SP-0049 REV3 (2024-10-22)' : plat === 'fit32' ? 'SiUS612412E p.7' : null,
+          title:`Cooling call with the reversing valve in the heating position for ${f0(rowsN * D.interval / 60)} min`,
+          why:`${ep.length} stretch${ep.length > 1 ? 'es' : ''}, first at ${fmtTime(D.t[ep[0].a])}: cooling was asked for while the 4-way valve reported the heating position, so the refrigerant ran in the heating direction. These units heat by de-energizing the valve coil.` + (plat === 'fit410' ? ' On DZ6VSA 1.5-3 ton (and the Amana ASZS6 / Goodman GSZS6 twins) built before the serial cut-offs 2404045992 (1.5 and 2 t), 2404031994 (2.5 and 3 t) and 2404030767 (2 t enhanced), the valve can stay in the heating position after a momentary power interruption; the software fix comes over the air with Daikin One+ / One Touch / Amana thermostat software 3.3.11 or later (TSB C-GN-SP-0049 REV3).' : ''),
+          fix:['Check that the reversing-valve coil is energized in cooling and that the valve shifts (feel the lines at the valve).', 'Check the outdoor board\'s valve output and the coil.'].concat(plat === 'fit410' ? ['Check the thermostat software version and the serial number against TSB C-GN-SP-0049 REV3: units not on Wi-Fi, or on an EWC zoning panel, get the outdoor board replaced instead of the over-the-air update (warranty authorization 8827).'] : [])}); } }
+    if (D.flowFlip) F.push({st:'info', dq:true, title:`${D.flowFlip} running row${D.flowFlip > 1 ? 's' : ''} with the 4-way valve the other way from the requested mode`, why:'The refrigerant flows the way the valve is set (SiUS121736EA PDF 108; SiUS612412E p.7), so those rows are drawn and judged in the valve\'s direction; the requested mode is still shown above the drawing.', do:'Normal around defrost and some start-up sequences; on a multi, a heating call running in the cooling direction for minutes is worth a look.' + (unitPlat() === 'fit410' ? ' On DZ6VSA 1.5-3 ton units built before the TSB serial cut-offs, the valve can stay in the heating position during a cooling call after a momentary power loss; the fix is thermostat software 3.3.11 or later (TSB C-GN-SP-0049 REV3, 2024-10-22).' : '')}); }
   // import column check: every reading was matched to the header row by name before it was linked to a chip; anything out of place is listed
   if (D.colmap){ const seen = D.colmap.filter(x => x.how !== 'absent'), bad = seen.filter(x => x.how === 'mismatch'), moved = seen.filter(x => x.how === 'moved');
     if (bad.length) F.push({rid:'L2', st:'warn', dq:true, dqShort:`${bad.length} reading${bad.length > 1 ? 's' : ''} not under the expected header`, title:`Column check: ${bad.length} of ${seen.length} readings were not under the header the app expected`, why:bad.map(x => `${x.label}: column ${x.col} is headed "${x.hdr}", left blank`).join(' · '), fix:['Re-export the recording from D-Checker with the default column set and compare.', 'If the export is right, the app\'s header table needs this model added: send the file to the library and flag it.']});
     const vary = (D.unbound || []).filter(u => u.status === 'varies');
     if (vary.length) F.push({st:'info', dq:true, title:`Review: ${vary.length} column${vary.length > 1 ? 's' : ''} in this file carr${vary.length > 1 ? 'y' : 'ies'} changing data the app does not show`, why:vary.slice(0, 8).map(u => `${u.col}: ${u.hdr} (e.g. ${u.sample})`).join(' · ') + (vary.length > 8 ? ` · and ${vary.length - 8} more` : ''), do:'These readings have no place on the cycle view yet. They are listed under Data → Where every number comes from; decide where each belongs before it is trusted anywhere.'});
     if (bad.length === 0) F.push({st:'ok', dq:true, title:`Column check: all ${seen.length} readings sit under their expected headers`, why:`each reading was found in the file's header row by name before it was linked to its chip${moved.length ? `; ${moved.length} of them (${moved.map(x => x.label).join(', ')}) sit at a different column number than the standard layout, which is normal for this model` : ''}; readings this export does not carry are simply blank${D.pcFixed ? `; ${D.pcFixed} cell${D.pcFixed > 1 ? 's' : ''} where the PC app printed 16 °C as 60 °F were put back to 60.8 °F` : ''}`, do:'The numbers on the cycle view are the file\'s own columns, each confirmed by its header label.'}); }
+  if (D.vcShift) F.push({st:'info', dq:true, dqShort:'Goodman columns realigned', title:'Goodman export: target speed and fan columns realigned', why:'Daikin\'s label file for the *VZC20 is one byte short in this group, so its export shows the command flags as "Trgt comp." (192 = compressor and fan on), the target compressor speed × 5 as "Target OU_fan", and the target fan rpm as "OU Fan". The app reads them in their true places (checked against this recording: Target OU_fan ÷ 5 follows the compressor speed); the actual outdoor-fan rpm is not in this export.', fix:['Nothing to do on the unit. If the fan speed matters, read it at the unit.']});
   if (D.targetsOff && Object.keys(D.targetsOff).length){ const o = D.targetsOff, parts = []; if (o.trps) parts.push(`target comp speed read ${f0(o.trps.tgt)} rps against ${f0(o.trps.act)} rps actual`); if (o.tfan) parts.push(`target fan read ${f0(o.tfan.tgt)} rpm against ${f0(o.tfan.act)} rpm actual`);
     F.push({rid:'L2', st:'warn', dq:true, dqShort:'target columns set aside', title:`Target columns on this export do not track the unit: ${o.trps ? 'comp speed' : ''}${o.trps && o.tfan ? ' and ' : ''}${o.tfan ? 'fan' : ''} set aside`, why:`${parts.join('; ')}, over the whole run with no protection holding it back. On every other platform seen so far the target matches the actual within a few rps once settled. Either these columns mean something else on this model, or the app is decoding this model's recording wrongly: its export has not yet been checked against a PC export of the same job. They are left blank here rather than judged against; the actuals are shown as recorded.`, fix:['Send this recording to the library and flag the model so the export can be decoded for this platform.', 'Judge the run by the actual speed, pressures and superheats; a "held under target" reading cannot be formed for this export.']}); }
   try { for (const r of rulebookFindings()) F.push(r); } catch(e){ console.warn('rulebook findings', e); }
@@ -4499,7 +4593,7 @@ function synopsisTimeline(){
     for (const id of ['limfrz','limpeak','limtd','liminv']) for (const e of episodes(i => isN(num[id][i]) && num[id][i] < 255, 1)) E.push({i:e.a, text:`${chById[id].label.replace('Max Hz limit: ', '')} limiter (cap ${f0(num[id][e.a])} rps)`, st:'warn', min:(e.b - e.a + 1) * dt});
     for (let i = 1; i < n; i++) if (isN(num.maxhz[i]) && isN(num.maxhz[i - 1]) && num.maxhz[i] !== num.maxhz[i - 1]) add(i, `Speed cap ${f0(num.maxhz[i - 1])} → ${f0(num.maxhz[i])} rps`, '');
     for (const k of D.zones){ const L = MZ.letters[k], ev = num['pev'+k], fan = num['ifan'+k];
-      { const dd = num['dd'+k]; for (const e of episodes(i => isN(dd[i]) && dd[i] === 0 && D.runSec[i] >= 0 && !/^stop/i.test((s['zmode'+k] && s['zmode'+k][i]) || ''), Math.max(2, Math.round(2 / dt)))) E.push({i:e.a, text:`Zone ${L} thermostat off (ΔD 0)${isN(ev[e.a]) && ev[e.a] > 0 ? `, port valve ${f0(ev[e.a])} pulses` : ', port closed'}${isN(fan[e.a]) && fan[e.a] > 0 ? ', fan ' + f0(fan[e.a]) + ' rpm still running' : ''}`, st:'', min:(e.b - e.a + 1) * dt}); }
+      { const dd = num['dd'+k]; for (const e of episodes(i => isN(dd[i]) && dd[i] === 0 && D.runSec[i] >= 0 && !zoneOff(k, i), Math.max(2, Math.round(2 / dt)))) E.push({i:e.a, text:`Zone ${L} thermostat off (ΔD 0)${isN(ev[e.a]) && ev[e.a] > 0 ? `, port valve ${f0(ev[e.a])} pulses` : ', port closed'}${isN(fan[e.a]) && fan[e.a] > 0 ? ', fan ' + f0(fan[e.a]) + ' rpm still running' : ''}`, st:'', min:(e.b - e.a + 1) * dt}); }
       for (let i = 1; i < n; i++){ if (isN(fan[i]) && isN(fan[i - 1]) && fan[i] !== fan[i - 1] && fan[i] > 0 && fan[i - 1] > 0) add(i, `Zone ${L} fan ${f0(fan[i - 1])} → ${f0(fan[i])} rpm`, ''); const m0 = s['zmode'+k][i - 1], m1 = s['zmode'+k][i]; if (m1 && m0 && m1 !== m0) add(i, `Zone ${L} mode ${m0} → ${m1}`, ''); }
       for (const e of episodes(i => s['zerr'+k][i] && !/^0+$/.test(s['zerr'+k][i]), 1)) E.push({i:e.a, text:`Zone ${L} error ${(errInfo(s['zerr'+k][e.a], errFam('head')) || {}).code || s['zerr'+k][e.a]}`, st:'alarm', min:(e.b - e.a + 1) * dt});
     }
@@ -4955,8 +5049,14 @@ function untar(u8){
   }
   return files;
 }
-const DL_IMODE = {0:'Fan Only', 1:'Heating', 2:'Cooling', 3:'Fan', 4:'Dry'};   // indoor unit mode: 0, 1, 2 confirmed (DH9VS, DZ6VS)
-const DL_OPMODE = {0:'Stop', 1:'Heating', 2:'Cooling', 3:'Fan', 4:'Dry'};   // 1 confirmed on a FIT heat pump; others provisional
+// Daikin's own enum tables (PC D-Checker Dchecker.exe 3.8.0.7, LabelConverter convertTable2xx / 3xx; research/dchecker-findings.md 1.3)
+const DL_STORE = {9:'Cooling Storage', 10:'Heating Storage', 11:'UseStrdThrm(cl)1', 12:'UseStrdThrm(cl)2', 13:'UseStrdThrm(cl)3', 14:'UseStrdThrm(cl)4', 15:'UseStrdThrm(ht)1', 16:'UseStrdThrm(ht)2', 17:'UseStrdThrm(ht)3', 18:'UseStrdThrm(ht)4'};
+const DL_OPMODE = Object.assign({0:'Fan Only', 1:'Heating', 2:'Cooling', 3:'Auto', 4:'Ventilation', 5:'Auto Cool', 6:'Auto Heat', 7:'Dry', 8:'Aux.'}, DL_STORE);   // 217 unitary outdoor
+const DL_IMODE = {0:'Fan Only', 1:'Heating', 2:'Cooling', 3:'Auto', 4:'Ventilation', 5:'Auto Heat', 6:'Auto Cool', 7:'Dry', 8:'Aux.'};   // 313 unitary indoor (high nibble)
+const DL_HMODE = Object.assign({}, DL_IMODE, DL_STORE);   // 201 multi head
+const DL_MOPMODE = {0:'Fan Only', 1:'Heating', 2:'Cooling', 3:'Dry', 4:'Fan Only2', 7:'Reheated Dry'};   // 202 multi outdoor
+const DL_FANTAP = {0:'OFF', 1:'LLLL', 2:'LLL', 3:'LL', 4:'L', 5:'L2', 6:'M', 7:'M2', 8:'H', 9:'H2', 10:'H3'};   // 206: anything else prints "---" in Daikin's export
+const DL_FLAP = {5:'W Flap', 6:'Stop', 7:'Flap'}, DL_FLAPSET = {5:'Wireless Flap', 6:'Stop', 7:'Flap'};   // 207 / 208 (0-4 = P0-P4)
 function dlParseLabels(text){
   // multi-split logs repeat one indoor-unit label block per head, all pointing at the same group id; the k-th repeat reads the k-th copy of that group in each record
   const seen = new Map();
@@ -4976,7 +5076,7 @@ function dlSplit(raw){
   }
   return recs;
 }
-const DL_FWMODE = {0:'Cooling', 1:'Heating'}, DL_AIRFLOW = {0:'Auto'}, DL_TX = {1:'Normal'};
+const DL_AIRFLOW = {0:'Auto', 1:'L', 2:'LM', 3:'M', 4:'MH', 5:'H', 6:'H2', 7:'H3'}, DL_TX = {0:'Error', 1:'Normal'};   // 209 / 210
 function dlValue(l, gl){
   const g = gl ? gl[l.inst || 0] : null;
   if (!g || g.length < l.off + l.size) return '---'; const o = l.off, t = l.type;
@@ -4989,13 +5089,13 @@ function dlValue(l, gl){
   if (t === 211) return g[o] === 0 ? 'OFF' : String(g[o]);
   if (t === 161){ const c = g[o] / 2; return f1(l.kind === 1 ? c * 1.8 + 32 : c); }   // FIT: demand % (÷2); multi: half-degree °C setpoints / discharge / fin
   if (t === 164) return String(g[o] * 5);
-  if (t === 217) return DL_OPMODE[g[o]] || ('Mode ' + g[o]);
-  if (t === 313) return DL_IMODE[g[o] >> 4] || ('Mode ' + (g[o] >> 4));
-  if (t === 203) return g[o] === 0 ? 'Normal' : 'Error ' + g[o];
+  if (t === 217) return DL_OPMODE[g[o]] || 'Aux.';
+  if (t === 313) return DL_IMODE[g[o] >> 4] || 'Aux.';
+  if (t === 203) return ['Normal', 'Error', 'Warning', 'Caution'][g[o]] || '';
   if (t === 215) return g[o].toString(16).toUpperCase().padStart(2, '0');
   if (t >= 300 && t <= 307) return (g[o] >> (t - 300)) & 1 ? 'ON' : 'OFF';
-  if (t === 310) return String(g[o] >> 4);
-  if (t === 311) return String(g[o] & 15);
+  if (t === 310) return String((g[o] & 0x70) >> 4);   // bits 6-4: bit 7 of the same byte is a drop flag (Disch temp. / HP / Fin drop)
+  if (t === 311) return String(g[o] & 7);              // bits 2-0: bit 3 is a drop flag (INV current / LP drop)
   if (t === 314) return u16().toString(16).toUpperCase().padStart(4, '0');
   if (t === 801) return 'R410A';
   if (t === 802) return 'R32';   // R-32 unit's label file (INV_Unitary_DH9VS)
@@ -5003,16 +5103,17 @@ function dlValue(l, gl){
   if (t === 155) return f1(u16() / 10);                                            // AC / DC volts
   if (t === 162){ if (g[o] === 0) return '---'; const c = (g[o] - 64) / 2; return f1(l.kind === 1 ? c * 1.8 + 32 : c); }   // half-degree °C offset at 64 (coil, pipe, air thermistors)
   if (t === 163) return String(g[o] * 0.25);                                          // amps in quarter steps
-  if (t === 165) return String(u16() & 0x7fff);                                       // timers: the top bit is a flag, not part of the count (the PC export of the same recording shows 60 where the bit made it 32828)
+  if (t === 165) return String(u16() & 0x3fff);                                       // timers: the top two bits are flags, not part of the count (Daikin conversion 165; the PC export shows 60 where a flag made it 32828)
   if (t === 200) return g[o] ? 'ON' : 'OFF';
-  if (t === 201 || t === 202) return DL_OPMODE[g[o]] || ('Mode ' + g[o]);
-  if (t === 204) return String(g[o]);
-  if (t === 205) return DL_FWMODE[g[o]] || ('Mode ' + g[o]);
-  if (t === 206) return (g[o] & 0x80 ? 'Auto ' : '') + 'tap ' + (g[o] & 0x7f);
-  if (t === 207) return 'P' + g[o];
-  if (t === 208) return String(g[o]);
-  if (t === 209) return DL_AIRFLOW[g[o]] || ('Level ' + g[o]);
-  if (t === 210) return DL_TX[g[o]] || ('Error ' + g[o]);
+  if (t === 201) return DL_HMODE[g[o]] || 'Aux.';
+  if (t === 202) return DL_MOPMODE[g[o]] || '';
+  if (t === 204) return ERR_L1[g[o] >> 4] + ERR_L2[g[o] & 15];                        // the letter code, as Daikin's export prints it (" 0" = none)
+  if (t === 205) return g[o] === 0 ? 'Cooling' : 'Heating';
+  if (t === 206) return DL_FANTAP[g[o]] || '---';
+  if (t === 207) return g[o] < 5 ? 'P' + g[o] : (DL_FLAP[g[o]] || String(g[o]));
+  if (t === 208) return g[o] < 5 ? 'P' + g[o] : (DL_FLAPSET[g[o]] || String(g[o]));
+  if (t === 209) return DL_AIRFLOW[g[o]] || String(g[o]);
+  if (t === 210) return DL_TX[g[o]] || String(g[o]);
   return '?';
 }
 function dlToCsv(labels, recs){
@@ -5062,7 +5163,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v100';
+const APP_VERSION = 'v101';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -5523,9 +5624,11 @@ function compTypeTxt(){ if (D && D.fam === 'multi') return 'The multi-split manu
 function oevTxt(m){ const pl = unitPlat();
   if (m === 'heat'){ const base = 'A stepper-motor needle valve and, in heating, the metering device: it drops the liquid returning from the indoor coil to low pressure before the outdoor coil.';
     if (pl === 'fit32') return base + ' The board steps it to hold suction temperature minus the outdoor coil middle temperature at 7°F (SiUS612412E p.7).';
+    if (pl === 'dh9') return base + ' On this family it runs subcooling control: it holds the indoor coil\'s subcooling (saturation at the indoor pressure sensor − indoor liquid) at the IDU Target SC, 1.8–9 °F (SiUS612415E p.9).';
     if (pl === 'fit410') return base + ' The manual calls this superheat control (SiUS612209EA p.11).';
     if (pl === 'vzc') return base + ' It meters only in heating (RS6215002r10 p.6).';
     return base + ' The manual on file for this platform does not describe its control.'; }
+  if (pl === 'dh9') return 'A stepper-motor needle valve. In cooling the board holds it fully open (480 pulses) and the indoor EEV does the metering (SiUS612415E p.9).';
   if (pl === 'fit32') return 'A stepper-motor needle valve. In cooling the board holds it fully open (480 pulses) and the liquid also passes around it through a check valve; the indoor EEV does the metering (SiUS612412E p.7, p.9).';
   if (pl === 'fit410') return 'A stepper-motor needle valve. In cooling the liquid passes around it through a check valve and the indoor EEV does the metering (SiUS612209EA p.7, p.9).';
   if (pl === 'vzc') return 'A stepper-motor needle valve. In cooling the liquid passes around it through a check valve, so it does not meter the cooling cycle (RS6215002r10 p.12–13).';
@@ -5537,7 +5640,7 @@ function suctTxt(){ const pl = unitPlat();
     : 'The suction thermistor (Ts) sits on this pipe before the accumulator; the low-pressure sensor (PS) sits after the accumulator, on the way to the compressor. The service port and the fusible plug are on this pipe too (SiUS612209EA p.9).';
   return 'Suction temperature and pressure together give suction superheat.'; }
 // a stopped room's port valve, per the family's manual (the cooling and heating pages)
-const PEV_P = {mxs:{cool:'PDF 119', heat:'PDF 118'}, mxl:{cool:'PDF 105', heat:'PDF 103–104'}, mxmS:{cool:'PDF 162', heat:'PDF 161'}, mxmL:{cool:'PDF 162', heat:'PDF 161'}};
+const PEV_P = {mxs:{cool:'PDF 119', heat:'PDF 118'}, mxl:{cool:'PDF 105', heat:'PDF 103–104'}, mxmS:{cool:'PDF 162', heat:'PDF 161'}, mxmL:{cool:'PDF 162', heat:'PDF 161'}, mxsT:{cool:'PDF 124', heat:'PDF 123–124'}};
 function pevTxt(m){ const mf = multiFam(), heat = m === 'heat', cite = [...new Set(mf.cands.map(f => `${MULTI[f].doc} ${PEV_P[f][heat ? 'heat' : 'cool']}`))].join('; ');
   return (heat ? 'In heating a stopped room\'s valve is not closed: the board runs liquid-pipe temperature control on it'
     : 'In cooling a stopped room\'s valve is fully closed, except that after each hour of continuous cooling it opens 80 pulses for a set time to bring oil back') + (cite ? ` (${cite}).` : '.'); }

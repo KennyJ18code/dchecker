@@ -73,17 +73,21 @@ Every rule follows the service manual of the platform it runs on (owner's rule, 
 
 | Platform | Manual | Used for |
 |---|---|---|
-| Daikin FIT R-410A (DX6VS / DZ6VS) | SiUS612209EA | analysis charts p.12–13 (cooling 67–115 °F, heating 17–62 °F outdoor), trip lines E13 / E15 / E22 / E32 / E41, control flows p.7–11, error codes p.45–47 |
-| Daikin FIT R-32 (DC6VS / DH6VSA / DC9VSA / DH7VSA) | SiUS612412E | superheat control p.7, trip lines E13 / E15 / E21 / E22 / E32 / E41, error codes p.44–46 |
-| DH9VS / DH7VS / DC9VS | installation manual (no service manual on file) | sensors p.30, monitor p.43, defrost p.27 |
-| Goodman / Amana *VZC20 | RS6215002r10 | analysis charts p.95–96, pressure transducer p.15, error codes p.97–100 |
-| Daikin DX9VC | installation and service reference | analysis chart p.21 |
+| Daikin FIT R-410A (DX6VS / DZ6VS; Goodman / Amana GSZS6 / ASZS6 and GSXS6 / ASXS6) | SiUS612209EA; installation manual 3P731493-1 | analysis charts p.12–13 (cooling 67–115 °F, heating 17–62 °F outdoor), trip lines E13 / E15 / E22 / E32 / E41, control flows p.7–11, error codes p.45–47; charging table by size (installation manual p.29–30) |
+| Daikin FIT R-32 (DC6VS / DH6VSA; DC9VSA / DH7VSA 2–4 ton; Goodman / Amana twins, including the single-fan GZV7SA / GXV9SA logged in the DH9VS layout) | SiUS612412E (Goodman SiUS612414E, Amana SiUS612413E: same content) | superheat control p.7, trip lines E13 / E15 / E21 / E22 / E32 / E41, error codes p.44–46 |
+| DH9VS, and the double-fan DH7VSA6010 / DC9VSA6010 and Goodman / Amana twins | SiUS612415E (double-fan models, 11/2024) with the installation manual | control p.9 (cooling: outdoor EEV fully open 480, indoor EEV holds IDU Target SH; heating: outdoor EEV holds the indoor subcooling at IDU Target SC), piping p.10, HPS p.15, trip lines E13 / E15 (11 psig) / E21 / E22 / E32 (226 °F) / E41 (153 °F) / E44 / 57 on p.50–57 |
+| Goodman / Amana *VZC20, Daikin DZ20VC / DZ9VC, Goodman / Amana *SZV9 (one platform) | RS6215002r10 | analysis charts p.95–96, pressure transducer p.15, error codes p.97–100 |
+| Daikin DX9VC / DX20VC, Goodman / Amana *VXC20 / *SXV9 (one platform) | DX9VC installation and service reference (IOD-4041); service manual RSD6115001r14 | analysis chart p.21 |
 | MXS (2MXS18N, 3/4MXS-R) | SiUS121736EA | port EEV range, limiter zones, start-up timing, ΔD, error codes |
 | MXL Aurora (2/3MXL-Q) | SiUS121632EA | the same |
 | MXM / MXT / MXTH (R-32) | SiUS122410EC | the same, small and large platform |
-| DFVE air handler | IOD-4054B with SiUS612412E | indoor sensor positions, indoor error codes |
+| R-410A large multi (5MXS48T, 4MXL36T) | SiUS121827E | the same; it shares the 32 rps start-up floor with the R-32 large platform, so the nameplate settles which |
+| DFVE air handler; CAPEA / CAPE cased coils | IOD-4054B with SiUS612412E; CAPEA / CAPE installation manual | indoor sensor positions, indoor error codes (cased coils: EE, d0, d4, 70, 73–78) |
+| How each logged byte is converted | Daikin's PC D-Checker (Dchecker.exe 3.8.0.7, read as data) | multi error letters, mode and fan names, retry counts, timers, the Error type classes, and the multi speed-limit column swap (its change note V3530) |
 
 Every rule carries its source. **Manual**: the card names the manual and page (the analysis chart's lines and the causes it marks for that combination of readings, the board's trip lines, the multi-split limiter zones). **Law**: refrigerant physics, such as a coil below freezing. **Field**: a number from experience with no manual page behind it; field rules stay hidden unless Settings → Field rules and provisional patterns is on, are labelled on every card, and never rise above a warning. The analysis charts apply only inside their outdoor-air range. The Rules tab lists the manual's lines for the loaded platform under "From the service manual"; bands you add yourself are listed apart as "Your own bands (not from a manual)". The error reference has a table per family from its manual, and multi-split error cells (a decimal byte) are shown raw beside a letter reading that is marked unconfirmed. `docs/rulebook.md` starts with a list of every rule and its source.
+
+The phone-recording decoder converts every byte the way Daikin's own PC D-Checker does: its conversion tables were read from the installed program as data (nothing was run), and the decoder matches Daikin's PC export cell for cell on the three recordings with both versions. The Goodman *VZC20 export has one known quirk: Daikin's label file for it is one byte short, so its "Trgt comp.", "Target OU_fan" and "OU Fan" columns hold the command flags, the target compressor speed × 5 and the target fan speed; the app reads them in their true places when the data shows that shape.
 
 ## Recording quality, placeholders and the PC export
 

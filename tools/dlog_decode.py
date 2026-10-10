@@ -15,9 +15,17 @@ usage: python dlog_decode.py <recording.tgz | folder> [out.csv]
 import sys, os, io, csv, struct, tarfile, gzip
 
 PSI_PER_KGF = 14.223           # the PC app's kgf/cm² → psi factor (verified: 0 of 404 cells differ)
-OPMODE = {0: 'Stop', 1: 'Heating', 2: 'Cooling', 3: 'Fan', 4: 'Dry'}   # 1 confirmed (FIT heating), 2 confirmed (multi cooling)
-OPMODE_FW = {0: 'Cooling', 1: 'Heating'}
-IMODE = {0: 'Fan Only', 1: 'Heating', 2: 'Cooling', 3: 'Fan', 4: 'Dry'}   # indoor unit mode (type 313): 0 confirmed 'Fan Only' on a DH9VS, 1 and 2 confirmed
+# Daikin's own enum tables (PC D-Checker Dchecker.exe 3.8.0.7, LabelConverter convertTable2xx / 3xx)
+STORE = {9: 'Cooling Storage', 10: 'Heating Storage', 11: 'UseStrdThrm(cl)1', 12: 'UseStrdThrm(cl)2', 13: 'UseStrdThrm(cl)3', 14: 'UseStrdThrm(cl)4',
+         15: 'UseStrdThrm(ht)1', 16: 'UseStrdThrm(ht)2', 17: 'UseStrdThrm(ht)3', 18: 'UseStrdThrm(ht)4'}
+OPMODE = {0: 'Fan Only', 1: 'Heating', 2: 'Cooling', 3: 'Auto', 4: 'Ventilation', 5: 'Auto Cool', 6: 'Auto Heat', 7: 'Dry', 8: 'Aux.', **STORE}   # 217
+IMODE = {0: 'Fan Only', 1: 'Heating', 2: 'Cooling', 3: 'Auto', 4: 'Ventilation', 5: 'Auto Heat', 6: 'Auto Cool', 7: 'Dry', 8: 'Aux.'}         # 313 (high nibble)
+HMODE = {**IMODE, **STORE}                                                                                                            # 201 multi head
+MOPMODE = {0: 'Fan Only', 1: 'Heating', 2: 'Cooling', 3: 'Dry', 4: 'Fan Only2', 7: 'Reheated Dry'}                                     # 202 multi outdoor
+FANTAP = {0: 'OFF', 1: 'LLLL', 2: 'LLL', 3: 'LL', 4: 'L', 5: 'L2', 6: 'M', 7: 'M2', 8: 'H', 9: 'H2', 10: 'H3'}                          # 206 ('---' otherwise)
+FLAP, FLAPSET = {5: 'W Flap', 6: 'Stop', 7: 'Flap'}, {5: 'Wireless Flap', 6: 'Stop', 7: 'Flap'}                                       # 207 / 208 (0-4 = P0-P4)
+AIRFLOW = {0: 'Auto', 1: 'L', 2: 'LM', 3: 'M', 4: 'MH', 5: 'H', 6: 'H2', 7: 'H3'}                                                      # 209
+ERR_L1, ERR_L2 = ' ACEHFJLPU987654', '0123456789AHCJEF'                                                                             # 204 error letters
 
 def f1(v):
     s = f'{v:.1f}'
@@ -79,13 +87,13 @@ def decode_value(lbl, gl):
         c = g[o] / 2
         return f1(c * 1.8 + 32 if lbl['kind'] == 1 else c)
     if t == 164: return str(g[o] * 5)
-    if t == 217: return OPMODE.get(g[o], f'Mode {g[o]}')
-    if t == 313: return IMODE.get(g[o] >> 4, f'Mode {g[o] >> 4}')
-    if t == 203: return 'Normal' if g[o] == 0 else f'Error {g[o]}'
+    if t == 217: return OPMODE.get(g[o], 'Aux.')
+    if t == 313: return IMODE.get(g[o] >> 4, 'Aux.')
+    if t == 203: return ['Normal', 'Error', 'Warning', 'Caution'][g[o]] if g[o] < 4 else ''
     if t == 215: return f'{g[o]:02X}'
     if 300 <= t <= 307: return 'ON' if (g[o] >> (t - 300)) & 1 else 'OFF'
-    if t == 310: return str(g[o] >> 4)
-    if t == 311: return str(g[o] & 0x0F)
+    if t == 310: return str((g[o] & 0x70) >> 4)          # bits 6-4; bit 7 of the byte is a drop flag
+    if t == 311: return str(g[o] & 0x07)                 # bits 2-0; bit 3 is a drop flag
     if t == 314: return f'{struct.unpack_from("<H", g, o)[0]:04X}'
     if t == 801: return 'R410A'
     if t == 802: return 'R32'                             # label file of an R-32 unit (INV_Unitary_DH9VS)
@@ -99,16 +107,17 @@ def decode_value(lbl, gl):
         v = g[o] * 0.25
         return str(int(v)) if v == int(v) else str(v)
     if t == 165:
-        v = struct.unpack_from('<H', g, o)[0]; return '0' if v == 0x8000 else str(v)
+        v = struct.unpack_from('<H', g, o)[0]; return str(v & 0x3FFF)   # the top two bits are flags (Daikin conversion 165)
     if t == 200: return 'ON' if g[o] else 'OFF'
-    if t in (201, 202): return OPMODE.get(g[o], f'Mode {g[o]}')
-    if t == 204: return str(g[o])
-    if t == 205: return OPMODE_FW.get(g[o], f'Mode {g[o]}')
-    if t == 206: return ('Auto ' if g[o] & 0x80 else '') + f'tap {g[o] & 0x7f}'
-    if t == 207: return f'P{g[o]}'
-    if t == 208: return str(g[o])
-    if t == 209: return 'Auto' if g[o] == 0 else f'Level {g[o]}'
-    if t == 210: return 'Normal' if g[o] == 1 else f'Error {g[o]}'
+    if t == 201: return HMODE.get(g[o], 'Aux.')
+    if t == 202: return MOPMODE.get(g[o], '')
+    if t == 204: return ERR_L1[g[o] >> 4] + ERR_L2[g[o] & 15]          # the letter code as Daikin's export prints it (' 0' = none)
+    if t == 205: return 'Cooling' if g[o] == 0 else 'Heating'
+    if t == 206: return FANTAP.get(g[o], '---')
+    if t == 207: return f'P{g[o]}' if g[o] < 5 else FLAP.get(g[o], str(g[o]))
+    if t == 208: return f'P{g[o]}' if g[o] < 5 else FLAPSET.get(g[o], str(g[o]))
+    if t == 209: return AIRFLOW.get(g[o], str(g[o]))
+    if t == 210: return {0: 'Error', 1: 'Normal'}.get(g[o], str(g[o]))
     return '?'
 
 def to_csv(labels, recs):

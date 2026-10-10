@@ -6,7 +6,7 @@ Diagnostic rules for Daikin residential inverter equipment: FIT split systems (D
 
 This file is the original rules spec. Since v100 (2026-10-09) the app follows the owner's rule: **every rule matches the platform's service manual, always**. Where a manual gives a line, the app uses that line and the card names the manual and page; where this file's numbers differ from the manual, the manual wins. A rule with no manual page behind it is a **field rule**: it is kept, but the app shows it only with Settings → Field rules and provisional patterns on, labels the card "Field rule, not from a service manual", and never shows it above a warning. **Law** means refrigerant physics (for example water freezing at 32 °F).
 
-Manuals: SiUS612209EA (FIT R-410A), SiUS612412E (FIT R-32), DH9VS / DH7VS / DC9VS installation manual, RS6215002r10 (Goodman / Amana *VZC20), DX9VC installation and service reference, SiUS121736EA (MXS), SiUS121632EA (MXL), SiUS122410EC (MXM / MXT), IOD-4054B (DFVE air handler). Page numbers are PDF pages.
+Manuals: SiUS612209EA and installation manual 3P731493-1 (FIT R-410A), SiUS612412E (FIT R-32), SiUS612415E and the DH9VS / DH7VS / DC9VS installation manual (double-fan DH9VS family), RS6215002r10 (Goodman / Amana *VZC20 = DZ20VC / DZ9VC / *SZV9), DX9VC installation and service reference, SiUS121736EA (MXS), SiUS121632EA (MXL), SiUS121827E (5MXS48T / 4MXL36T), SiUS122410EC (MXM / MXT), IOD-4054B (DFVE air handler), the CAPEA / CAPE installation manual (cased coils), RSD6620001r1 (Daikin communicating furnace, for its E7). Page numbers are PDF pages.
 
 ### Rules from this file
 
@@ -55,13 +55,13 @@ Manuals: SiUS612209EA (FIT R-410A), SiUS612412E (FIT R-32), DH9VS / DH7VS / DC9V
 | Rule | Line | Source |
 |---|---|---|
 | Analysis chart | Every reading outside the chart's lines inside its outdoor range (cooling 67–115 °F, heating 17–62 °F), and the causes whose X marks cover all of them, with the chart's remedy | SiUS612209EA p.12–13; RS6215002r10 p.95–96; DX9VC p.21 |
-| E13 high pressure | 605 psig | SiUS612209EA p.49; SiUS612412E p.48; RS6215002r10 p.15 (HPS) |
-| E15 low pressure | 17 psig for 5 min | SiUS612209EA p.50; SiUS612412E p.49 |
-| E21 low discharge SH | under 9 °F with the indoor EEV at its 50-pulse minimum (R-32 FIT) | SiUS612412E p.50 |
-| E22 discharge | 248 °F | SiUS612209EA p.52; SiUS612412E p.51 |
-| E32 inverter fin | 203 °F (R-410A) / 214 °F (R-32) on 1.5–3 ton, 230 °F on 3.5–5 ton | SiUS612209EA p.53–54; SiUS612412E p.52–53 |
-| E41 refrigerant shortage, heating | discharge SH over 117 °F (R-410A) / 135 °F (R-32); liquid pipe more than 3.6 °F below outdoor air on 3.5–5 ton | SiUS612209EA p.55; SiUS612412E p.54 |
-| Charge figure (information only) | 11 ±1 °F (DH9VS, CVT), 8 ±1 °F (*VZC20 and DX9VC charge mode); applies only in the manual's own charge test | DH9VS installation manual p.26; RS6215002r10 p.23–24; DX9VC p.10–12 |
+| E13 high pressure | 605 psig | SiUS612209EA p.49; SiUS612412E p.48; RS6215002r10 p.15 (HPS); SiUS612415E p.15, p.50 (HPS opens 605, cuts in 465) |
+| E15 low pressure | 17 psig for 5 min (FIT); **11 psig** for 5 min (DH9VS family) | SiUS612209EA p.50; SiUS612412E p.49; SiUS612415E p.51 |
+| E21 low discharge SH | under 9 °F with the EEV at its minimum (R-32 FIT, DH9VS family) | SiUS612412E p.50; SiUS612415E p.52 |
+| E22 discharge | 248 °F | SiUS612209EA p.52; SiUS612412E p.51; SiUS612415E p.53 |
+| E32 inverter fin | 203 °F (R-410A) / 214 °F (R-32) on 1.5–3 ton, 230 °F on 3.5–5 ton; about 226 °F on the DH9VS family | SiUS612209EA p.53–54; SiUS612412E p.52–53; SiUS612415E p.54 |
+| E41 refrigerant shortage, heating | discharge SH over 117 °F (R-410A FIT) / 135 °F (R-32 FIT) / 153 °F (DH9VS family); liquid pipe more than 3.6 °F below outdoor air (FIT: 3.5–5 ton; DH9VS family: all sizes) | SiUS612209EA p.55; SiUS612412E p.54; SiUS612415E p.55 |
+| Charge figure (information only) | R-410A FIT by size (1.5 t 10, 2 t 12, 2.5 t 14, 3 t 15 [DX6VSA 13], 3.5 t 8, 4 t 9, 5 t 9; Enhanced 2 t 14, 3 t 8, 3.5 t 9, 4 t 9 °F, ±1 °F, CHARGE MODE); 11 ±1 °F (DH9VS family, CVT); 8 ±1 °F (*VZC20 and DX9VC charge mode; the 5-ton *VZC20's Daikin twin and successor manuals say 10 °F); applies only in the manual's own charge test | installation manual 3P731493-1 p.29–30; DH9VS installation manual p.26; RS6215002r10 p.23–24; RSD6215002r9 p.32; DX9VC p.10–12 |
 | Multi limiter zones | Freeze-up, peak-cut, discharge drop and stop, input current, and the fin's L4 line: each family's own values | SiUS121736EA PDF 106–113, 219; SiUS121632EA PDF 97–99, 199; SiUS122410EC PDF 147–150, 318 |
 | Error codes | One table per family, from its manual | each manual's error-code pages |
 
@@ -71,7 +71,9 @@ Manuals: SiUS612209EA (FIT R-410A), SiUS612412E (FIT R-32), DH9VS / DH7VS / DC9V
 - **Fault library and EEV-response checks (V1 / V2)**: field rules. V1 follows what the outdoor EEV controls in heating (suction − outdoor coil middle on the R-32 FIT, SiUS612412E p.7); V2 only in cooling (the indoor EEV is fully open in heating, p.7).
 - **Cause → effect patterns** (A–H): shown only when confirmed on a real repair, or with the switch on. Where a manual gives a line the pattern uses it (defrost maximum, the board's discharge drop flag, the R-32 FIT outdoor superheat, the high-pressure line).
 - **Colour bands**: the Rules tab's "From the service manual" list is built from the lines above for the loaded platform; bands a user adds are listed apart as "Your own bands (not from a manual)".
-- **Logged targets**: Target SH is the indoor EEV's cooling target (SiUS612412E p.7). No manual describes a subcooling control, so the logged Target SC is shown for reference only and the rules that compare subcooling with it are field rules.
+- **Logged targets**: Target SH is the indoor EEV's cooling target (SiUS612412E p.7; SiUS612415E p.9, 5.4–18 °F). On the DH9VS family the IDU Target SC is the outdoor EEV's heating target for the indoor subcooling (SiUS612415E p.9, 1.8–9 °F). No manual describes the outdoor "Target SC" column, so it is shown for reference only and the rules that compare subcooling with it are field rules.
+- **Defrost runs**: the compressor stops just before and just after a defrost (SiUS612209EA / SiUS612412E p.11); those stops are part of the defrost, not new runs. Newer R-32 heat pumps defrost on 2, 6, 12 or 24 h intervals (SiUS612417EA p.9, p.45), so no fixed maximum interval is assumed for them.
+- **Airflow (S8)**: judged only after 2 min running and 2 min of an unchanged request, outside defrost: the request ramps by design (cooling profile D) and is 0 in defrost.
 
 ## How to use this file
 
