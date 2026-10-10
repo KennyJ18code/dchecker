@@ -65,6 +65,17 @@ Manuals: SiUS612209EA and installation manual 3P731493-1 (FIT R-410A), SiUS61241
 | Multi limiter zones | Freeze-up, peak-cut, discharge drop and stop, input current, and the fin's L4 line: each family's own values | SiUS121736EA PDF 106–113, 219; SiUS121632EA PDF 97–99, 199; SiUS122410EC PDF 147–150, 318 |
 | Error codes | One table per family, from its manual | each manual's error-code pages |
 
+### The diagnostic route (v103)
+
+| Part | Source |
+|---|---|
+| Suspects (chart route) | The analysis chart's rows with every column kept: the log's symptoms and the chart's complaint columns (SiUS612209EA p.12–13; RS6215002r10 p.95–96; DX9VC installation & service reference p.21 without its two OD EEV rows, as in RSD6115001r14 p.18) |
+| Tests | Each manual's servicing pages. SiUS612209EA p.16–24: S-12 HPS, S-13 pressure sensor, S-16G ECM motor, S-17A / S-17B compressor, S-26 thermistor / EEV coil 40–50 Ω / solenoid coil 1,480–1,820 Ω, S-104 compressor efficiency, S-114 non-condensables, S-203 / S-203A static. The thermistor table (SiUS612209EA p.72; the same values in SiUS612412E p.71, SiUS612415E p.72, RS6215002r10 p.104, RSD6115001r14 p.78). RS6215002r10 p.15–30: HPS cut-out 605 psig, sensor at X17A, winding insulation under 100 kΩ, EEV coil, reversing valve, drier, TXV, non-condensables, line set 250 ft, static. RSD6115001r14: S-12, S-13, S-17, S-26, S-104, S-105B–S-110, S-114, line set p.37, S-202 / S-204. Line set limit for the R-410A FIT: installation manual 3P731493-1 p.15. Charge figures as on the synopsis card. |
+| Flowcharts (code route) | SiUS612209EA p.49–67, SiUS612412E p.48–64, SiUS612415E p.50–65, as printed. A minor code takes its critical code's flowchart. |
+| Order of stops | The app's, not a manual's: easiest first (look, meter, gauges, open the system), then the stop covering the most suspects |
+| Borrowed, labelled | E15 flowchart steps used without the code; RS6215002r10 p.23 (temperature drop across the drier) and p.18 (reversing valve) used on the FIT |
+| Field rule | The R-410A FIT chart on an R-32 FIT or DH9VS unit, only with Settings → Field rules on |
+
 ### Signatures, patterns and the colour bands
 
 - **Signatures** (the per-row flags): low discharge SH at speed uses the manual's line above; "held" uses the board's own drop flags. EV pinned or closed, discharge climbing, LP falling, outdoor vs indoor pressure, outdoor coil, current, thermistor order, short cycles and "SC never reached" are field rules. The outdoor EEV is judged only in heating: in cooling it is bypassed by its check valve (SiUS612209EA p.9; SiUS612412E p.7, p.9; RS6215002r10 p.12–13).

@@ -553,6 +553,96 @@ body.no-cabinet #indoor-var .cab{display:none}
 .tabs button span{font-size:13px;font-weight:700}
 .tabs button[aria-selected="true"]{font-weight:700}
 .pvgear{display:none}
+/* ===== diagnostic route: a strip map of the manual's tests (trail symbols: ● look, ■ meter, ◆ gauges, ◆◆ opens the system) ===== */
+.rt-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:0 0 10px}
+.rt-srcs,.rt-btns{display:flex;flex-wrap:wrap;gap:6px}
+.rt-src-b,.rt-cmp{border:1px solid var(--line);background:var(--panel);color:var(--ink2);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;cursor:pointer;margin:0 6px 6px 0;font-family:inherit}
+.rt-src-b{margin:0}
+.rt-src-b.on,.rt-cmp.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rt-sheet{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel)}
+.rt-headrow{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:3px solid var(--accent);padding-bottom:8px;margin-bottom:6px}
+.rt-title{font-size:19px;font-weight:800;color:var(--accent);letter-spacing:.01em}
+.rt-sub,.rt-docr{font-size:12.5px;color:var(--ink2)}.rt-docr{text-align:right}
+.rt-sec{margin:14px 0}
+.rt-lbl{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+.rt-chip{display:inline-block;border-radius:6px;padding:3px 9px;margin:0 6px 6px 0;font-size:12.5px;font-weight:700;background:var(--warn-soft);color:var(--warn)}
+.rt-chip i{font-style:normal;font-weight:600;margin-left:5px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;opacity:.85}
+.rt-chip.gauge{background:var(--accent-soft);color:var(--accent)}
+.rt-chip.none{background:var(--panel2);color:var(--ink2)}
+.rt-chip.code{background:var(--alarm-soft);color:var(--alarm)}
+.rt-note{font-size:12px;color:var(--muted);margin-top:3px}
+.rt-head2{font-size:13px;margin:0 0 8px;color:var(--ink)}
+.rt-sus{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:6px}
+.rt-su{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px;background:var(--panel)}
+.rt-lt{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--ink2);display:grid;place-items:center;font-weight:800;font-size:11.5px;color:var(--ink)}
+.rt-nm{font-weight:700;line-height:1.25}.rt-rem,.rt-why{font-size:11.5px;color:var(--ink2);line-height:1.3}
+.rt-su.cleared{color:var(--muted);background:var(--panel2)}.rt-su.cleared .rt-nm{text-decoration:line-through}.rt-su.cleared .rt-lt{border-color:var(--line);color:var(--muted)}
+.rt-su.found{border:2px solid var(--alarm);background:var(--alarm-soft)}.rt-su.found .rt-lt{border-color:var(--alarm);color:var(--alarm)}.rt-su.found .rt-why{color:var(--alarm);font-weight:700}
+.rt-su.checked .rt-why{color:var(--warn);font-weight:700}
+.rt-map{list-style:none;margin:0;padding:0}
+.rt-stop{position:relative;padding:3px 0 16px 34px;margin-left:14px;border-left:4px solid var(--accent)}
+.rt-stop:last-child{border-left-color:transparent}
+.rt-stop.start{border-left-style:dashed}
+.rt-dot{position:absolute;left:-16px;top:0;width:28px;height:28px;border-radius:50%;background:var(--panel);border:4px solid var(--accent);display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--accent);box-sizing:border-box}
+.rt-stop.next .rt-dot{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 4px var(--accent-soft)}
+.rt-stop.done.pass .rt-dot{background:var(--ok);border-color:var(--ok);color:#fff}
+.rt-stop.done.fail .rt-dot{background:var(--alarm);border-color:var(--alarm);color:#fff}
+.rt-stop.done.chk .rt-dot,.rt-stop.flow.done .rt-dot{background:var(--ink2);border-color:var(--ink2);color:var(--panel)}
+.rt-stop.off,.rt-stop.skip{opacity:.5}
+.rt-body{min-width:0}
+.rt-st{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14px;line-height:1.3;padding-top:3px}
+.rt-tier{font-size:13px;line-height:1;letter-spacing:-.05em}.rt-tier.t0{color:#2E7D32}.rt-tier.t1{color:#1565C0}.rt-tier.t2,.rt-tier.t3{color:var(--ink)}
+.rt-tag{font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;background:var(--warn-soft);color:var(--warn)}
+.rt-nexttag{font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;background:var(--accent);color:var(--accent-ink);text-transform:uppercase;letter-spacing:.05em}
+.rt-how{font-size:12.5px;color:var(--ink);margin:3px 0;line-height:1.4}.rt-note2{color:var(--warn)}
+.rt-src{font-size:11.5px;color:var(--muted);margin:3px 0}
+.rt-hint{font-size:12px;color:var(--accent);margin:3px 0}
+.rt-fs{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0}
+.rt-f{display:inline-flex;align-items:baseline;gap:5px;font-size:12px;color:var(--ink2)}
+.rt-f input{width:66px;border:0;border-bottom:2px solid var(--ink2);background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:700;padding:2px;border-radius:0;outline:none}
+.rt-f input:focus{border-bottom-color:var(--accent)}
+.rt-f i{font-style:normal}
+.rt-judge{font-size:12.5px;color:var(--ink);background:var(--panel2);border-radius:6px;padding:4px 8px;margin:4px 0;display:inline-block}
+.rt-outs{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 3px}
+.rt-outs button{border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:7px;padding:6px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left}
+.rt-outs button.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.rt-outs button.bad.on{background:var(--alarm);border-color:var(--alarm)}
+.rt-stop.flow .rt-outs button.on{background:var(--ink2);border-color:var(--ink2);color:var(--panel)}
+.rt-rule{font-size:11px;color:var(--muted)}
+.rt-end{border:2px solid var(--line);border-radius:10px;padding:10px 12px;margin:4px 0 0 14px;font-size:13px}
+.rt-end.found{border-color:var(--alarm);background:var(--alarm-soft)}
+.rt-end .btn{margin-top:8px}
+.rt-foot{font-size:11px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:8px;line-height:1.45}
+.rt-sign{display:block;margin-top:10px;font-size:12px;color:var(--ink)}
+.rt-linkbar,.rt-fieldbar{font-size:12.5px;border-radius:8px;padding:8px 10px;margin:0 0 10px;background:var(--warn-soft);color:var(--warn)}
+.rt-linkbar .btn{margin-left:6px}
+@media (max-width:600px){
+  .rt-sheet{padding:10px 10px}
+  .rt-docr{text-align:left}
+  .rt-sus{grid-template-columns:1fr}
+  .rt-stop{padding-left:28px;margin-left:12px}
+}
+@media print{
+  @page{size:letter;margin:.45in}
+  body.rt-print, body:has(#panel-route:not([hidden])){background:#fff !important;padding:0 !important}
+  body.rt-print > *:not(main), body:has(#panel-route:not([hidden])) > *:not(main), body.rt-print main > *:not(#panel-route), body:has(#panel-route:not([hidden])) main > *:not(#panel-route), body.rt-print .rt-noprint, body:has(#panel-route:not([hidden])) .rt-noprint{display:none !important}
+  body.rt-print main, body:has(#panel-route:not([hidden])) main{padding:0 !important;margin:0 !important;max-width:none !important}
+  body.rt-print #panel-route, body:has(#panel-route:not([hidden])) #panel-route{display:block !important;border:0 !important;box-shadow:none !important;padding:0 !important;margin:0 !important}
+  body.rt-print .rt-sheet, body:has(#panel-route:not([hidden])) .rt-sheet{border:0;padding:0}
+  body.rt-print, body:has(#panel-route:not([hidden])), body.rt-print *, body:has(#panel-route:not([hidden])) *{color:#000 !important;background:transparent !important;box-shadow:none !important}
+  body.rt-print .rt-stop, body:has(#panel-route:not([hidden])) .rt-stop, body.rt-print .rt-su, body:has(#panel-route:not([hidden])) .rt-su, body.rt-print .rt-end, body:has(#panel-route:not([hidden])) .rt-end{break-inside:avoid}
+  body.rt-print .rt-stop, body:has(#panel-route:not([hidden])) .rt-stop{border-left-color:#000 !important}
+  body.rt-print .rt-dot, body:has(#panel-route:not([hidden])) .rt-dot{background:#fff !important;border-color:#000 !important}
+  body.rt-print .rt-headrow, body:has(#panel-route:not([hidden])) .rt-headrow{border-bottom-color:#000 !important}
+  body.rt-print .rt-outs button, body:has(#panel-route:not([hidden])) .rt-outs button{border:1px solid #000 !important;padding:3px 8px}
+  body.rt-print .rt-outs button::before, body:has(#panel-route:not([hidden])) .rt-outs button::before{content:'\2610  '}
+  body.rt-print .rt-outs button.on::before, body:has(#panel-route:not([hidden])) .rt-outs button.on::before{content:'\2611  '}
+  body.rt-print .rt-outs button.on, body:has(#panel-route:not([hidden])) .rt-outs button.on{font-weight:900;border-width:2px !important}
+  body.rt-print .rt-su.cleared .rt-nm, body:has(#panel-route:not([hidden])) .rt-su.cleared .rt-nm{text-decoration:line-through}
+  body.rt-print .rt-su, body:has(#panel-route:not([hidden])) .rt-su, body.rt-print .rt-end, body:has(#panel-route:not([hidden])) .rt-end, body.rt-print .rt-judge, body:has(#panel-route:not([hidden])) .rt-judge{border:1px solid #000 !important}
+  body.rt-print .rt-f input, body:has(#panel-route:not([hidden])) .rt-f input{border-bottom:1px solid #000 !important;width:72px}
+  body.rt-print .rt-stop.off, body:has(#panel-route:not([hidden])) .rt-stop.off, body.rt-print .rt-stop.skip, body:has(#panel-route:not([hidden])) .rt-stop.skip{opacity:1}
+}
 /* ===== phone layout (bottom tabs + folded chips) ===== */
 .pvbanner{display:none}
 @media (max-width:600px){
@@ -636,6 +726,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     <button role="tab" aria-selected="true" data-tab="cycle" id="tab-cycle">Cycle</button>
     <button role="tab" aria-selected="false" data-tab="trends" id="tab-trends">Trends</button>
     <button role="tab" aria-selected="false" data-tab="synopsis" id="tab-synopsis">Synopsis</button>
+    <button role="tab" aria-selected="false" data-tab="route" id="tab-route">Route</button>
     <button role="tab" aria-selected="false" data-tab="rules" id="tab-rules" hidden>Rules</button>
     <button role="tab" aria-selected="false" data-tab="runs" id="tab-runs" hidden>Runs</button>
     <button role="tab" aria-selected="false" data-tab="data" id="tab-data">Data</button>
@@ -764,6 +855,12 @@ body.no-cabinet #indoor-var .cab{display:none}
     <div class="tablewrap"><table class="syntab" id="synreads"></table></div>
     <h2>Every control · time in each state</h2>
     <div class="tablewrap"><table class="syntab" id="synctrl"></table></div>
+  </section>
+
+  <!-- ROUTE: the manual's tests, one stop at a time -->
+  <section class="panel card" id="panel-route" hidden>
+    <h2 class="rt-noprint">The service manual's tests, one stop at a time</h2>
+    <div id="routehost"></div>
   </section>
 
   <!-- RUNS -->
@@ -1112,7 +1209,7 @@ function manualBands(){
 
 /* ---------- state ---------- */
 let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
-window.dchkDbg = () => ({D, cur, REF, S, AIRIN, CURRENT_REC, air:airSideCalc(), KB, cycleAt});   // read-only hook for tools/shot.html (KB / cycleAt: the tabled 3D part cards)
+window.dchkDbg = () => ({D, cur, REF, S, AIRIN, CURRENT_REC, air:airSideCalc(), KB, cycleAt, RT:{ctx:rtCtx, srcs:() => rtSources(rtCtx()), last:() => RT_LAST, text:rtText, build:buildRoute, load:rtLoad, save:rtSave, link:() => RT_LINK, url:rtLinkUrl}});   // read-only hook for tools/shot.html (KB / cycleAt: the tabled 3D part cards)
 let pins = loadJSON('dchk.pins', []);
 const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
           <g id="g-in">
@@ -2738,11 +2835,16 @@ function mfv(fn, dir){ const mf = multiFam(); const pairs = mf.cands.map(f => [f
   const docs = [...new Set(mf.cands.map(f => MULTI[f].doc))].join(' / ');
   return {v, same, docs, txt:same ? '' : pairs.map(([f, x]) => `${MULTI[f].short} ${Math.round(x * 10) / 10}`).join(' · ')}; }
 const mfIs18 = () => { const mf = multiFam(); return mf.cands.length === 1 && mf.cands[0] === 'mxs' && (D.mfp || {}).ports === 2; };   // 2MXS18: the 18-class tables
-/* Each platform's ANALYSIS CHART as printed: for every possible cause, the symptoms the manual marks with an X ("X indicates possible
-   cause"). Only the symptoms the log can show are kept (discharge temp, discharge SH, high and low pressure, suction SH at the suction
-   service valve, subcooling at the liquid service valve); r = the chart's "Test Method Remedy". Read from the PDFs' X marks and checked
-   against the rendered pages. */
-const CHARTS = {"fit410":{"cool":{"page":12,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"r":"Fully open liquid stop valve"},"Gas stop valve does not fully open":{"f":["dshHi","lpLo","tdHi"],"r":"Fully open gas stop valve"},"Line set restriction":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"r":"Check line set"},"Line set length is too long":{"f":["lpLo","sshHi"],"r":"Check line set length; Change OD position if needed"},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"r":"Replace filter-dryer"},"ID EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","sshHi","sshLo","tdHi","tdLo"],"r":"Check the connection to control board; Repair/replace if needed"},"ID EEV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","sshHi","sshLo","tdHi","tdLo"],"r":"Check ID EEV; Replace/repair if needed"},"OD solenoid valve coil failure":{"f":["dshHi","hpLo","lpHi","sshHi","tdHi"],"r":"Check the connection to control board; Repair/replace if needed"},"OD solenoid valve failure":{"f":["dshHi","hpLo","lpHi","sshHi","tdHi"],"r":"Check OD solenoid valve; Replace/repair if needed"},"Pressure sensor failure":{"f":["lpHi","lpLo","tdHi"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor discharge thermistor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor coil thermistor failure":{"f":["dshLo","hpHi","hpLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor air thermistor failure":{"f":["dshLo","hpHi","hpLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"OD recirculation":{"f":["dshHi","hpHi","tdHi"],"r":"Re-arrange OD position"},"ID recirculation":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":"Re-arrange ID position"},"Dirty OD heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"r":"Check OD heat-exchanger; Clean"},"Dirty ID heat-exchanger":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":"Check ID heat-exchanger; Clean"},"Outdoor ambient temp is too high":{"f":["dshHi","hpHi","sshLo","tdHi"],"r":""},"Outdoor ambient temp is too low":{"f":["dshLo","hpLo","lpLo","tdLo"],"r":""},"ID return air temp is too high":{"f":["lpHi","sshHi"],"r":""},"ID return air temp is too low":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":""},"Mixture of non-condensable gas":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"r":"Recover refrigerant, evacuate pipe, and re-charge"},"OD fan motor failure":{"f":["dshHi","hpHi","tdHi"],"r":"Replace OD fan motor"},"Over charge":{"f":["dshHi","dshLo","hpHi","sshLo","tdHi","tdLo"],"r":"Recover part of charge"},"Under charge":{"f":["dshHi","hpLo","lpLo","sshHi","tdHi","tdLo"],"r":"Test for leaks, Add refrigerant"},"Leak":{"f":["dshHi","hpLo","lpLo","sshHi","tdHi","tdLo"],"r":"Specify and repair the leak point"},"ID failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","sshHi","sshLo","tdHi","tdLo"],"r":"Replace ID"},"Compressor failure":{"f":["dshHi","hpLo","lpHi","tdHi","tdLo"],"r":"Replace compressor"},"Low ID CFM":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":"Check airflow Trim, Check ID fan motor; Repair/replace if needed"}}},"heat":{"page":13,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","tdHi"],"r":"Fully open liquid stop valve"},"Gas stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","tdHi"],"r":"Fully open gas stop valve"},"Line set restriction":{"f":["dshHi","hpHi","lpLo","tdHi"],"r":"Check line set"},"Line set length is too long":{"f":["hpHi","hpLsvLo"],"r":"Check line set length; Change OD position if needed"},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","tdHi"],"r":"Replace filter-dryer"},"OD EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"r":"Check OD EEV coil connection: Repair/replace if needed"},"OD EEV failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"r":"Check OD EEV: Repair/replace if needed"},"ID EEV coil failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","tdHi"],"r":"Check the connection to control board; Repair/replace if needed"},"ID EEV failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","tdHi"],"r":"Check ID EEV; Replace/repair if needed"},"OD solenoid valve coil failure":{"f":["dshHi","dshLo","hpHi","hpSsvLo","tdHi","tdLo"],"r":"Check the connection to control board; Repair/replace if needed"},"OD solenoid valve failure":{"f":["dshHi","dshLo","hpHi","hpSsvLo","tdHi","tdLo"],"r":"Check OD solenoid valve; Replace/repair if needed"},"Check valve failure – Leakage":{"f":["dshLo","tdLo"],"r":"Check check valve: Repair/replace if needed"},"Pressure sensor failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor suction thermistor failure":{"f":["dshHi","dshLo","lpLo","tdHi","tdLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor discharge thermistor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor coil thermistor failure":{"f":["lpLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor coil defrost thermistor failure":{"f":["lpLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor air thermistor failure":{"f":["hpHi","lpLo"],"r":"Check resistance and connections to verify operation; Replace if needed"},"OD recirculation":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"r":"Re-arrange OD position"},"ID recirculation":{"f":["dshHi","hpHi","tdHi"],"r":"Re-arrange ID position"},"Dirty OD heat-exchanger":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"r":"Check OD heat-exchanger; Clean"},"Dirty ID heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"r":"Check ID heat-exchanger; Clean"},"Outdoor ambient temp is too high":{"f":["hpHi"],"r":""},"Outdoor ambient temp is too low":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"r":""},"ID return air temp is too high":{"f":["hpHi","tdHi"],"r":""},"ID return air temp is too low":{"f":["hpLsvLo","hpSsvLo"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","tdHi"],"r":"Recover refrigerant, evacuate pipe, and re-charge"},"OD fan motor failure":{"f":["dshHi","lpLo","tdHi"],"r":"Replace OD fan motor"},"RV failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"r":"Check RV: Repair/replace if needed"},"RV coil failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"r":"Check RV coil: Repair/replace if needed"},"Over charge":{"f":["dshHi","dshLo","hpHi"],"r":"Recover part of charge"},"Under charge":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"r":"Test for leaks, Add refrigerant"},"Leak":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"r":"Specify and repair the leak point"},"ID failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"r":"Replace ID"},"Compressor failure":{"f":["dshHi","dshLo","hpLsvLo","hpSsvLo","tdHi","tdLo"],"r":"Replace compressor"},"Low ID CFM":{"f":["hpHi","tdHi"],"r":"Check airflow Trim, Check ID fan motor; Repair/replace if needed"}}}},"vzc":{"cool":{"page":95,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"Gas stop valve does not fully open":{"f":["dshHi","lpLo","tdHi"],"r":""},"Line set restriction":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"Line set length is too long":{"f":["lpLo","sshHi"],"r":""},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"ID EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"ID EEV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"Check valve failure – Blocked":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"r":""},"Pressure sensor failure":{"f":["lpHi","lpLo","tdHi"],"r":""},"Discharge temp sensor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"r":""},"Coil temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"r":""},"Ambient temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"r":""},"OD recirculation":{"f":["dshHi","hpHi","tdHi"],"r":""},"ID recirculation":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":""},"Dirty OD Heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"r":""},"Dirty ID Heat-exchanger":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"r":""},"Outdoor Ambient temp is too high":{"f":["dshHi","hpHi","sshLo","tdHi"],"r":""},"Outdoor Ambient temp is too low":{"f":["dshLo","hpLo","lpLo","scHi","tdLo"],"r":""},"ID suction temp is too high":{"f":["lpHi","sshHi"],"r":""},"ID suction temp is too low":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"r":""},"OD fan motor failure":{"f":["dshHi","hpHi","scLo","tdHi"],"r":""},"RV failure":{"f":["dshHi","hpLo","lpHi","tdHi"],"r":""},"RV coil failure":{"f":["dshHi","hpLo","lpHi","tdHi"],"r":""},"Over charge":{"f":["dshHi","dshLo","hpHi","scHi","sshLo","tdHi","tdLo"],"r":""},"Under charge":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"r":""},"Leak":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"r":""},"TXV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"TXV is small":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"TXV is big":{"f":["dshLo","hpLo","lpHi","scLo","sshLo","tdLo"],"r":""},"ID Failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"Compressor failure":{"f":["dshHi","hpLo","lpHi","tdHi","tdLo"],"r":""},"Low ID CFM":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":""}}},"heat":{"page":96,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scHi","tdHi"],"r":""},"Gas stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"r":""},"Line set restriction":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"r":""},"Line set length is too long":{"f":["hpHi","hpLsvLo"],"r":""},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"r":""},"OD EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","scHi","scLo","tdHi","tdLo"],"r":""},"OD EEV failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","scHi","scLo","tdHi","tdLo"],"r":""},"ID EEV coil failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","scLo","tdHi"],"r":""},"ID EEV failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","scLo","tdHi"],"r":""},"Check valve failure – Leakage":{"f":["dshLo","scLo","tdLo"],"r":""},"Pressure sensor failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","scHi","scLo"],"r":""},"Discharge temp sensor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"r":""},"Coil temp sensor failure":{"f":["lpLo"],"r":""},"Defrost sensor failure":{"f":["lpLo"],"r":""},"Liquid temp sensor failure":{"f":["scHi","scLo"],"r":""},"Ambient temp sensor failure":{"f":["hpHi","lpLo"],"r":""},"OD recirculation":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"r":""},"ID recirculation":{"f":["dshHi","hpHi","tdHi"],"r":""},"Dirty OD Heat-exchanger":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"r":""},"Dirty ID Heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"r":""},"Outdoor Ambient temp is too high":{"f":["hpHi"],"r":""},"Outdoor Ambient temp is too low":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","scLo","tdHi","tdLo"],"r":""},"ID suction temp is too high":{"f":["hpHi","tdHi"],"r":""},"ID suction temp is too low":{"f":["hpLsvLo","hpSsvLo"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"r":""},"OD fan motor failure":{"f":["dshHi","lpLo","tdHi"],"r":""},"RV failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"r":""},"RV coil failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"r":""},"Over charge":{"f":["dshHi","dshLo","hpHi","scHi"],"r":""},"Under charge":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","scLo","tdHi","tdLo"],"r":""},"Leak":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","scLo","tdHi","tdLo"],"r":""},"TXV failure":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"r":""},"ID failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","scHi","scLo","tdHi","tdLo"],"r":""},"Compressor failure":{"f":["dshHi","dshLo","hpLsvLo","hpSsvLo","tdHi","tdLo"],"r":""},"Low ID CFM":{"f":["hpHi","scLo","tdHi"],"r":""}}}},"dx9vc":{"cool":{"page":21,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"Gas stop valve does not fully open":{"f":["dshHi","lpLo","tdHi"],"r":""},"Line set restriction":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"Line set length is too long":{"f":["lpLo","sshHi"],"r":""},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"ID EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"ID EEV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"Check valve failure – Blocked":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"r":""},"Pressure sensor failure":{"f":["lpHi","lpLo","tdHi"],"r":""},"Discharge temp sensor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"r":""},"Coil temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"r":""},"Ambient temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"r":""},"OD recirculation":{"f":["dshHi","hpHi","tdHi"],"r":""},"ID recirculation":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":""},"Dirty OD Heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"r":""},"Dirty ID Heat-exchanger":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"r":""},"Outdoor Ambient temp is too high":{"f":["dshHi","hpHi","sshLo","tdHi"],"r":""},"Outdoor Ambient temp is too low":{"f":["dshLo","hpLo","lpLo","scHi","tdLo"],"r":""},"ID suction temp is too high":{"f":["lpHi","sshHi"],"r":""},"ID suction temp is too low":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"r":""},"OD fan motor failure":{"f":["dshHi","hpHi","scLo","tdHi"],"r":""},"Over charge":{"f":["dshHi","dshLo","hpHi","scHi","sshLo","tdHi","tdLo"],"r":""},"Under charge":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"r":""},"Leak":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"r":""},"TXV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"TXV is small":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"r":""},"TXV is big":{"f":["dshLo","hpLo","lpHi","scLo","sshLo","tdLo"],"r":""},"ID Failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"r":""},"Compressor failure":{"f":["dshHi","hpLo","lpHi","tdHi","tdLo"],"r":""},"Low ID CFM":{"f":["dshLo","lpLo","sshLo","tdLo"],"r":""}}}}};
+/* Each platform's ANALYSIS CHART as printed: for every possible cause, the columns the manual marks with an X ("X indicates possible
+   cause"). f = the symptoms the log can show (discharge temp, discharge SH, high and low pressure, suction SH at the suction service valve,
+   subcooling at the liquid service valve); c = the chart's complaint and observation columns, which only the tech can supply: weak (weak
+   cooling / heating), repeat (repeated stop/start), noise, stop (stop operation), noswitch (no switch cooling / heating), defrost (incomplete
+   defrost operation), sweat (sweating liquid line), dmdHi / dmdLo (requested % demand > / < actual). A row with no f (only complaint columns)
+   never matches a flagged reading; the Route tab uses it when the readings are inside every line. r = the chart's "Test Method Remedy"
+   (R-410A FIT only; the Goodman charts have no remedy column). Read from the PDFs' X marks and checked against the rendered pages
+   (SiUS612209EA p.12-13, RS6215002r10 p.95-96, DX9VC installation & service reference p.21 without its two OD EEV rows: the DX9VC has no
+   outdoor EEV and its service manual's chart, RSD6115001r14 p.18, drops them). */
+const CHARTS = {"fit410":{"cool":{"page":12,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"c":["noise","repeat","weak"],"r":"Fully open liquid stop valve"},"Gas stop valve does not fully open":{"f":["dshHi","lpLo","tdHi"],"c":["repeat","weak"],"r":"Fully open gas stop valve"},"Line set restriction":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"c":["noise","repeat","weak"],"r":"Check line set"},"Line set length is too long":{"f":["lpLo","sshHi"],"c":["noise","repeat","weak"],"r":"Check line set length; Change OD position if needed"},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"c":["noise","repeat","weak"],"r":"Replace filter-dryer"},"ID EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","sshHi","sshLo","tdHi","tdLo"],"c":["repeat","stop","weak"],"r":"Check the connection to control board; Repair/replace if needed"},"ID EEV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","sshHi","sshLo","tdHi","tdLo"],"c":["repeat","weak"],"r":"Check ID EEV; Replace/repair if needed"},"OD solenoid valve coil failure":{"f":["dshHi","hpLo","lpHi","sshHi","tdHi"],"c":["noise","repeat","stop","weak"],"r":"Check the connection to control board; Repair/replace if needed"},"OD solenoid valve failure":{"f":["dshHi","hpLo","lpHi","sshHi","tdHi"],"c":["noise","repeat","stop","weak"],"r":"Check OD solenoid valve; Replace/repair if needed"},"High Pressure switch failure":{"f":[],"c":["stop"],"r":"Check resistance to verify operation; Replace if needed"},"Pressure sensor failure":{"f":["lpHi","lpLo","tdHi"],"c":["repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor suction thermistor failure":{"f":[],"c":["weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor discharge thermistor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"c":["repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor coil thermistor failure":{"f":["dshLo","hpHi","hpLo"],"c":["repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor air thermistor failure":{"f":["dshLo","hpHi","hpLo"],"c":["repeat","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"OD recirculation":{"f":["dshHi","hpHi","tdHi"],"c":["noise","repeat","weak"],"r":"Re-arrange OD position"},"ID recirculation":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["repeat","weak"],"r":"Re-arrange ID position"},"Dirty OD heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"c":["noise","repeat","weak"],"r":"Check OD heat-exchanger; Clean"},"Dirty ID heat-exchanger":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["repeat","weak"],"r":"Check ID heat-exchanger; Clean"},"Outdoor ambient temp is too high":{"f":["dshHi","hpHi","sshLo","tdHi"],"c":["noise","repeat","weak"],"r":""},"Outdoor ambient temp is too low":{"f":["dshLo","hpLo","lpLo","tdLo"],"c":["repeat","weak"],"r":""},"ID return air temp is too high":{"f":["lpHi","sshHi"],"c":[],"r":""},"ID return air temp is too low":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["repeat","weak"],"r":""},"Mixture of non-condensable gas":{"f":["dshHi","hpHi","lpLo","sshHi","tdHi"],"c":["noise","repeat","weak"],"r":"Recover refrigerant, evacuate pipe, and re-charge"},"OD fan motor failure":{"f":["dshHi","hpHi","tdHi"],"c":["noise","repeat","stop","weak"],"r":"Replace OD fan motor"},"Over charge":{"f":["dshHi","dshLo","hpHi","sshLo","tdHi","tdLo"],"c":["stop","weak"],"r":"Recover part of charge"},"Under charge":{"f":["dshHi","hpLo","lpLo","sshHi","tdHi","tdLo"],"c":["noise","weak"],"r":"Test for leaks, Add refrigerant"},"Leak":{"f":["dshHi","hpLo","lpLo","sshHi","tdHi","tdLo"],"c":["noise","repeat","weak"],"r":"Specify and repair the leak point"},"OD control board failure":{"f":[],"c":["stop"],"r":"Replace OD control board"},"ID failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","sshHi","sshLo","tdHi","tdLo"],"c":["noswitch","repeat","stop","weak"],"r":"Replace ID"},"Compressor failure":{"f":["dshHi","hpLo","lpHi","tdHi","tdLo"],"c":["noise","repeat","stop","weak"],"r":"Replace compressor"},"Compressor and gas furnace are operating at the same time":{"f":[],"c":["stop"],"r":""},"Cooling loop is not attached":{"f":[],"c":["repeat","weak"],"r":"Attach cooling loop to cold plate"},"Cooling loop grease is not enough":{"f":[],"c":["repeat","weak"],"r":"Add grease"},"Low ID CFM":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["repeat","stop","weak"],"r":"Check airflow Trim, Check ID fan motor; Repair/replace if needed"}}},"heat":{"page":13,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","tdHi"],"c":["defrost","repeat","sweat","weak"],"r":"Fully open liquid stop valve"},"Gas stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","tdHi"],"c":["defrost","repeat","weak"],"r":"Fully open gas stop valve"},"Line set restriction":{"f":["dshHi","hpHi","lpLo","tdHi"],"c":["defrost","repeat","sweat","weak"],"r":"Check line set"},"Line set length is too long":{"f":["hpHi","hpLsvLo"],"c":["sweat"],"r":"Check line set length; Change OD position if needed"},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","tdHi"],"c":["defrost","repeat","sweat","weak"],"r":"Replace filter-dryer"},"OD EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"c":["defrost","repeat","stop","weak"],"r":"Check OD EEV coil connection: Repair/replace if needed"},"OD EEV failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"c":["defrost","repeat","stop","weak"],"r":"Check OD EEV: Repair/replace if needed"},"ID EEV coil failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","tdHi"],"c":["defrost","repeat","stop","sweat","weak"],"r":"Check the connection to control board; Repair/replace if needed"},"ID EEV failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","tdHi"],"c":["defrost","repeat","stop","sweat","weak"],"r":"Check ID EEV; Replace/repair if needed"},"OD solenoid valve coil failure":{"f":["dshHi","dshLo","hpHi","hpSsvLo","tdHi","tdLo"],"c":["defrost","noise","repeat","stop","sweat","weak"],"r":"Check the connection to control board; Repair/replace if needed"},"OD solenoid valve failure":{"f":["dshHi","dshLo","hpHi","hpSsvLo","tdHi","tdLo"],"c":["defrost","noise","repeat","stop","sweat","weak"],"r":"Check OD solenoid valve; Replace/repair if needed"},"Check valve failure – Leakage":{"f":["dshLo","tdLo"],"c":["repeat","stop","weak"],"r":"Check check valve: Repair/replace if needed"},"High Pressure switch failure":{"f":[],"c":["stop"],"r":"Check resistance to verify operation; Replace if needed"},"Pressure sensor failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo"],"c":["repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor suction thermistor failure":{"f":["dshHi","dshLo","lpLo","tdHi","tdLo"],"c":["repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor discharge thermistor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"c":["repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor coil thermistor failure":{"f":["lpLo"],"c":["defrost","repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor coil defrost thermistor failure":{"f":["lpLo"],"c":["defrost","repeat","stop","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor liquid thermistor failure":{"f":[],"c":["stop","sweat"],"r":"Check resistance and connections to verify operation; Replace if needed"},"Outdoor air thermistor failure":{"f":["hpHi","lpLo"],"c":["repeat","stop","sweat","weak"],"r":"Check resistance and connections to verify operation; Replace if needed"},"OD recirculation":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"c":["repeat","weak"],"r":"Re-arrange OD position"},"ID recirculation":{"f":["dshHi","hpHi","tdHi"],"c":["repeat","weak"],"r":"Re-arrange ID position"},"Dirty OD heat-exchanger":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"c":["repeat","weak"],"r":"Check OD heat-exchanger; Clean"},"Dirty ID heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"c":["repeat","weak"],"r":"Check ID heat-exchanger; Clean"},"Outdoor ambient temp is too high":{"f":["hpHi"],"c":["repeat","stop","sweat","weak"],"r":""},"Outdoor ambient temp is too low":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"c":["repeat","weak"],"r":""},"ID return air temp is too high":{"f":["hpHi","tdHi"],"c":["repeat","weak"],"r":""},"ID return air temp is too low":{"f":["hpLsvLo","hpSsvLo"],"c":["sweat"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","tdHi"],"c":["repeat","weak"],"r":"Recover refrigerant, evacuate pipe, and re-charge"},"OD fan motor failure":{"f":["dshHi","lpLo","tdHi"],"c":["repeat","stop","weak"],"r":"Replace OD fan motor"},"RV failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"c":["defrost","noswitch","repeat","stop","weak"],"r":"Check RV: Repair/replace if needed"},"RV coil failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"c":["repeat","weak"],"r":"Check RV coil: Repair/replace if needed"},"Over charge":{"f":["dshHi","dshLo","hpHi"],"c":["repeat","sweat","weak"],"r":"Recover part of charge"},"Under charge":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"c":["repeat","sweat","weak"],"r":"Test for leaks, Add refrigerant"},"Leak":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"c":["repeat","sweat","weak"],"r":"Specify and repair the leak point"},"ID failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","tdHi","tdLo"],"c":["defrost","noise","repeat","stop","sweat","weak"],"r":"Replace ID"},"OD control board failure":{"f":[],"c":["stop"],"r":"Replace OD control board"},"Compressor failure":{"f":["dshHi","dshLo","hpLsvLo","hpSsvLo","tdHi","tdLo"],"c":["defrost","noise","repeat","stop","weak"],"r":"Replace compressor"},"Cooling loop is not attached":{"f":[],"c":["repeat","weak"],"r":"Attach cooling loop to cold plate"},"Cooling loop grease is not enough":{"f":[],"c":["repeat","weak"],"r":"Add grease"},"Low ID CFM":{"f":["hpHi","tdHi"],"c":["repeat","stop","weak"],"r":"Check airflow Trim, Check ID fan motor; Repair/replace if needed"}}}},"vzc":{"cool":{"page":95,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Gas stop valve does not fully open":{"f":["dshHi","lpLo","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"Line set restriction":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Line set length is too long":{"f":["lpLo","sshHi"],"c":["noise","repeat","weak"],"r":""},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"OD EEV coil failure":{"f":[],"c":["dmdHi","repeat","stop","weak"],"r":""},"OD EEV failure":{"f":[],"c":["dmdHi","repeat","weak"],"r":""},"ID EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"ID EEV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Check valve failure – Blocked":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"High Pressure switch failure":{"f":[],"c":["stop"],"r":""},"Pressure sensor failure":{"f":["lpHi","lpLo","tdHi"],"c":["dmdHi","repeat","stop","weak"],"r":""},"Discharge temp sensor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"Coil temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"Ambient temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"OD recirculation":{"f":["dshHi","hpHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"ID recirculation":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Dirty OD Heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Dirty ID Heat-exchanger":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Outdoor Ambient temp is too high":{"f":["dshHi","hpHi","sshLo","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Outdoor Ambient temp is too low":{"f":["dshLo","hpLo","lpLo","scHi","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"ID suction temp is too high":{"f":["lpHi","sshHi"],"c":[],"r":""},"ID suction temp is too low":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"OD fan motor failure":{"f":["dshHi","hpHi","scLo","tdHi"],"c":["dmdHi","noise","repeat","stop","weak"],"r":""},"RV failure":{"f":["dshHi","hpLo","lpHi","tdHi"],"c":["dmdHi","noswitch","repeat","stop","weak"],"r":""},"RV coil failure":{"f":["dshHi","hpLo","lpHi","tdHi"],"c":["dmdHi","noswitch","repeat","stop","weak"],"r":""},"Over charge":{"f":["dshHi","dshLo","hpHi","scHi","sshLo","tdHi","tdLo"],"c":["dmdLo","stop","weak"],"r":""},"Under charge":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"c":["noise","weak"],"r":""},"Leak":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"c":["dmdHi","noise","repeat","weak"],"r":""},"TXV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"TXV is small":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["weak"],"r":""},"TXV is big":{"f":["dshLo","hpLo","lpHi","scLo","sshLo","tdLo"],"c":["dmdLo","weak"],"r":""},"OD Control Board Failure":{"f":[],"c":["stop"],"r":""},"ID Failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","noswitch","repeat","stop","weak"],"r":""},"Compressor failure":{"f":["dshHi","hpLo","lpHi","tdHi","tdLo"],"c":["dmdHi","noise","repeat","stop","weak"],"r":""},"Cooling loop is not attached":{"f":[],"c":["dmdHi","repeat","weak"],"r":""},"Cooling loop grease is not enough":{"f":[],"c":["dmdHi","repeat","weak"],"r":""},"Compressor and Gas furnace are operating at the same time":{"f":[],"c":["stop"],"r":""},"Low ID CFM":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""}}},"heat":{"page":96,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scHi","tdHi"],"c":["defrost","dmdHi","repeat","sweat","weak"],"r":""},"Gas stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"c":["defrost","dmdHi","repeat","weak"],"r":""},"Line set restriction":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"c":["defrost","dmdHi","repeat","sweat","weak"],"r":""},"Line set length is too long":{"f":["hpHi","hpLsvLo"],"c":["sweat"],"r":""},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"c":["defrost","dmdHi","repeat","sweat","weak"],"r":""},"OD EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","scHi","scLo","tdHi","tdLo"],"c":["defrost","dmdHi","dmdLo","repeat","stop","weak"],"r":""},"OD EEV failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","scHi","scLo","tdHi","tdLo"],"c":["defrost","dmdHi","dmdLo","repeat","stop","weak"],"r":""},"ID EEV coil failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","scLo","tdHi"],"c":["defrost","dmdHi","dmdLo","repeat","stop","sweat","weak"],"r":""},"ID EEV failure":{"f":["dshHi","hpHi","hpLsvLo","lpLo","scLo","tdHi"],"c":["defrost","dmdHi","dmdLo","repeat","stop","sweat","weak"],"r":""},"Check valve failure – Leakage":{"f":["dshLo","scLo","tdLo"],"c":["dmdLo","repeat","stop","weak"],"r":""},"High Pressure switch failure":{"f":[],"c":["stop"],"r":""},"Pressure sensor failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","scHi","scLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"Discharge temp sensor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"Coil temp sensor failure":{"f":["lpLo"],"c":["defrost","dmdHi","repeat","stop","weak"],"r":""},"Defrost sensor failure":{"f":["lpLo"],"c":["defrost","dmdHi","repeat","stop","weak"],"r":""},"Liquid temp sensor failure":{"f":["scHi","scLo"],"c":["stop","sweat"],"r":""},"Ambient temp sensor failure":{"f":["hpHi","lpLo"],"c":["dmdHi","repeat","stop","sweat","weak"],"r":""},"OD recirculation":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"ID recirculation":{"f":["dshHi","hpHi","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"Dirty OD Heat-exchanger":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"Dirty ID Heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"Outdoor Ambient temp is too high":{"f":["hpHi"],"c":["dmdHi","repeat","stop","sweat","weak"],"r":""},"Outdoor Ambient temp is too low":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","scLo","tdHi","tdLo"],"c":["dmdHi","repeat","weak"],"r":""},"ID suction temp is too high":{"f":["hpHi","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"ID suction temp is too low":{"f":["hpLsvLo","hpSsvLo"],"c":["sweat"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"OD fan motor failure":{"f":["dshHi","lpLo","tdHi"],"c":["dmdHi","repeat","stop","weak"],"r":""},"RV failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"c":["defrost","dmdHi","noswitch","repeat","stop","weak"],"r":""},"RV coil failure":{"f":["dshHi","hpLsvLo","hpSsvLo"],"c":["defrost","dmdHi","noswitch","repeat","stop","weak"],"r":""},"Over charge":{"f":["dshHi","dshLo","hpHi","scHi"],"c":["dmdHi","dmdLo","repeat","stop","sweat","weak"],"r":""},"Under charge":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","scLo","tdHi","tdLo"],"c":["repeat","sweat","weak"],"r":""},"Leak":{"f":["dshHi","hpLsvLo","hpSsvLo","lpLo","scLo","tdHi","tdLo"],"c":["repeat","sweat","weak"],"r":""},"TXV failure":{"f":["dshHi","hpHi","lpLo","scLo","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"TXV size is small":{"f":[],"c":["sweat"],"r":""},"ID failure":{"f":["dshHi","dshLo","hpHi","hpLsvLo","hpSsvLo","lpLo","scHi","scLo","tdHi","tdLo"],"c":["defrost","dmdHi","dmdLo","noise","repeat","stop","sweat","weak"],"r":""},"OD Control Board failure":{"f":[],"c":["stop"],"r":""},"Compressor failure":{"f":["dshHi","dshLo","hpLsvLo","hpSsvLo","tdHi","tdLo"],"c":["defrost","dmdHi","noise","repeat","stop","weak"],"r":""},"Cooling loop is not attached":{"f":[],"c":["dmdHi","repeat","weak"],"r":""},"Cooling loop grease is not enough":{"f":[],"c":["dmdHi","repeat","weak"],"r":""},"Compressor and Gas furnace are operating at the same time":{"f":[],"c":["stop","sweat"],"r":""},"Low ID CFM":{"f":["hpHi","scLo","tdHi"],"c":["dmdHi","repeat","stop","weak"],"r":""}}}},"dx9vc":{"cool":{"page":21,"causes":{"Liquid stop valve does not fully open":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Gas stop valve does not fully open":{"f":["dshHi","lpLo","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"Line set restriction":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Line set length is too long":{"f":["lpLo","sshHi"],"c":["noise","repeat","weak"],"r":""},"Blocked filter-dryer":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"ID EEV coil failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"ID EEV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Check valve failure – Blocked":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"c":["dmdHi","repeat","weak"],"r":""},"High Pressure switch failure":{"f":[],"c":["stop"],"r":""},"Pressure sensor failure":{"f":["lpHi","lpLo","tdHi"],"c":["dmdHi","repeat","stop","weak"],"r":""},"Discharge temp sensor failure":{"f":["dshHi","dshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"Coil temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""},"Ambient temp sensor failure":{"f":["dshLo","hpHi","hpLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"OD recirculation":{"f":["dshHi","hpHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"ID recirculation":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Dirty OD Heat-exchanger":{"f":["dshHi","hpHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Dirty ID Heat-exchanger":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Outdoor Ambient temp is too high":{"f":["dshHi","hpHi","sshLo","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"Outdoor Ambient temp is too low":{"f":["dshLo","hpLo","lpLo","scHi","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"ID suction temp is too high":{"f":["lpHi","sshHi"],"c":[],"r":""},"ID suction temp is too low":{"f":["dshLo","lpLo","scLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"Mixture of non-condensible gas":{"f":["dshHi","hpHi","lpLo","scLo","sshHi","tdHi"],"c":["dmdHi","noise","repeat","weak"],"r":""},"OD fan motor failure":{"f":["dshHi","hpHi","scLo","tdHi"],"c":["dmdHi","noise","repeat","stop","weak"],"r":""},"Over charge":{"f":["dshHi","dshLo","hpHi","scHi","sshLo","tdHi","tdLo"],"c":["dmdLo","stop","weak"],"r":""},"Under charge":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"c":["noise","weak"],"r":""},"Leak":{"f":["dshHi","hpLo","lpLo","scLo","sshHi","tdHi","tdLo"],"c":["dmdHi","noise","repeat","weak"],"r":""},"TXV failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","repeat","weak"],"r":""},"TXV is small":{"f":["dshHi","hpHi","lpLo","scHi","sshHi","tdHi"],"c":["weak"],"r":""},"TXV is big":{"f":["dshLo","hpLo","lpHi","scLo","sshLo","tdLo"],"c":["dmdLo","weak"],"r":""},"OD Control Board Failure":{"f":[],"c":["stop"],"r":""},"ID Failure":{"f":["dshHi","dshLo","hpHi","hpLo","lpHi","lpLo","scHi","scLo","sshHi","sshLo","tdHi","tdLo"],"c":["dmdHi","dmdLo","noswitch","repeat","stop","weak"],"r":""},"Compressor failure":{"f":["dshHi","hpLo","lpHi","tdHi","tdLo"],"c":["dmdHi","noise","repeat","stop","weak"],"r":""},"Cooling loop is not attached":{"f":[],"c":["dmdHi","repeat","weak"],"r":""},"Cooling loop grease is not enough":{"f":[],"c":["dmdHi","repeat","weak"],"r":""},"Compressor and Gas furnace are operating at the same time":{"f":[],"c":["stop"],"r":""},"Low ID CFM":{"f":["dshLo","lpLo","sshLo","tdLo"],"c":["dmdHi","dmdLo","repeat","stop","weak"],"r":""}}}}};
 const CHART_FLAG = {tdHi:'discharge temp above the line', tdLo:'discharge temp below the line', dshHi:'discharge SH above the line', dshLo:'discharge SH below the line',
   hpHi:'high pressure above the line', hpLo:'high pressure below the line', hpSsvLo:'high pressure (gas side) below the line', hpLsvLo:'high pressure (liquid side) below the line',
   lpHi:'low pressure above the line', lpLo:'low pressure below the line', sshHi:'suction SH above the line', sshLo:'suction SH below the line', scHi:'subcooling above the line', scLo:'subcooling below the line'};
@@ -4401,34 +4503,41 @@ const IMPL_IDS = {'Indoor gas vs liquid pipe':['igas', 'iliq'], 'Discharge colde
 
 // The platform's ANALYSIS CHART (service manual): the readings outside its lines over the settled stretch, and the causes the chart marks as
 // possible for every one of them. Judged on settled rows (8+ min into a run, not defrost, not oil return) inside the chart's outdoor range;
-// the chart also assumes 65–85 °F indoors, which a unitary log does not record.
-function chartFindings(){
-  const out = [], p = uniP(), ch = CHARTS[unitPlat()]; if (!p || !p.chart || !ch || D.fam === 'multi') return out;
+// the chart also assumes 65–85 °F indoors, which a unitary log does not record. chartObs(m, pl) is shared by the synopsis card and the
+// Route tab (pl = the platform whose chart and lines are used).
+function chartObs(m, pl){
+  const p = UNI[pl], ch = CHARTS[pl]; if (!D || !p || !p.chart || !ch || D.fam === 'multi') return null; const C = ch[m], W = p.chart[m]; if (!C || !W) return null;
   const num = D.num, s = D.str, dt = D.interval / 60, med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
-  for (const m of ['cool', 'heat']){ const C = ch[m], W = p.chart[m]; if (!C || !W) continue;
-    const rows = []; let outside = 0;
-    for (let i = 0; i < D.n; i++){ if (D.mode[i] !== m || D.runSec[i] < SIG.settle * 60 || s.defrost[i] === 'ON' || s.oilret[i] === 'ON' || D.sinceDefrost[i] <= 5) continue; const o = num.oat[i]; if (!isN(o)) continue; if (o < W.oat[0] || o > W.oat[1]){ outside++; continue; } rows.push(i); }
-    const M = m === 'cool' ? 'cooling' : 'heating', cite = `${p.doc} ${W.p}`;
-    if (rows.length < Math.max(6, Math.round(5 / dt))){ if (outside * dt >= 5) out.push({st:'info', src:cite, mode:m, title:`Analysis chart not applied (${M}): outdoor air outside its ${W.oat[0]}–${W.oat[1]} °F range`, why:`The service manual's ${M} analysis chart holds only for ${W.oat[0]}–${W.oat[1]} °F outdoors (and 65–85 °F indoors); ${f0(outside * dt)} settled minutes of this recording were outside it.`, do:'Judge this stretch by the error codes and the board\'s own trip lines; the chart\'s lines do not apply here.'}); continue; }
-    const md = id => num[id] ? med(rows.map(i => num[id][i])) : null;
-    const td = md('disch'), dsh = md('dsh'), hp = md('hp'), lp = md('lp'), ssh = md('sh'), sc = md('sc');
-    const dshHi = m === 'cool' ? p.dsh.hiCool : p.dsh.hiHeat, lpCalc = m === 'heat' && (D.psrc || PSRC).lpHeat === 'calc';
-    const obs = [], seen = [], chk = (flag, cond, txt) => { if (cond) obs.push([flag, txt]); };
-    if (isN(td)){ chk('tdHi', td > p.disch.hi, `discharge ${f0(td)}°F (over ${p.disch.hi})`); chk('tdLo', td < p.disch.lo, `discharge ${f0(td)}°F (under ${p.disch.lo})`); seen.push(`discharge ${f0(td)}°F`); }
-    if (isN(dsh) && dshHi){ chk('dshHi', dsh > dshHi, `discharge SH ${f1s(dsh)}°F (over ${dshHi})`); chk('dshLo', dsh < p.dsh.lo, `discharge SH ${f1s(dsh)}°F (under ${p.dsh.lo})`); seen.push(`discharge SH ${f1s(dsh)}°F`); }
-    if (isN(hp) && p.hp){ if (m === 'cool'){ chk('hpHi', hp > p.hp.hi, `high pressure ${f0(hp)} psi (over ${p.hp.hi})`); chk('hpLo', hp < p.hp.loCool, `high pressure ${f0(hp)} psi (under ${p.hp.loCool})`); }
-      else { chk('hpHi', hp > p.hp.hi, `high pressure ${f0(hp)} psi (over ${p.hp.hi})`); chk('hpSsvLo', hp < p.hp.loHeat, `high pressure ${f0(hp)} psi (under ${p.hp.loHeat})`); } seen.push(`high pressure ${f0(hp)} psi`); }
-    if (isN(lp) && p.lp && !lpCalc){ if (m === 'cool'){ chk('lpHi', lp > p.lp.hiCool, `low pressure ${f0(lp)} psi (over ${p.lp.hiCool})`); chk('lpLo', lp < p.lp.loCool, `low pressure ${f0(lp)} psi (under ${p.lp.loCool})`); }
-      else chk('lpLo', lp < p.lp.loHeat, `low pressure ${f0(lp)} psi (under ${p.lp.loHeat})`); seen.push(`low pressure ${f0(lp)} psi`); }
-    if (m === 'cool' && p.ssh && !p.noTs && isN(ssh)){ chk('sshHi', ssh > p.ssh.hiCool, `suction SH ${f1s(ssh)}°F (over ${p.ssh.hiCool})`); chk('sshLo', ssh < p.ssh.loCool, `suction SH ${f1s(ssh)}°F (under ${p.ssh.loCool})`); seen.push(`suction SH ${f1s(ssh)}°F`); }
-    if (p.sc && isN(sc)){ chk('scHi', sc > p.sc.hi, `subcooling ${f1s(sc)}°F (over ${p.sc.hi})`); chk('scLo', sc < p.sc.lo, `subcooling ${f1s(sc)}°F (under ${p.sc.lo})`); seen.push(`subcooling ${f1s(sc)}°F`); }
-    const oats = rows.map(i => num.oat[i]).filter(isN), range = `${f0(Math.min(...oats))}–${f0(Math.max(...oats))} °F outdoors`;
-    const notes = [m === 'cool' && hpSrcAt(rows[0]) === 'tm' ? 'the high pressure is the board\'s figure from the coil thermistor Tm, not a gauge' : '', (p.ssh || p.sc) ? 'the chart\'s suction SH and subcooling are gauge readings at the service valves, the app\'s come from the unit\'s thermistors' : ''].filter(Boolean);
+  const rows = []; let outside = 0;
+  for (let i = 0; i < D.n; i++){ if (D.mode[i] !== m || D.runSec[i] < SIG.settle * 60 || s.defrost[i] === 'ON' || s.oilret[i] === 'ON' || D.sinceDefrost[i] <= 5) continue; const o = num.oat[i]; if (!isN(o)) continue; if (o < W.oat[0] || o > W.oat[1]){ outside++; continue; } rows.push(i); }
+  const M = m === 'cool' ? 'cooling' : 'heating', cite = `${p.doc} ${W.p}`, base = {m, M, C, W, p, cite, rows, outside, outMin:outside * dt, min:rows.length * dt};
+  if (rows.length < Math.max(6, Math.round(5 / dt))) return Object.assign(base, {applies:false});
+  const md = id => num[id] ? med(rows.map(i => num[id][i])) : null;
+  const td = md('disch'), dsh = md('dsh'), hp = md('hp'), lp = md('lp'), ssh = md('sh'), sc = md('sc');
+  const dshHi = m === 'cool' ? p.dsh.hiCool : p.dsh.hiHeat, lpCalc = m === 'heat' && (D.psrc || PSRC).lpHeat === 'calc';
+  const obs = [], seen = [], chk = (flag, cond, txt) => { if (cond) obs.push([flag, txt]); };
+  if (isN(td)){ chk('tdHi', td > p.disch.hi, `discharge ${f0(td)}°F (over ${p.disch.hi})`); chk('tdLo', td < p.disch.lo, `discharge ${f0(td)}°F (under ${p.disch.lo})`); seen.push(`discharge ${f0(td)}°F`); }
+  if (isN(dsh) && dshHi){ chk('dshHi', dsh > dshHi, `discharge SH ${f1s(dsh)}°F (over ${dshHi})`); chk('dshLo', dsh < p.dsh.lo, `discharge SH ${f1s(dsh)}°F (under ${p.dsh.lo})`); seen.push(`discharge SH ${f1s(dsh)}°F`); }
+  if (isN(hp) && p.hp){ if (m === 'cool'){ chk('hpHi', hp > p.hp.hi, `high pressure ${f0(hp)} psi (over ${p.hp.hi})`); chk('hpLo', hp < p.hp.loCool, `high pressure ${f0(hp)} psi (under ${p.hp.loCool})`); }
+    else { chk('hpHi', hp > p.hp.hi, `high pressure ${f0(hp)} psi (over ${p.hp.hi})`); chk('hpSsvLo', hp < p.hp.loHeat, `high pressure ${f0(hp)} psi (under ${p.hp.loHeat})`); } seen.push(`high pressure ${f0(hp)} psi`); }
+  if (isN(lp) && p.lp && !lpCalc){ if (m === 'cool'){ chk('lpHi', lp > p.lp.hiCool, `low pressure ${f0(lp)} psi (over ${p.lp.hiCool})`); chk('lpLo', lp < p.lp.loCool, `low pressure ${f0(lp)} psi (under ${p.lp.loCool})`); }
+    else chk('lpLo', lp < p.lp.loHeat, `low pressure ${f0(lp)} psi (under ${p.lp.loHeat})`); seen.push(`low pressure ${f0(lp)} psi`); }
+  if (m === 'cool' && p.ssh && !p.noTs && isN(ssh)){ chk('sshHi', ssh > p.ssh.hiCool, `suction SH ${f1s(ssh)}°F (over ${p.ssh.hiCool})`); chk('sshLo', ssh < p.ssh.loCool, `suction SH ${f1s(ssh)}°F (under ${p.ssh.loCool})`); seen.push(`suction SH ${f1s(ssh)}°F`); }
+  if (p.sc && isN(sc)){ chk('scHi', sc > p.sc.hi, `subcooling ${f1s(sc)}°F (over ${p.sc.hi})`); chk('scLo', sc < p.sc.lo, `subcooling ${f1s(sc)}°F (under ${p.sc.lo})`); seen.push(`subcooling ${f1s(sc)}°F`); }
+  const oats = rows.map(i => num.oat[i]).filter(isN), range = `${f0(Math.min(...oats))}–${f0(Math.max(...oats))} °F outdoors`;
+  const notes = [m === 'cool' && hpSrcAt(rows[0]) === 'tm' ? 'the high pressure is the board\'s figure from the coil thermistor Tm, not a gauge' : '', (p.ssh || p.sc) ? 'the chart\'s suction SH and subcooling are gauge readings at the service valves, the app\'s come from the unit\'s thermistors' : ''].filter(Boolean);
+  return Object.assign(base, {applies:true, obs, seen, notes, range, oatMin:Math.min(...oats), oatMax:Math.max(...oats)});
+}
+function chartFindings(){
+  const out = [], pl = unitPlat(), dt = D.interval / 60;
+  for (const m of ['cool', 'heat']){ const o = chartObs(m, pl); if (!o) continue; const {M, cite, W, C, rows, obs, seen, notes, range} = o;
+    if (!o.applies){ if (o.outside * dt >= 5) out.push({st:'info', src:cite, mode:m, title:`Analysis chart not applied (${M}): outdoor air outside its ${W.oat[0]}–${W.oat[1]} °F range`, why:`The service manual's ${M} analysis chart holds only for ${W.oat[0]}–${W.oat[1]} °F outdoors (and 65–85 °F indoors); ${f0(o.outside * dt)} settled minutes of this recording were outside it.`, do:'Judge this stretch by the error codes and the board\'s own trip lines; the chart\'s lines do not apply here.'}); continue; }
     if (!obs.length){ out.push({st:'ok', src:cite, mode:m, title:`Settled readings inside every line of the service manual's ${M} analysis chart`, why:`Settled medians over ${f0(rows.length * dt)} min at ${range}: ${seen.join(', ')}. None crosses a line on the chart; shorter excursions past a line show on their own cards.${notes.length ? ' Note: ' + notes.join('; ') + '.' : ''}`, do:'The chart marks no symptom, so it points at no cause. Error codes and the complaint still come first.'}); continue; }
     const flags = obs.map(o => o[0]), causes = Object.entries(C.causes).filter(([nm, x]) => flags.every(f => x.f.includes(f)));
     out.push({st:'warn', src:cite, mode:m, title:`Outside the service manual's ${M} analysis chart: ${obs.map(o => o[1]).join(', ')}`,
       why:`Settled medians over ${f0(rows.length * dt)} min at ${range}, inside the chart's ${W.oat[0]}–${W.oat[1]} °F range. ${causes.length ? `The chart marks ${causes.length === 1 ? 'one cause' : causes.length + ' causes'} as possible with all of these: ${causes.map(c => c[0]).join(', ')}.` : 'No single cause on the chart is marked with all of these together; check each reading on its own.'}${notes.length ? ' Note: ' + notes.join('; ') + '.' : ''}`,
-      fix:causes.length ? causes.slice(0, 10).map(([nm, x]) => nm + (x.r ? ' — ' + x.r : '')) : ['Confirm each flagged reading with gauges and a probe before acting on it.']});
+      fix:causes.length ? causes.slice(0, 10).map(([nm, x]) => nm + (x.r ? ' — ' + x.r : '')) : ['Confirm each flagged reading with gauges and a probe before acting on it.'],
+      do:causes.length ? 'The Route tab gives the manual\'s test for each of these and narrows the list as the tests come back.' : undefined});
   }
   return out;
 }
@@ -4669,8 +4778,625 @@ function buildSynopsis(){
     + (dqWarn.length ? `<h4 class="syndq">About the recording</h4>${dqWarn.map(card).join('')}` : '')
     + (notes.length ? `<details class="synnotes"><summary>Also noted · ${notes.length}</summary>${notes.map(card).join('')}</details>` : '')
     + '<p class="synkey"><i class="crit"></i>critical <i class="minor"></i>minor <i class="fan"></i>fan / airflow <i class="humid"></i>humidity · a card in two colours belongs to both</p>';
+  rtRefresh();
   $('#synnote').textContent = D.fam === 'multi' ? `A Multi_Split export carries no pressures, humidity or airflow, so these findings rest on coil, pipe and air temperatures plus the EV positions, judged by the ${mfName()} manual's own lines. Confirm humidity with a meter.` : 'Findings come from the platform\'s service manual (each card names the page), refrigerant physics, or the recording itself. They point at what to check first; they are not a replacement for gauges and a scale.' + (S.provisional ? ' Field rules and provisional patterns are switched on (Settings): those have no manual page behind them or have not been confirmed on a real repair.' : ' Field rules with no manual page behind them, and patterns not yet confirmed on a repair, are off (Settings → Field rules).');
 }
+/* ---------- diagnostic route (v103) ----------
+   Kenny, 2026-10-10: cross-reference the cooling and heating analysis charts with the data chips to point at a short list of repairs, give
+   the service manual's own test for each, and let the list update as items test good; printable and shareable for a field tech.
+   Two kinds of route, both from the platform's service manual:
+   · chart route (fit410, vzc, dx9vc have an analysis chart): the chart rows marked for every flagged reading and every complaint the tech
+     picks are the suspects; each suspect carries the manual's test (rtTests). A pass clears what the stop covers, a fail confirms it, and a
+     stop that can only find a fault (a kink you can see) marks the suspect checked, not cleared.
+   · code route (fit410, fit32, dh9): the manual's own flowchart for a logged error code, step by step, in the manual's order.
+   The order of stops on a chart route is the app's (easiest first, then the stop that covers the most suspects): the manual gives none.
+   A borrowed test (a flowchart step used without its code, or another Daikin / Goodman manual's method) is always tagged with its source.
+   On the R-32 FIT and DH9VS the manuals have no analysis chart: with Settings → Field rules on, the R-410A FIT chart can be used, labelled. */
+const RT_TIER = [{s:'●', t:'look'}, {s:'■', t:'meter, power off'}, {s:'◆', t:'gauges or thermometer'}, {s:'◆◆', t:'opens the system'}];
+const RT_CMP = {weak:m => m === 'heat' ? 'Weak heating' : 'Weak cooling', repeat:() => 'Repeated stop/start', noise:() => 'Noise', stop:() => 'Stop operation',
+  noswitch:m => m === 'heat' ? 'No switch heating' : 'No switch cooling', defrost:() => 'Incomplete defrost operation', sweat:() => 'Sweating liquid line',
+  dmdHi:() => 'Requested % demand > actual', dmdLo:() => 'Requested % demand < actual'};
+const RT_CMP_ORDER = ['weak', 'repeat', 'noise', 'stop', 'noswitch', 'defrost', 'sweat', 'dmdHi', 'dmdLo'];
+// chart rows → one id per cause, so a test can name what it covers on every platform's wording
+const RT_CAUSE = [[/^liquid stop valve/, 'lsv'], [/^gas stop valve/, 'gsv'], [/^line set restriction/, 'lineset'], [/^line set length/, 'linelen'], [/^blocked filter/, 'drier'],
+  [/^id eev coil/, 'ieevcoil'], [/^id eev failure/, 'ieev'], [/^od eev coil/, 'oeevcoil'], [/^od eev failure/, 'oeev'], [/^od solenoid valve coil/, 'svcoil'], [/^od solenoid valve failure/, 'sv'],
+  [/^check valve/, 'checkv'], [/^high pressure switch/, 'hps'], [/^pressure sensor/, 'psensor'], [/suction thermistor/, 'th_ts'], [/discharge (thermistor|temp sensor)/, 'th_td'],
+  [/coil defrost thermistor|^defrost sensor/, 'th_tb'], [/coil (thermistor|temp sensor)/, 'th_tm'], [/liquid (thermistor|temp sensor)/, 'th_tl'], [/air thermistor|^ambient temp sensor/, 'th_ta'],
+  [/^od recirculation/, 'odrecirc'], [/^id recirculation/, 'idrecirc'], [/^dirty od/, 'odcoil'], [/^dirty id/, 'idcoil'], [/^outdoor ambient temp is too high/, 'oathi'], [/^outdoor ambient temp is too low/, 'oatlo'],
+  [/^id (return air|suction) temp is too high/, 'rahi'], [/^id (return air|suction) temp is too low/, 'ralo'], [/non-condens/, 'nc'], [/^od fan motor/, 'odfan'], [/^rv coil/, 'rvcoil'], [/^rv failure/, 'rv'],
+  [/^over charge/, 'over'], [/^under charge/, 'under'], [/^leak$/, 'leak'], [/^txv failure/, 'txv'], [/^txv (size )?is small/, 'txvsmall'], [/^txv is big/, 'txvbig'], [/^od control board/, 'odpcb'],
+  [/^id failure/, 'idfail'], [/^compressor failure/, 'comp'], [/^compressor and gas furnace/, 'dualfuel'], [/^cooling loop is not attached/, 'loop'], [/^cooling loop grease/, 'grease'], [/^low id cfm/, 'lowcfm']];
+const rtCauseId = nm => { const n = String(nm).toLowerCase().replace(/\s+/g, ' ').trim(); for (const [re, id] of RT_CAUSE) if (re.test(n)) return id; return 'x_' + n.replace(/[^a-z0-9]+/g, '_'); };
+// each chart's own lines, from its column headings (°F, psig)
+const RT_LINES = {
+  fit410:{cool:{td:[105, 200], dsh:[20, 70], hp:[255, 490], lp:[100, 185], ssh:[4, 20]}, heat:{td:[105, 200], dsh:[20, 80], hpHi:490, hpssv:270, hplsv:270, lpLo:40}},
+  vzc:{cool:{td:[105, 200], dsh:[20, 70], hp:[255, 490], lp:[100, 185], ssh:[4, 20], sc:[4, 12]}, heat:{td:[105, 200], dsh:[20, 70], hpHi:490, hpssv:270, hplsv:270, lpLo:40, sc:[4, 12]}},
+  dx9vc:{cool:{td:[105, 200], dsh:[20, 70], hp:[255, 490], lp:[100, 185], ssh:[4, 20], sc:[4, 12]}},
+};
+const RT_GRP = {tdHi:'td', tdLo:'td', dshHi:'dsh', dshLo:'dsh', hpHi:'hp', hpLo:'hp', hpSsvLo:'hp', hpLsvLo:'hplsv', lpHi:'lp', lpLo:'lp', sshHi:'ssh', sshLo:'ssh', scHi:'sc', scLo:'sc'};
+// the thermistor table every one of these manuals prints (identical values: SiUS612209EA p.72, SiUS612412E p.71, SiUS612415E p.72,
+// RS6215002r10 p.104, RSD6115001r14 p.78): °C, kΩ for Tm / Tl / Ts / Tb / Tgi / Tli, kΩ for Td, kΩ for Ta (to 50 °C)
+const RT_THERM = [[-30, 364.43, 4759.15, 362.48], [-25, 267.00, 3454.24, 265.99], [-20, 197.81, 2533.62, 197.31], [-15, 148.10, 1877.01, 147.86], [-10, 111.99, 1403.82, 111.88],
+  [-5, 85.49, 1059.45, 85.43], [0, 65.84, 806.47, 65.80], [5, 51.09, 618.95, 51.10], [10, 39.96, 478.76, 39.99], [15, 31.50, 373.11, 31.54], [20, 25.01, 292.86, 25.06],
+  [25, 20.00, 231.44, 20.04], [30, 16.10, 184.11, 16.13], [35, 13.04, 147.37, 13.07], [40, 10.63, 118.68, 10.65], [45, 8.71, 96.13, 8.73], [50, 7.18, 78.29, 7.18],
+  [55, 5.95, 64.10, null], [60, 4.96, 52.76, null], [65, 4.16, 43.63, null], [70, 3.50, 36.26, null], [75, 2.96, 30.27, null], [80, 2.51, 25.38, null], [85, 2.14, 21.37, null],
+  [90, 1.83, 18.06, null], [95, 1.58, 15.33, null], [100, 1.36, 13.06, null], [105, 1.18, 11.17, null], [110, 1.02, 9.59, null], [115, 0.89, 8.25, null], [120, 0.78, 7.13, null],
+  [125, 0.68, 6.18, null], [130, 0.60, 5.37, null], [135, 0.53, 4.69, null], [140, 0.47, 4.10, null], [145, 0.42, 3.59, null], [150, 0.37, 3.16, null]];
+// expected kΩ at °F for column col (1 = Tm group, 2 = Td, 3 = Ta), interpolated on ln R between the table's 5 °C rows
+function rtThermK(tF, col){ if (!isN(tF)) return null; const c = (tF - 32) / 1.8; const R = RT_THERM.filter(r => isN(r[col])); if (c < R[0][0] || c > R[R.length - 1][0]) return null;
+  for (let k = 1; k < R.length; k++) if (c <= R[k][0]){ const a = R[k - 1], b = R[k], f = (c - a[0]) / (b[0] - a[0]); return Math.exp(Math.log(a[col]) + f * (Math.log(b[col]) - Math.log(a[col]))); } return null; }
+const RT_THS = {th_td:{col:2, sym:'Td', nm:'discharge thermistor', ch:'disch'}, th_tm:{col:1, sym:'Tm', nm:'outdoor coil thermistor', ch:'ocmid'}, th_ta:{col:3, sym:'Ta', nm:'outdoor air thermistor', ch:'oat'},
+  th_ts:{col:1, sym:'Ts', nm:'suction thermistor', ch:'suct'}, th_tb:{col:1, sym:'Tb', nm:'defrost thermistor', ch:'ochex'}, th_tl:{col:1, sym:'Tl', nm:'outdoor liquid thermistor', ch:'liq'}};
+// each platform's pages for the tests (printed folio = PDF page in these manuals)
+const RT_DOC = {
+  fit410:{doc:'SiUS612209EA', chart:{cool:'p.12', heat:'p.13'}, e15:'p.50', e21:'p.51', s26:'S-26, p.21', th:'p.72', s13:'S-13, p.17', s12:'S-12, p.16', s16:'S-16G, p.17–19', s17:'S-17A / S-17B, p.20–21', s104:'S-104, p.22', s114:'S-114, p.23', s203:'S-203 / S-203A, p.23–24',
+    remedyCol:true, line:'125 ft equivalent, 100 ft actual (installation manual 3P731493-1 p.15)', lineMax:125, charge:'CHARGE MODE at 65–105 °F outdoors, installation manual 3P731493-1 p.29–30'},
+  fit32:{doc:'SiUS612412E', e15:'p.49', e21:'p.50', s26:'S-26, p.19', th:'p.71', s13:'S-13, p.15', s12:'S-12, p.14', s16:'S-16G, p.15–17', s17:'S-17A / S-17B, p.18–19', s104:'S-104, p.20', s114:'S-114, p.21', s203:'S-203 / S-203A, p.21–22'},
+  dh9:{doc:'SiUS612415E', e15:'p.51', e21:null, s26:'S-26, p.20', th:'p.72', s13:'S-13, p.16', s12:'S-12, p.15', s16:'S-16G, p.16–18', s17:'S-17A / S-17B, p.19–20', s104:'S-104, p.21–22', s114:'S-114, p.22', s203:'S-203 / S-203A, p.22–23'},
+  vzc:{doc:'RS6215002r10', chart:{cool:'p.95', heat:'p.96'}, s26:'p.17–18', th:'p.104', s13:'p.15–16', s12:'p.15', s17:'p.16–17', s104:'p.23', s114:'p.25', s203:'p.30', txv:'p.23–25', drier:'p.23', rv:'p.18', leak:'p.21',
+    line:'250 ft equivalent (p.28)', lineMax:250, charge:'CHARGE MODE at 100 %, 65–105 °F outdoors, p.22–25'},
+  dx9vc:{doc:'RSD6115001r14', chartDoc:'DX9VC installation & service reference', chart:{cool:'p.21'}, s26:'S-26, p.24–25', th:'p.78', s13:'S-13, p.22', s12:'S-12, p.22', s17:'S-17A / S-17B, p.23–24', s104:'S-104, p.32',
+    s114:'S-114, p.35', s203:'S-202 / S-204, p.39', txv:'S-105B–S-110, p.32–35', drier:'S-107, p.32', line:'250 ft equivalent (p.37)', lineMax:250, charge:'charge mode, installation & service reference p.10–12'},
+};
+// The manual's tests for a chart route on platform X.plat in mode m. Each stop names what it covers by cause id; "how" and "src" quote or
+// summarise the manual and give its page. tag marks a borrowed method. outs: clears = a pass rules it out, confirms = the cause is found,
+// checks = looked at but not ruled out (the manual's test can only find the fault, not prove it absent).
+function rtTests(X, m){
+  const pl = X.plat, R = RT_DOC[pl] || {}, C = X.chart[m], ch = CHARTS[C.chPl][m], cp = (RT_DOC[C.chPl].chart || {})[m] || '', heat = m === 'heat', vc = pl === 'vzc' || pl === 'dx9vc';
+  const chartDoc = C.field ? 'SiUS612209EA ' + cp + ' (R-410A FIT chart, field rule)' : (R.chartDoc ? R.chartDoc + ' ' + cp : cp);
+  const row = id => Object.keys(ch.causes).find(nm => rtCauseId(nm) === id);
+  const rem = id => { const nm = row(id); if (!nm) return null; const r = ch.causes[nm].r; return r ? `chart remedy "${r}" (${chartDoc})` : `chart row "${nm}" (${chartDoc})`; };
+  const src = (...a) => a.filter(Boolean);
+  const T = [], add = t => { t.ids = [...new Set(t.outs.flatMap(o => [...(o.clears || []), ...(o.confirms || []), ...(o.checks || [])]))]; T.push(t); };
+  const ok = (l, ids) => ({k:'pass', l, clears:ids}), bad = (l, ids, k) => ({k:k || 'fail', l, confirms:ids}), seen = (l, ids) => ({k:'none', l, checks:ids});
+  const num = v => isN(v) ? v : null, rd = (r, k) => num(r && r[k]);
+  const fit = /^fit|^dh9/.test(pl);
+  // ---- ● look
+  add({id:'stopv', tier:0, t:'Both stop valves fully open', how:['Check that the liquid and the gas stop valve are both fully open.'],
+    src:src(rem('lsv'), rem('gsv'), fit && `E15 flowchart: "Stop valve clogged? → Open stop valve. Replace valve." (${R.e15})`),
+    outs:[ok('Both fully open', ['lsv', 'gsv']), bad('Liquid valve was not', ['lsv'], 'failL'), bad('Gas valve was not', ['gsv'], 'failG')]});
+  add({id:'odcoil', tier:0, t:'Outdoor coil clean', how:['Look at the outdoor coil face and fins for dirt, debris or damage.'], src:src(rem('odcoil')), outs:[ok('Clean', ['odcoil']), bad('Dirty', ['odcoil'])]});
+  add({id:'odair', tier:0, t:'Outdoor air not blocked or recirculating', how:['Check the clearances around the outdoor unit and that its discharge air is not drawn back in.'], src:src(rem('odrecirc')),
+    outs:[ok('Clear', ['odrecirc']), bad('Blocked or recirculating', ['odrecirc'])]});
+  add({id:'odfan', tier:0, t:'Outdoor fan running', how:['Watch the outdoor fan run with the compressor.'], src:src(rem('odfan')), hint:() => X.hintFan && X.hintFan[m],
+    outs:[ok('Runs', ['odfan']), bad('Not running right', ['odfan'])]});
+  add({id:'idcoil', tier:0, t:'Indoor coil and filter clean', how:['Look at the filter and the indoor coil face.'], src:src(rem('idcoil')), outs:[ok('Clean', ['idcoil']), bad('Dirty', ['idcoil'])]});
+  add({id:'idair', tier:0, t:'Indoor air not recirculating', how:['Check the indoor unit is not drawing its own supply air back in.'], src:src(rem('idrecirc')), outs:[ok('Clear', ['idrecirc']), bad('Recirculating', ['idrecirc'])]});
+  add({id:'loop', tier:0, t:'Board cooling loop on the cold plate, with grease', how:['With the power off, look at the refrigerant cooling loop on the inverter board\'s cold plate: attached, with thermal grease.'],
+    src:src(rem('loop'), rem('grease')), outs:[ok('Attached, greased', ['loop', 'grease']), bad('Not attached', ['loop'], 'failA'), bad('Grease missing', ['grease'], 'failG')]});
+  add({id:'dualfuel', tier:0, t:'Compressor and gas furnace not running together', how:['Watch a call: the gas furnace and the compressor should not run at the same time.'], src:src(rem('dualfuel')),
+    outs:[ok('Not together', ['dualfuel']), bad('They run together', ['dualfuel'])]});
+  if (R.line) add({id:'linelen', tier:0, t:'Line set within its length limit', how:[`The manual's limit: ${R.line}.`], src:src(rem('linelen')), fields:[{k:'len', l:'Equivalent length', u:'ft'}],
+    judge:r => isN(rd(r, 'len')) ? {txt:`${f0(rd(r, 'len'))} ft against ${R.lineMax} ft`, sug:rd(r, 'len') > R.lineMax ? 'fail' : 'pass'} : null,
+    outs:[ok('Within the limit', ['linelen']), bad('Too long', ['linelen'])]});
+  add({id:'kinks', tier:0, t:'Line set: kinks or crushed spots', how:['Walk the line set and look for kinks, flattened or crushed spots.'],
+    src:src(rem('lineset'), fit && `E15 flowchart: "also check any kink on piping" (${R.e15})`), note:'Finding none does not clear a restriction inside the line.',
+    outs:[seen('None found', ['lineset']), bad('Kink or crushed spot found', ['lineset'])]});
+  if (C.oatRange) add({id:'oat', tier:0, t:'Outdoor air inside the chart\'s range', how:[`The chart holds for ${C.chartRange[0]}–${C.chartRange[1]} °F outdoors (${chartDoc}).`], src:src(`chart footer, ${chartDoc}`),
+    auto:'pass', autoTxt:`From the log: ${C.oatRange[0]}–${C.oatRange[1]} °F over the judged stretch.`, outs:[ok('Inside the range', ['oathi', 'oatlo']), bad('Above the range', ['oathi'], 'failHi'), bad('Below the range', ['oatlo'], 'failLo')]});
+  // ---- ■ meter, power off
+  const coilHow = side => pl === 'fit410' ? (side === 'i' ? 'Unplug the EEV cable at the indoor control board and measure pins 1–6, 2–6, 3–6 and 4–6.' : 'Unplug the EEV cable at the outdoor control board: 1.5–3.0 ton pins 1–5, 2–5, 3–5, 4–5; 3.5–5.0 ton pins 1–6, 2–6, 3–6, 4–6.')
+    : 'Unplug the EEV cable at the control board and measure between the connector pins.';
+  const coilJudge = r => { const v = ['a', 'b', 'c', 'd'].map(k => rd(r, k)).filter(isN); if (!v.length) return null; const out = v.filter(x => x < 40 || x > 50); return {txt:out.length ? `${out.length} reading${out.length > 1 ? 's' : ''} outside 40–50 Ω` : `All ${v.length} inside 40–50 Ω`, sug:out.length ? 'fail' : v.length === 4 ? 'pass' : null}; };
+  const coilFields = [{k:'a', l:'Pin 1', u:'Ω'}, {k:'b', l:'Pin 2', u:'Ω'}, {k:'c', l:'Pin 3', u:'Ω'}, {k:'d', l:'Pin 4', u:'Ω'}];
+  add({id:'eevcoil_i', tier:1, t:'Indoor EEV coil resistance', how:[coilHow('i'), '40–50 Ω on each.'].concat(fit && R.e21 ? [`Check the coil is seated: its protrusion clicks into the dimple on the valve body (E21 flowchart note, ${R.e21}).`] : []),
+    src:src(`${R.s26}: 40–50 Ω`, rem('ieevcoil')), fields:coilFields, judge:coilJudge, outs:[ok('Inside 40–50 Ω', ['ieevcoil']), bad('Outside, or not seated', ['ieevcoil'])]});
+  if (heat) add({id:'eevcoil_o', tier:1, t:'Outdoor EEV coil resistance', how:[coilHow('o'), '40–50 Ω on each.'], src:src(`${R.s26}: 40–50 Ω`, rem('oeevcoil')), fields:coilFields, judge:coilJudge,
+    outs:[ok('Inside 40–50 Ω', ['oeevcoil']), bad('Outside, or not seated', ['oeevcoil'])]});
+  if (fit) add({id:'svcoil', tier:1, t:'Solenoid valve coil resistance', how:['Unplug the coil cable at the board and measure between its pins: 1,480–1,820 Ω.'], src:src(`${R.s26}: 1,480–1,820 Ω`, rem('svcoil')),
+    fields:[{k:'r', l:'Coil', u:'Ω'}], judge:r => isN(rd(r, 'r')) ? {txt:`${f0(rd(r, 'r'))} Ω against 1,480–1,820 Ω`, sug:rd(r, 'r') >= 1480 && rd(r, 'r') <= 1820 ? 'pass' : 'fail'} : null,
+    outs:[ok('Inside 1,480–1,820 Ω', ['svcoil']), bad('Outside', ['svcoil'])]});
+  for (const [id, th] of Object.entries(RT_THS)) add({id, tier:1, t:`${th.nm[0].toUpperCase() + th.nm.slice(1)} (${th.sym}) against the table`,
+    how:['Unplug it at the board; measure its resistance and the temperature at the sensor with your own probe.'], src:src(`${R.s26}; table ${R.th}`, rem(id)),
+    hint:() => X.hintTh && X.hintTh[m] && X.hintTh[m][id], fields:[{k:'t', l:'Temp at the sensor', u:'°F'}, {k:'r', l:'Resistance', u:'kΩ'}],
+    judge:r => { const e = rtThermK(rd(r, 't'), th.col); if (!isN(e)) return isN(rd(r, 't')) ? {txt:'Outside the table\'s range'} : null; return {txt:`The table: ${e >= 100 ? f0(e) : e.toFixed(2)} kΩ at ${f0(rd(r, 't'))} °F (between its rows)` + (isN(rd(r, 'r')) ? `; your reading is ${f0((rd(r, 'r') / e - 1) * 100)} % ${rd(r, 'r') >= e ? 'above' : 'below'}. The manual sets no tolerance: replace it if it is open, shorted or outside the valid range.` : '')}; },
+    outs:[ok('Matches the table', [id]), bad('Open, shorted or off the table', [id])]});
+  add({id:'hps', tier:1, t:'High pressure switch', how:[vc ? 'With the wire removed, check continuity across the switch' + (pl === 'vzc' ? ' at X32A' : '') + '; then in charge mode with the coil blocked it must cut out at 605 psig (−17 psig).' : 'With the wire on the PCB side removed, check across the PCB-side terminals: it must be continuous.'],
+    src:src(R.s12, rem('hps')), outs:[ok('Continuous / cuts out right', ['hps']), bad('Open or cuts out low', ['hps'])]});
+  // ---- ◆ gauges or thermometer
+  add({id:'rat', tier:2, t:'Return air inside 65–85 °F', how:['Measure the return air at the indoor unit.'], src:src(`chart footer, ${chartDoc}: indoor 65–85 °F`), fields:[{k:'ra', l:'Return air', u:'°F'}],
+    judge:r => isN(rd(r, 'ra')) ? {txt:`${f0(rd(r, 'ra'))} °F`, sug:rd(r, 'ra') > 85 ? 'failHi' : rd(r, 'ra') < 65 ? 'failLo' : 'pass'} : null,
+    outs:[ok('Inside 65–85 °F', ['rahi', 'ralo']), bad('Above 85 °F', ['rahi'], 'failHi'), bad('Below 65 °F', ['ralo'], 'failLo')]});
+  add({id:'psensor', tier:2, t:'Pressure sensor against a gauge', how:[fit ? 'Read a gauge and the D-Checker pressure at the same moment (the first step of the E13 and E15 flowcharts); if they differ, check the sensor\'s output voltage against the graph.' : 'Gauge on, then a DC voltmeter across the sensor' + (pl === 'vzc' ? ' at X17A pins 1 and 3' : ' (black and white wires)') + '; compare the voltage with the graph.'],
+    src:src(R.s13 + ': voltage vs pressure graph', rem('psensor')), fields:[{k:'g', l:'Gauge', u:'psig'}, {k:'d', l:'D-Checker', u:'psig'}],
+    judge:r => isN(rd(r, 'g')) && isN(rd(r, 'd')) ? {txt:`They differ by ${f0(Math.abs(rd(r, 'g') - rd(r, 'd')))} psi. The manual gives no tolerance.`} : null,
+    outs:[ok('Agree; voltage on the graph', ['psensor']), bad('Disagree or off the graph', ['psensor'])]});
+  if (fit || pl === 'vzc' || pl === 'dx9vc') add({id:'airflow', tier:2, t:'Indoor airflow and external static', how:fit ? ['Check the airflow trim setting and the blower (' + R.s16 + ').', 'Measure return and supply static; compare the total with the indoor unit\'s allowable range in its specifications (' + R.s203 + ').'] : ['Measure return and supply static; compare the total with the indoor unit\'s allowable range (' + R.s203 + ').'],
+    src:src(R.s203, rem('lowcfm')), hint:() => X.hintCfm && X.hintCfm[m], fields:[{k:'ret', l:'Return static', u:'in. w.c.'}, {k:'sup', l:'Supply static', u:'in. w.c.'}],
+    judge:r => isN(rd(r, 'ret')) && isN(rd(r, 'sup')) ? {txt:`Total external static ${(Math.abs(rd(r, 'ret')) + Math.abs(rd(r, 'sup'))).toFixed(2)} in. w.c.`} : null,
+    outs:[ok('Airflow right', ['lowcfm']), bad('Low airflow', ['lowcfm'])]});
+  add({id:'drier', tier:2, t:'Temperature drop across the filter-drier', how:['Running: measure the liquid line just before and just after the filter-drier.', `A restriction shows as a temperature drop across the drier (${vc ? R.doc + ' ' + R.drier : 'RS6215002r10 p.23'}).`],
+    src:src(fit ? `E15 flowchart: "Check all refrigerant filter and dryer in circuit … Clogging suspected? → Replace the clogged parts." (${R.e15})` : null, rem('drier')), tag:vc ? null : 'method from another manual',
+    fields:[{k:'a', l:'Before the drier', u:'°F'}, {k:'b', l:'After', u:'°F'}], judge:r => isN(rd(r, 'a')) && isN(rd(r, 'b')) ? {txt:`Drop ${f1s(rd(r, 'a') - rd(r, 'b'))} °F. The manual gives no number: any drop points at the drier.`} : null,
+    outs:[ok('No drop', ['drier']), bad('Drop across it', ['drier'])]});
+  if (fit){
+    const iDiffOk = !heat;   // cooling: the indoor EEV meters, the flowchart moves on when there is a difference
+    add({id:'eevdt_i', tier:2, t:'Temperature before and after the indoor EEV', tag:`E15 flowchart step (${R.e15}), used without the code`,
+      how:[heat ? 'Heating: a temperature difference across the indoor EEV → "Check EEV coil then replace if necessary. Replace EEV if EEV coil have no failure."' : 'Cooling: no temperature difference across the indoor EEV → "Check EEV coil then replace if necessary. Replace EEV if EEV coil have no failure."'],
+      src:src(`E15 flowchart, ${R.e15}`, rem('ieev')), fields:[{k:'a', l:'Before', u:'°F'}, {k:'b', l:'After', u:'°F'}], judge:r => isN(rd(r, 'a')) && isN(rd(r, 'b')) ? {txt:`Difference ${f1s(Math.abs(rd(r, 'a') - rd(r, 'b')))} °F`} : null,
+      note:'The flowchart only names the fault; when it moves on, the valve is not ruled out.', outs:iDiffOk ? [seen('A difference: the flowchart moves on', ['ieev']), bad('No difference', ['ieev'])] : [seen('No difference: the flowchart moves on', ['ieev']), bad('A difference', ['ieev'])]});
+    if (heat) add({id:'eevdt_o', tier:2, t:'Temperature before and after the outdoor EEV', tag:`E15 flowchart step (${R.e15}), used without the code`,
+      how:['Heating: no temperature difference across the outdoor EEV → "Check EEV coil then replace if necessary. Replace EEV if EEV coil have no failure."'], src:src(`E15 flowchart, ${R.e15}`, rem('oeev')),
+      fields:[{k:'a', l:'Before', u:'°F'}, {k:'b', l:'After', u:'°F'}], judge:r => isN(rd(r, 'a')) && isN(rd(r, 'b')) ? {txt:`Difference ${f1s(Math.abs(rd(r, 'a') - rd(r, 'b')))} °F`} : null,
+      note:'The flowchart only names the fault; when it moves on, the valve is not ruled out.', outs:[seen('A difference: the flowchart moves on', ['oeev']), bad('No difference', ['oeev'])]});
+    add({id:'sv', tier:2, t:'Solenoid valve body', how:['The manual names no test for the valve body.'], src:src(rem('sv')), hint:() => X.hintSv && X.hintSv[m], outs:[seen('No fault seen', ['sv']), bad('Valve faulty', ['sv'])]});
+  }
+  if (vc) add({id:'txv', tier:2, t:'TXV operation (bulb test)', how:['Take the bulb off the suction line and cool it in ice water: suction pressure should fall. Warm it in your hand: it should rise.', 'No change: the valve is restricted, the power element is faulty or the equalizer tube is plugged.', pl === 'vzc' ? 'The valve is factory adjusted to 8 °F ± 1 °F superheat (p.23).' : 'The valve is factory adjusted to 7–9 °F superheat (S-108, p.32).'],
+    src:src(R.doc + ' ' + R.txv, rem('txv')), outs:[ok('Responds', ['txv']), bad('No change', ['txv'])]});
+  add({id:'rv', tier:2, t:'Reversing valve and its coil', tag:vc ? null : 'method from another manual',
+    how:['Temperature: the true suction and the suction line after the valve should read the same; a 4 °F difference means the valve is leaking.', pl === 'vzc' ? 'Electrical: 24 V at the coil (X25A) in cooling; the coil tests continuous; lifting the coil, the pilot plunger clicks.' : 'Electrical: power at the coil in cooling, the coil tests continuous, and the pilot plunger clicks when the coil is lifted (the Goodman steps; that manual gives 24 V for its own coil).'],
+    src:src('RS6215002r10 p.18', rem('rv'), rem('rvcoil')), outs:[ok('Valve and coil good', ['rv', 'rvcoil']), bad('Valve leaks or sticks', ['rv'], 'failV'), bad('Coil open or no 24 V', ['rvcoil'], 'failC')]});
+  {   // charge: the manual's charge test (the same figure the synopsis card quotes)
+    const sz = X.size, t = sz && isN(sz.t) ? sz.t : null; let v = null;
+    if (pl === 'fit410'){ if (isN(t)) v = sz.e ? ({2:14, 3:8, 3.5:9, 4:9}[t] || null) : (t === 3 && X.out === 'ac' ? null : {1.5:10, 2:12, 2.5:14, 3:15, 3.5:8, 4:9, 5:9}[t] || null); }
+    else if (pl === 'vzc') v = t === 5 ? null : 8; else if (pl === 'dx9vc') v = 8;
+    const txt = pl === 'fit410' ? (isN(v) ? `${v} ± 1 °F for this size` : 'by size: 1.5 t 10, 2 t 12, 2.5 t 14, 3 t 15 (DX6VSA 13), 3.5 t 8, 4 t 9, 5 t 9 ± 1 °F; enhanced 2 t 14, 3 t 8, 3.5 t 9, 4 t 9') : pl === 'vzc' ? (t === 5 ? '8 ± 1 °F in this manual (the DZ20VC / DZ9VC / *SZV9 manuals say 10 for 5 ton)' : '8 ± 1 °F') : '8 ± 1 °F';
+    add({id:'charge', tier:2, t:'Charge in the manual\'s charge test', how:[`${R.charge}: gauge on the liquid valve port, thermometer on the liquid line at the valve. Subcooling = saturation temperature − liquid line temperature.`, `Target subcooling: ${txt}. Outside 65–105 °F the manual says weigh in the charge.`],
+      src:src(R.charge, rem('over'), rem('under')), fields:[{k:'p', l:'Liquid pressure', u:'psig'}, {k:'t', l:'Liquid line', u:'°F'}],
+      judge:r => { if (!isN(rd(r, 'p')) || !isN(rd(r, 't'))) return null; const s = satF(rd(r, 'p'), X.ref), sc = isN(s) ? s - rd(r, 't') : null; if (!isN(sc)) return null; return {txt:`Subcooling ${f1s(sc)} °F (saturation ${f1s(s)} °F from the app's ${X.ref === 'R32' ? 'R-32' : 'R-410A'} table)` + (isN(v) ? ` against ${v} ± 1 °F` : ''), sug:isN(v) ? (sc > v + 1 ? 'failHi' : sc < v - 1 ? 'failLo' : 'pass') : null}; },
+      outs:[ok('On target', ['over', 'under']), bad('High: over charge', ['over'], 'failHi'), bad('Low: under charge', ['under'], 'failLo')]});
+  }
+  add({id:'comp', tier:2, t:'Compressor: insulation, ground and efficiency', how:[pl === 'vzc' ? 'Megohmmeter from U, V and W to ground: under 100 kΩ, replace the compressor; then the ground test.' : 'Insulation and ground: each compressor terminal to unpainted piping must read infinity.',
+      'Efficiency, with the charge correct: in CHARGE MODE with gauges, below-normal high side, above-normal low side, a low temperature difference across the coil and low amp draw mean the compressor is faulty.'],
+    src:src(R.s17, R.s104, rem('comp')), outs:[ok('Insulation, ground and efficiency good', ['comp']), bad('Fails one of them', ['comp'])]});
+  add({id:'nc', tier:2, t:'Non-condensables', how:['Shut the system down and let the pressures equalize: wait at least 15 minutes.', 'Compare the pressure with the temperature of the coldest coil. If the pressure reads a higher temperature than the coil, non-condensables are present.'],
+    src:src(R.s114, rem('nc')), fields:[{k:'p', l:'Standing pressure', u:'psig'}, {k:'t', l:'Coldest coil', u:'°F'}],
+    judge:r => { if (!isN(rd(r, 'p')) || !isN(rd(r, 't'))) return null; const s = satF(rd(r, 'p'), X.ref); if (!isN(s)) return null; return {txt:`${f0(rd(r, 'p'))} psig reads ${f1s(s)} °F (the app's ${X.ref === 'R32' ? 'R-32' : 'R-410A'} table); the coil is ${f1s(rd(r, 't'))} °F: ${s > rd(r, 't') ? 'the pressure reads warmer than the coil' : 'not warmer than the coil'}.`, sug:s > rd(r, 't') ? 'fail' : 'pass'}; },
+    outs:[ok('Not warmer than the coil', ['nc']), bad('Reads warmer: non-condensables', ['nc'])]});
+  add({id:'leak', tier:2, t:'Leak search', how:[pl === 'vzc' ? 'The manual\'s leak test (p.21): dry nitrogen and soapy water; its pressure test holds 150 psig for 3 min, 325 psig for 5 min and 450 psig for 4 h.' : 'The manual gives no leak-search method.'],
+    src:src(pl === 'vzc' ? 'p.21' : null, rem('leak')), outs:[seen('No leak found', ['leak']), bad('Leak found', ['leak'])]});
+  add({id:'checkv', tier:3, t:'Check valve', how:['The manual names no test for the check valve.'], src:src(rem('checkv')), outs:[seen('No fault seen', ['checkv']), bad('Faulty', ['checkv'])]});
+  return T.filter(t => t.ids.some(id => row(id)));
+}
+// The service manuals' error-code flowcharts, step by step and worded as printed (SiUS612209EA p.49–67, SiUS612412E p.48–64,
+// SiUS612415E p.50–65; read from the rendered pages). A node: q = the question (or {cool, heat} when the box words it by mode),
+// when = a step the chart limits to one mode (skipped in the other, following its NO line as the chart does), opts = [{a, go | act}],
+// w = a helper the app can show (gauge comparison, thermistor table, coil resistance …). start may be {cool, heat}.
+const RT_FLOW_NOTE1 = '*1: Check if EEV coil is correctly secured to EEV body. Protrusion on EEV coil should be clicked into place on dimple of EEV body.';
+const rtYes = x => /^[A-Za-z0-9]{1,3}$/.test(x) ? {a:'Yes', go:x} : {a:'Yes', act:x}, rtNo = x => /^[A-Za-z0-9]{1,3}$/.test(x) ? {a:'No', go:x} : {a:'No', act:x};   // a node id, or the chart's corrective action
+function rtFlows(pl){
+  const d9 = pl === 'dh9', f32 = pl === 'fit32', pcb = d9 ? 'Replace OD unit PCB (A1P).' : 'Replace OD unit PCB.', pcbB = d9 ? 'Replace PCB (A1P).' : 'Replace PCB.';
+  const P = {fit410:{E13:49, E15:50, E21:51, E22:52, E32s:53, E32l:54, E41:55, E44:56, c57:57, E58:58, b9:62, b9h:63, i70:64, i73:65, i74:66, i75:67},
+    fit32:{E13:48, E15:49, E21:50, E22:51, E32s:52, E32l:53, E41:54, E44:55, c57:56, E58:57, b9:59, b9h:60, i70:61, i73:62, i74:63, i75:64},
+    dh9:{E13:50, E15:51, E21:52, E22:53, E32:54, E41:55, E44:56, c57:57, E58:58, b9:60, b9h:61, i70:62, i73:63, i74:64, i75:65}}[pl];
+  if (!P) return {};
+  const recirc = pl === 'fit410' ? 'short circuit' : 'air re-circulation';
+  const F = {};
+  F.E13 = d9 ? {t:'High pressure error', p:P.E13, cond:'When the pressure is higher than 4.2 MPa (605 PSIG).', nodes:[
+      {id:'g', q:'Does manifold gauge indicate same high pressure as D-checker?', w:'gaugeHP', opts:[rtYes('A'), rtNo('g2')]},
+      {id:'g2', q:'OD high pressure sensor failure?', w:'sensorV', opts:[rtYes('Check them in accordance with check procedure then replace it if necessary.'), rtNo(pcb)]},
+      {id:'A', label:'A', q:'HPS (high pressure switch) connected to a PCB properly?', opts:[rtNo('Fix the wiring.'), rtYes('a2')]},
+      {id:'a2', q:'HPS failure?', w:'hps', opts:[rtYes('Replace HPS.'), rtNo('a3')]},
+      {id:'a3', q:'E24 error code indicated?', opts:[rtYes('Replace HPS.'), rtNo('a4')]},
+      {id:'a4', q:'Stop valve clogged?', opts:[rtYes('Open stop valve. Replace valve.'), rtNo('a5')]},
+      {id:'a5', q:'Overcharge?', w:'charge', opts:[rtYes('Adjust sub-cooling with manifold gauge.'), rtNo('a6')]},
+      {id:'a6', when:'cool', q:'Is OD coil dirty?', opts:[rtYes('Clean up the coil.'), rtNo('a7')]},
+      {id:'a7', when:'cool', q:'OD fan failure?', opts:[rtYes('Remove obstruction. Check motor wiring. Replace fan motor.'), rtNo('a8')]},
+      {id:'a8', when:'heat', q:'Is static pressure high?', w:'static', opts:[rtYes('Clean up air filters. Check duct work.'), rtNo('a9')]},
+      {id:'a9', when:'heat', q:'ID blower failure?', opts:[rtYes('Remove obstruction in blower. Check motor wiring. Replace fan motor.'), rtNo(pcb)]}]}
+    : {t:'High pressure error', p:P.E13, cond:'When the pressure is higher than 4.2 MPa (605 PSIG).', nodes:[
+      {id:'g', q:'Does manifold gauge indicate same high pressure as D-checker?', w:'gaugeHP', opts:[rtYes('A'), rtNo('g1')]},
+      {id:'g1', when:'cool', q:'Overcharge?', w:'charge', opts:[rtYes('Adjust sub-cooling with manifold gauge.'), rtNo('g2')]},
+      {id:'g2', q:{cool:(f32 ? 'Heat exchanger' : 'OD hex mid') + ' thermistor failure?', heat:'ID pressure sensor failure?'}, w:{cool:'th_tm', heat:'sensorV'}, opts:[rtYes('Check in accordance with the checking procedure then replace any faulty part if necessary.'), rtNo('B')]},
+      {id:'A', label:'A', q:'Stop valve clogged?', opts:[rtYes('Open stop valve. Replace valve.'), rtNo('a2')]},
+      {id:'a2', q:'Overcharge?', w:'charge', opts:[rtYes('Adjust sub-cooling with manifold gauge.'), rtNo('a3')]},
+      {id:'a3', when:'cool', q:'Is OD coil dirty?', opts:[rtYes('Clean up the coil.'), rtNo('a4')]},
+      {id:'a4', when:'cool', q:'OD fan failure?', opts:[rtYes('Remove obstruction. Check motor wiring. Replace fan motor.'), rtNo('a5')]},
+      {id:'a5', when:'heat', q:'Is static pressure high?', w:'static', opts:[rtYes('Clean up air filters. Check duct work.'), rtNo('a6')]},
+      {id:'a6', when:'heat', q:'ID blower failure?', opts:[rtYes('Remove obstruction in blower. Check motor wiring. Replace fan motor.'), rtNo(pcb)]},
+      {id:'B', label:'B', q:'HPS (high pressure switch) connected to a PCB properly?', opts:[rtNo('Fix the wiring.'), rtYes('b2')]},
+      {id:'b2', q:'HPS failure?', w:'hps', opts:[rtYes('Replace HPS.'), rtNo('b3')]},
+      {id:'b3', q:'E24 error code indicated?', opts:[rtYes('Replace HPS.'), rtNo(pcb)]}]};
+  F.E15 = {t:'Low pressure error', p:P.E15, cond:d9 ? 'When the pressure is less than 0.08 MPa (11 PSIG) for 5 minutes.' : 'When the pressure is less than 0.12 MPa (17 PSIG) for 5 minutes.', nodes:[
+      {id:'g', q:'Does manifold gauge indicate same low pressure as D-checker?', w:'gaugeLP', opts:[rtYes('A'), rtNo('g2')]},
+      {id:'g2', q:d9 ? 'OD low pressure sensor failure?' : 'OD pressure sensor failure?', w:'sensorV', opts:[rtYes(d9 ? 'Check them in accordance with check procedure then replace it if necessary.' : 'Check in accordance with the checking procedure then replace any faulty part if necessary.'), rtNo(pcb)]},
+      {id:'A', label:'A', q:'Stop valve clogged?', opts:[rtYes('Open stop valve. Replace valve.'), rtNo('a2')]},
+      {id:'a2', q:'Undercharge?', w:'charge', opts:[rtYes('Adjust sub-cooling with manifold gauge. Check refrigerant leak.'), rtNo('a3')]},
+      {id:'a3', q:{cool:'Is the following thermistor failure? [in cooling] ' + (d9 ? 'ID gas temp' : 'Indoor gas temp'), heat:'Is the following thermistor failure? [in heating] ' + (d9 ? 'ID liquid temp, OD liquid temp' : 'Suction temp')}, w:{cool:'th_tgi', heat:d9 ? 'th_tl' : 'th_ts'}, opts:[rtYes('Replace the faulty thermistor.'), rtNo('a4')]},
+      {id:'a4', q:{cool:'Is there temperature differential between before and after EEV? [in cooling] OD EEV' + (d9 ? ' (Y1E)' : ''), heat:'Is there temperature differential between before and after EEV? [in heating] ID EEV'}, w:'dtEEV', opts:[rtYes('Check EEV coil then replace if necessary. Replace EEV if EEV coil have no failure.'), rtNo('a5')]},
+      {id:'a5', q:{cool:'Is there temperature differential between before and after EEV? [in cooling] ID EEV', heat:'Is there temperature differential between before and after EEV? [in heating] OD EEV' + (d9 ? ' (Y1E)' : '')}, w:'dtEEV', opts:[rtNo('Check EEV coil then replace if necessary. Replace EEV if EEV coil have no failure.'), rtYes('a6')]},
+      {id:'a6', q:'Check all refrigerant filter and dryer in circuit, also check any kink on piping. Clogging suspected?', w:'drier', opts:[rtYes('Replace the clogged parts.'), rtNo('a7')]},
+      {id:'a7', q:{cool:'[When cooling] ID fan failure? Is static pressure high?', heat:'[When heating] OD fan failure?'}, w:{cool:'static'}, opts:[rtYes('Remove obstruction. Check motor wiring. Replace fan motor. Clean up air filters. Check duct work.'), rtNo(pcb)]}]};
+  F.E21 = d9 ? {t:'EEV control error', p:P.E21, cond:'When discharge superheat became excessive low (< 5°C (9°F)) and EEV pulse is minimum.', nodes:[
+      {id:'1', q:'Charge amount of refrigerant is correct?', w:'charge', opts:[rtNo('Charge refrigerant correctly.'), rtYes('2')]},
+      {id:'2', q:'Indoor EEV coil and outdoor EEV coils (Y1E/Y3E) are connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('3')]},
+      {id:'3', q:'Coil resistance of EEV is normal?', w:'coil', opts:[rtNo('Replace EEV coil.'), rtYes('4')]},
+      {id:'4', q:'EEV (Y1E/Y3E valve body) is normal?', opts:[rtNo('Replace the EEV body.'), rtYes('5')]},
+      {id:'5', q:{cool:'[When cooling] ID pressure sensor and ID gas thermistor have failure?', heat:'[When heating] OD high pressure sensor, ID liquid thermistor and OD liquid thermistor have failure?'}, opts:[rtYes('Replace the failed sensor.'), rtNo('6')]},
+      {id:'6', q:'Discharge thermistor secured properly?', opts:[rtNo('Install properly.'), rtYes('7')]},
+      {id:'7', q:'Characteristics of discharge thermistor are normal?', w:'th_td', opts:[rtNo('Replace the thermistor.'), rtYes('8')]},
+      {id:'8', q:'Characteristic of the high pressure sensor is normal?', w:'sensorV', opts:[rtNo('Replace the pressure sensor.'), rtYes(pcbB)]}]}
+    : {t:'EEV control error', p:P.E21, cond:'When discharge pipe superheat became excessive low' + (f32 ? ' (< 5°C (9°F))' : '') + ' and EEV pulse is minimum.', note:RT_FLOW_NOTE1, nodes:[
+      {id:'1', q:'Charge amount of refrigerant is correct?', w:'charge', opts:[rtNo('Charge refrigerant correctly.'), rtYes('2')]},
+      {id:'2', q:'Indoor and outdoor EEV coils are connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('3')]},
+      {id:'3', q:'Indoor and outdoor EEV coils are attached to EEV body properly? (*1)', opts:[rtNo('Attach EEV coil properly.'), rtYes('4')]},
+      {id:'4', q:'Coil resistance of EEV is normal?', w:'coil', opts:[rtNo('Replace EEV coil.'), rtYes('5')]},
+      {id:'5', q:'Thermistors are connected properly?', opts:[rtNo('Connect properly.'), rtYes('6')]},
+      {id:'6', q:'Characteristics of thermistors are normal?', w:'th_td', opts:[rtNo('Replace thermistors.'), rtYes('7')]},
+      {id:'7', q:'Characteristic of pressure sensor is normal?', w:'sensorV', opts:[rtNo('Replace pressure sensor.'), rtYes(pcbB)]}]};
+  F.E22 = d9 ? {t:'Discharge or compressor temperature error', p:P.E22, cond:'When discharge temperature became excessive high; discharge thermistor not detecting discharge temperature (not on correct position); OL switch activated while the compressor was running.', nodes:[
+      {id:'1', q:'When the error happened, actual discharge temperature was higher than the criterion (120°C (248°F)). Measure by field prepared measurement tool.', w:'td', opts:[rtYes('A'), rtNo('2')]},
+      {id:'2', q:'Discharge thermistor is connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('3')]},
+      {id:'3', q:'Discharge thermistor is connected to discharge pipe properly?', opts:[rtNo('Connect properly.'), rtYes('4')]},
+      {id:'4', q:'Characteristic of discharge thermistor is normal?', w:'th_td', opts:[rtNo('Replace thermistors.'), rtYes(pcbB)]},
+      {id:'A', label:'A', q:'Does the system have refrigerant shortage or leak?', w:'charge', opts:[rtYes('Fix the leak and charge level.'), rtNo('a2')]},
+      {id:'a2', q:'Characteristic of OL switch (Q1E) is in range? OPEN: 125±3°C (257±5.4°F) CLOSE: 110±6°C (230±10.8°F)', opts:[rtNo('Replace the OL switch.'), rtYes('a3')]},
+      {id:'a3', q:'Indoor and outdoor EEV coils (both Y1E and Y3E) are connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('a4')]},
+      {id:'a4', q:'Coil resistance of EEV is normal?', w:'coil', opts:[rtNo('Replace EEV coil.'), rtYes('a5')]},
+      {id:'a5', q:'Any damage are suspected in the compressor?', opts:[rtYes('Check compressor fault.'), rtNo('a6')]},
+      {id:'a6', q:'The compressor wiring connected to correct compressor and PCB terminals (U, V, W)?', opts:[rtNo('Connect to correct terminals.'), rtYes(pcbB)]}]}
+    : {t:'High discharge temperature error', p:P.E22, cond:'When discharge temperature became excessive high.', note:RT_FLOW_NOTE1, nodes:[
+      {id:'1', q:'Discharge temperature is higher than the criterion (120°C (248°F))?', w:'td', opts:[rtYes('Check refrigerant leak. Check compressor fault.'), rtNo('2')]},
+      {id:'2', q:'Discharge thermistor is connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('3')]},
+      {id:'3', q:'Discharge thermistor is connected to discharge pipe properly?', opts:[rtNo('Connect properly.'), rtYes('4')]},
+      {id:'4', q:'Characteristic of discharge thermistor is normal?', w:'th_td', opts:[rtNo('Replace thermistors.'), rtYes('5')]},
+      {id:'5', q:'Indoor and outdoor EEV coils are connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('6')]},
+      {id:'6', q:'Indoor and outdoor EEV coils are attached to EEV body properly? (*1)', opts:[rtNo('Attach EEV coil properly.'), rtYes('7')]},
+      {id:'7', q:'Coil resistance of EEV is normal?', w:'coil', opts:[rtNo('Replace EEV coil.'), rtYes(pcbB)]}]};
+  const e32big = (p, crit, th, shsc) => ({t:'Outdoor PCB high temperature error', p, cond:'When the temperature became excessive high.', box:`Check inverter fin temperature with D-checker. E32 ${d9 ? 'may occur' : 'occurs'} when the temperature exceeds or is close to ${crit}.`, w0:'fin', nodes:[
+      {id:'1', q:'Is the liquid tubing all the way contacting to a cooling plate?', opts:[rtNo('Fix the liquid tubing to contact surely to cooling plate.'), rtYes('2')]},
+      {id:'2', q:'All four nails of cooling plate have hooked into square holes? All screws of cooling plate cover tightened with proper torque 1.59±0.20 N·m (1.17±0.15 lb·ft)?', opts:[rtNo('Secure the cooling plate cover with proper torque.'), rtYes('3')]},
+      {id:'3', q:'Have grease already been replaced to new grease on a cooling plate?', opts:[rtNo('Replace the grease.'), rtYes('4')]},
+      {id:'4', q:`Is the ${th} thermistor connected to a connector on a PCB correctly?`, opts:[rtNo('Correct the miss-connection.'), rtYes('5')]},
+      {id:'5', q:'Clogging refrigerant circuit?', opts:[rtYes('Resolve the clogging.'), rtNo('6')]},
+      {id:'6', q:`Is amount of charge correct? ${shsc} is proper?`, w:'charge', opts:[rtNo('Adjust charge per IO manual.'), rtYes('7')]},
+      {id:'7', q:`Is there any ${recirc}? Is suction air temperature of the outdoor unit higher than 46°C (115°F)?`, opts:[rtYes(`Resolve the ${recirc}. Keep under 46°C (115°F) on suction air.`), rtNo('8')]},
+      {id:'8', q:'Cycle power. Does the error still occur?', opts:[rtNo('Keep running.'), rtYes(pcb)]}]});
+  if (d9) F.E32 = e32big(P.E32, '108°C (226°F)', 'R10T', 'SC');
+  else {
+    F.E32s = {t:'Outdoor PCB high temperature error', sizes:f32 ? '1.5–3.0 ton; Enhanced HP 2.0 ton; High Efficiency AC 2.0 ton' : '1.5–3.0 ton', p:P.E32s, cond:'When the temperature became excessive high.',
+      box:`Check inverter fin temperature with D-checker. E32 occurs when the temperature exceeds or is close to the reference value. Criteria: ${f32 ? '101°C (214°F)' : '95°C (203°F)'}.`, w0:'fin', nodes:[
+      {id:'1', q:'If the cooling fin dirty, clean up, does the error still occur?', opts:[rtNo('Keep running.'), rtYes('2')]},
+      {id:'2', q:'If there is any obstruction around outdoor coil or discharge grill, please remove it. Does the error still occur?', opts:[rtNo('Keep running.'), rtYes('3')]},
+      {id:'3', q:`Is there any ${recirc}? Is suction air temperature of the outdoor unit higher than 46°C (115°F)?`, opts:[rtYes(`Resolve the ${recirc}. Keep under 46°C (115°F) on suction air.`), rtNo('4')]},
+      {id:'4', q:'Cycle power. Does the error still occur?', opts:[rtNo('Keep running.'), rtYes(pcb)]}]};
+    F.E32l = Object.assign(e32big(P.E32l, '110°C (230°F)', 'R7T', 'SH'), {sizes:f32 ? '3.5–5.0 ton; Enhanced HP 3.0–4.0 ton; High Efficiency AC 3.0–4.0 ton' : '3.5–5.0 ton'});
+    F.E32l.box = 'Check inverter fin temperature with D-checker. E32 occurs when the temperature exceeds or is close to the reference value. Criteria: 110°C (230°F).';
+  }
+  F.E41 = {t:'Refrigerant shortage', p:P.E41, cond:'[Cooling] When evaporating pressure is excessive low. [Heating] When discharge SH is high or liquid pipe temp is low.', start:{cool:'c1', heat:d9 ? 'h2' : 'h1'}, nodes:[
+      {id:'c1', when:'cool', q:`Is amount of charge correct? ${d9 ? 'SC' : 'SH'} is proper?`, w:'charge', opts:[rtNo('Adjust charge per IO manual.'), rtYes('Check any clogging in refrigerant circuit.')]},
+      ...(d9 ? [] : [{id:'h1', when:'heat', q:'For compressor wiring, any open circuit or connected to a wrong terminal?', opts:[rtYes('Fix the wiring issue.'), rtNo('h2')]}]),
+      {id:'h2', when:'heat', q:`Is amount of charge correct? ${d9 ? 'SC' : 'SH'} is proper?`, w:'charge', opts:[rtNo('Adjust charge per IO manual.'), rtYes('h3')]},
+      {id:'h3', when:'heat', q:'Clogging refrigerant circuit?', opts:[rtYes('Resolve the clogging.'), rtNo('h4')]},
+      {id:'h4', when:'heat', q:'Check D-checker data', w:'e41data', opts:[{a:`Disch temp. − Cond temp. > ${d9 ? '85°C (153°F)' : f32 ? '75°C (135°F)' : '65°C (117°F)'}`, go:'h5'},
+        {a:(d9 ? '' : f32 ? '3.5–5.0 ton models and 3.0–4.0 ton Enhanced Capacity/High Efficiency FIT: ' : '3.5–5.0 ton models: ') + `Outdoor air temp. − 2°C (${d9 ? '3.6' : '4'}°F) > Liquid pipe temp.`, go:'h6'}, {a:'Other', act:'Replace OD unit PCB.'}]},
+      {id:'h5', when:'heat', q:'Measure discharge temp and high pressure then compare with D-checker data. Obviously different?', opts:[rtYes('Replace failed sensor if necessary.'), rtNo(pcb)]},
+      {id:'h6', when:'heat', q:'Measure OD air temperature then compare with D-checker data. Obviously different?', w:'th_ta', opts:[rtYes('Replace failed sensor if necessary.'), rtNo('h7')]},
+      {id:'h7', when:'heat', q:'Measure liquid tubing temp beside of OD liquid thermistor then compare with D-checker data. Obviously different?', opts:[rtYes('Replace failed sensor if necessary.'), rtNo(d9 ? 'h8' : 'Install thermal insulation onto liquid tubing exposed to outdoor to keep warm.')]},
+      ...(d9 ? [{id:'h8', when:'heat', q:'Install thermal insulation onto liquid tubing exposed to outdoor to keep warm. Resolved?', opts:[rtYes('Keep running.'), rtNo(pcb)]}] : [])]};
+  F.E44 = {t:'Outdoor temperature outside of range', p:P.E44, cond:'When outdoor temperature is excessive low or high.', nodes:[
+      {id:'1', q:'Actual outdoor temperature', w:'oat', opts:[{a:'Cooling mode: above 55°C (131°F) or below −21°C (−6°F); heating mode: above 27°C (81°F) or below −32°C (−26°F)', act:'System cannot run in that condition.'}, {a:'Other', go:'A'}]},
+      {id:'A', label:'A', q:'Compare the measured outdoor temperature and D-checker data. Obviously different?', w:'th_ta', opts:[rtNo(pcb), rtYes('a2')]},
+      {id:'a2', q:`Is there any factor that can cause wrong detection of OD outdoor air thermistor, for example ${pl === 'fit410' ? 'short circuit' : f32 ? 're-circulation' : 'air re-circulation'} of discharge air, outdoor air thermistor is touching to outdoor coil or sunlight?`, opts:[rtYes('Remove those factor.'), rtNo('Inspect the outdoor air thermistor then replace if necessary.')]}]};
+  F.c57 = {t:'Refrigerant cooling sweat error', code:f32 ? 'E57' : '57', p:P.c57, sizes:d9 ? null : f32 ? 'HP 3.5–5.0 ton; Enhanced HP 3.0–4.0 ton' : 'HP 3.5–5.0 ton',
+    cond:pl === 'fit410' ? 'When outdoor liquid pipe temperature became excessive low during heating operation.' : 'When liquid pipe temperature is less than outdoor temperature minus 2°C (3.6°F) for continuous 420 seconds or less than outdoor temperature minus 5°C (9°F) for continuous 100 seconds during heating operation.',
+    note:d9 ? null : RT_FLOW_NOTE1, nodes:[
+      {id:'1', q:'Charge amount of refrigerant is correct?', w:'charge', opts:[rtNo('Check refrigerant leak. Charge refrigerant correctly.'), rtYes('2')]},
+      {id:'2', q:'Indoor EEV coil is connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('3')]},
+      {id:'3', q:d9 ? 'Indoor EEV coil is attached to EEV body properly?' : 'Indoor and outdoor EEV coils are attached to EEV body properly? (*1)', opts:[rtNo('Attach EEV coil properly.'), rtYes('4')]},
+      {id:'4', q:'Coil resistance of EEV is normal?', w:'coil', opts:[rtNo('Replace EEV coil.'), rtYes('5')]},
+      {id:'5', q:d9 ? 'Outdoor air and liquid thermistors are connected properly?' : 'Outdoor liquid thermistor is connected properly?', opts:[rtNo('Connect properly.'), rtYes('6')]},
+      {id:'6', q:d9 ? 'Characteristics of outdoor air and liquid thermistors are normal?' : 'Characteristic of outdoor liquid thermistor is normal?', w:'th_tl', opts:[rtNo('Replace thermistor.'), rtYes(pcbB)]}]};
+  F.E58 = {t:d9 ? 'Overload protection switch open error' : 'Overload protection sensor open error', p:P.E58, cond:'When there is no continuity in OL switch at the start of compressor operation.', nodes:[
+      {id:'1', q:'OL is connected to PCB properly?', opts:[rtNo('Connect properly.'), rtYes('2')]},
+      {id:'2', q:'OL switch is opened?', opts:[rtNo(pcbB), rtYes('Replace OL switch.')]}]};
+  const esp = pl === 'fit410' ? ['0.5 inH2O (124.5 Pa)', 'below'] : ['0.9 inH2O (224 Pa)', 'less than'];
+  const lowAir = (p, eh) => ({t:`Low indoor airflow (${eh ? 'with' : 'without'} electric heat mode)`, indoor:true, p, cond:`When ${eh ? '' : 'no '}EH demand is active and the blower feedback is 50 rpm < rpm ≤ 150 rpm 10 times in a row, or 360 times in 720 checks.`, nodes:[
+      {id:'1', q:'Obstacles are touching the blower/motor, or blocked filters?', opts:[rtYes('Remove obstacles from a blower/motor or filters.'), rtNo('2')]},
+      {id:'2', q:'Blockage in the airflow (duct work)?', opts:[rtYes('Remove obstacles from the duct.'), rtNo('3')]},
+      {id:'3', q:`Ducts are undersized. External static pressure is more than ${esp[0]}?`, w:'static', opts:[rtYes(`Redesign the duct so that the external static pressure is ${esp[1]} ${esp[0]}.`), rtNo('Replace control board or motor.')]}]});
+  F.b9 = lowAir(P.b9, false); F.b9h = lowAir(P.b9h, true);
+  F.i70 = {t:'EEV disconnection detected', indoor:true, code:'70', p:P.i70, cond:'EEV connector not detected.', nodes:[
+      {id:'1', q:'Indoor EEV coil connected? (control board and junction connector)', opts:[rtNo('Connect the EEV coil.'), rtYes('2')]},
+      {id:'2', q:'Incorrect wiring to EEV?', opts:[rtYes('Correct wiring to EEV.'), rtNo('3')]},
+      {id:'3', q:'Wrong resistance value of EEV coil? (pins 1–6, 2–6, 3–6, 4–6: 40–50 Ω)', w:'coil', opts:[rtYes('Replace EEV coil.'), rtNo('Replace control board.')]}]};
+  const thFlow = (p, code, which, w) => ({t:`${which === 'liquid' ? 'Liquid' : 'Gas'} side thermistor abnormality`, indoor:true, code, p, cond:'Open or short circuit of the thermistor.', nodes:[
+      {id:'1', q:`Indoor ${which} thermistor connected? (control board and junction connector)`, opts:[rtNo(`Connect the ${which} thermistor.`), rtYes('2')]},
+      {id:'2', q:`Incorrect wiring to ${which} thermistor?`, opts:[rtYes(`Correct wiring to ${which} thermistor.`), rtNo('3')]},
+      {id:'3', q:`Wrong resistance value of ${which} thermistor? (the table on this page)`, w, opts:[rtYes(`Replace ${which} thermistor.`), rtNo('Replace control board.')]}]});
+  F.i73 = thFlow(P.i73, '73', 'liquid', 'th_tli'); F.i74 = thFlow(P.i74, '74', 'gas', 'th_tgi');
+  F.i75 = {t:'Pressure sensor abnormality', indoor:true, code:'75', p:P.i75, cond:'Open or short circuit of the pressure sensor.', nodes:[
+      {id:'1', q:'Indoor pressure sensor connected? (control board and junction connector)', opts:[rtNo('Connect the pressure sensor.'), rtYes('2')]},
+      {id:'2', q:'Incorrect wiring to pressure sensor?', opts:[rtYes('Correct wiring to pressure sensor.'), rtNo('3')]},
+      {id:'3', q:'Wrong voltage value of pressure sensor? (the voltage vs pressure graph on this page)', w:'sensorV', opts:[rtYes('Replace pressure sensor.'), rtNo('Replace control board.')]}]};
+  for (const [k, f] of Object.entries(F)){ f.key = k; f.idx = {}; for (const n of f.nodes) f.idx[n.id] = n; if (!f.start) f.start = f.nodes[0].id; }
+  return F;
+}
+// logged code (error-table key) → the flowchart that serves it. A minor code (thermostat only) is the same event below its shutdown count
+// in the manual's error table, so it takes the critical code's flowchart.
+const RT_CODEFLOW = {outdoor:{'13':'E13', '14':'E13', '15':'E15', '16':'E15', '21':'E21', '54':'E21', '22':'E22', '55':'E22', '32':'E32', '33':'E32', '41':'E41', '44':'E44', '57':'c57', '58':'E58', 'B9':'b9'},
+  indoor:{'B9':'b9', '9B':'b9h', '70':'i70', '73':'i73', '74':'i74', '75':'i75'}};
+// ---- route context: everything a route needs, from the open recording or from a shared link (RT_LINK, no recording)
+let RT_LINK = null, RT_XC = null;
+function rtCtx(){
+  if (RT_LINK) return RT_LINK.X;
+  if (!D) return null;
+  const pl = unitPlat(), multi = D.fam === 'multi', sz = sizeInfo();
+  if (RT_XC && RT_XC.D === D && RT_XC.prov === !!S.provisional && RT_XC.size === SIZE) return RT_XC.X;
+  const u = UNI[pl] || {}, num = D.num, s = D.str, dt = D.interval / 60;
+  const med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  const X = {live:true, plat:pl, multi, ref:REF.ref || 'R410A', model:D.model ? String(D.model).replace(/^INV_Unitary_/i, '') : '', name:multi ? 'Multi-split' : (u.name || 'no service manual on file for this model'),
+    doc:(RT_DOC[pl] || {}).doc || u.doc || '', out:EQ.out, size:sz ? {t:sz.t, e:!!sz.e} : null, rec:fmtTime(D.t[0], true), chart:{}, chartOut:{}, codes:[], hintFan:{}, hintCfm:{}, hintSv:{}, hintTh:{}};
+  if (!multi && pl && pl !== 'other'){
+    const chPl = CHARTS[pl] ? pl : ((pl === 'fit32' || pl === 'dh9') && fieldOn() ? 'fit410' : null);
+    if (chPl) for (const m of ['cool', 'heat']){ const o = chartObs(m, chPl); if (!o) continue;
+      if (!o.applies){ if (o.outMin >= 5) X.chartOut[m] = {min:Math.round(o.outMin), range:o.W.oat}; continue; }
+      const R = o.rows, md = id => num[id] ? med(R.map(i => num[id][i])) : null;
+      X.chart[m] = {chPl, field:chPl !== pl, flags:o.obs.map(x => [x[0], x[1]]), seen:o.seen, notes:o.notes, oatRange:[Math.round(o.oatMin), Math.round(o.oatMax)], chartRange:o.W.oat, min:Math.round(o.min), cite:o.cite};
+      { const f = chById.fan && chById.fan.present ? md('fan') : null, t = chById.tfan && chById.tfan.present ? md('tfan') : null;
+        if (isN(f) || isN(t)) X.hintFan[m] = `The log: outdoor fan ${isN(f) ? f0(f) + ' rpm' : 'speed not in this export'}${isN(t) ? ` against a target of ${f0(t)} rpm` : ''} (median of the judged stretch).`; }
+      if (chById.cfm && chById.cfm.present && chById.reqcfm && chById.reqcfm.present){ const A = R.filter(airSettled); const c = med(A.map(i => num.cfm[i])), q = med(A.map(i => num.reqcfm[i])); if (isN(c) && isN(q)) X.hintCfm[m] = `The log: ${f0(c)} cfm reported against ${f0(q)} cfm requested (settled airflow, median).`; }
+      if (s.svhot && s.svhot.some(v => v != null)){ const on = R.filter(i => s.svhot[i] === 'ON').length; X.hintSv[m] = `The log: the solenoid read open on ${pct(on, R.length)} % of the judged rows` + (pl === 'fit410' && m === 'cool' ? '; the FIT keeps it closed throughout cooling (SiUS612209EA p.10).' : '.'); }
+      X.hintTh[m] = {}; for (const [id, th] of Object.entries(RT_THS)){ const v = chById[th.ch] && chById[th.ch].present ? md(th.ch) : null; if (isN(v)) X.hintTh[m][id] = `The log: ${chById[th.ch].label} ${f0(v)} °F (median of the judged stretch).`; }
+    }
+    // logged codes, each with the readings its flowchart asks about, taken over the rows where the code showed
+    const seen = {};
+    for (let i = 0; i < D.n; i++) for (const e of rowErrors(i)){ if (!e.key || !e.k) continue; const kind = e.who === 'Indoor' ? 'indoor' : 'outdoor', id = kind + ':' + e.key;
+      (seen[id] = seen[id] || {kind, key:e.key, disp:e.code || e.key, t:e.t, src:e.k.src || '', minor:!!e.k.minor, fk:(RT_CODEFLOW[kind] || {})[e.key] || null, rows:[]}).rows.push(i); }
+    for (const c of Object.values(seen)){ const R = c.rows, md = id => num[id] ? med(R.map(i => num[id][i])) : null, mx = id => { const v = num[id] ? R.map(i => num[id][i]).filter(isN) : []; return v.length ? Math.max(...v) : null; };
+      const cool = R.filter(i => D.mode[i] === 'cool').length, heat = R.filter(i => D.mode[i] === 'heat').length;
+      const dl = R.map(i => isN(num.oat[i]) && num.liq && isN(num.liq[i]) ? num.oat[i] - num.liq[i] : null);
+      X.codes.push({kind:c.kind, key:c.key, disp:c.disp, t:c.t, src:c.src, minor:c.minor, fk:c.fk, n:R.length, min:Math.max(1, Math.round(R.length * dt)), first:fmtTime(D.t[R[0]]), mode:heat > cool ? 'heat' : cool ? 'cool' : null,
+        v:{lp:md('lp'), hp:md('hp'), td:mx('disch'), dsh:md('dsh'), fin:mx('fin'), oat:md('oat'), oatLiq:med(dl)}}); }
+  }
+  RT_XC = {D, prov:!!S.provisional, size:SIZE, X};
+  return X;
+}
+// ---- persistence: one state per recording (or per shared link)
+const rtKey = () => RT_LINK ? 'dchk.route.link.' + RT_LINK.id : (D ? 'dchk.route.' + (D.sha || D.name) : null);
+function rtLoad(){ const k = rtKey(); const st = (k && loadJSON(k, null)) || (RT_LINK && RT_LINK.st ? JSON.parse(JSON.stringify(RT_LINK.st)) : null) || {}; return Object.assign({src:null, by:{}}, st); }
+function rtSave(st){ const k = rtKey(); if (k) saveJSON(k, st); if (RT_LINK) try { history.replaceState(null, '', '#route=' + rtB64(JSON.stringify({v:1, app:APP_VERSION, X:RT_LINK.X, st}))); } catch(e){} }
+const rtBy = (st, id) => st.by[id] || (st.by[id] = {cmp:[], g:{}, res:{}, rd:{}, ans:{}, mode:null});
+// ---- the routes this recording offers: the manual's flowchart for each logged code, then the analysis chart per mode
+function rtSources(X){
+  const out = []; if (!X || X.multi) return out; const F = rtFlows(X.plat);
+  for (const c of X.codes){ if (!c.fk) continue; let fl = [];
+    if (c.fk === 'E32' && !F.E32){ const t = X.size && X.size.t, e = X.size && X.size.e, small = isN(t) && (X.plat === 'fit32' ? (!e && t <= 3) || (e && t === 2) : !e && t <= 3), big = isN(t) && (X.plat === 'fit32' ? (!e && t >= 3.5) || (e && t >= 3 && t <= 4) : !e && t >= 3.5);
+      fl = small ? [F.E32s] : big ? [F.E32l] : [F.E32s, F.E32l].filter(Boolean); }
+    else if (F[c.fk]) fl = [F[c.fk]];
+    for (const f of fl) out.push({id:`code:${c.kind}:${c.key}:${f.key}`, kind:'code', c, f, label:`${c.disp} flowchart${f.sizes && fl.length > 1 ? ' (' + f.sizes.split(';')[0] + ')' : ''}`}); }
+  for (const m of ['cool', 'heat']) if (X.chart[m]) out.push({id:'chart:' + m, kind:'chart', m, label:`${m === 'heat' ? 'Heating' : 'Cooling'} analysis chart${X.chart[m].field ? ' (field rule)' : ''}`});
+  return out;
+}
+// ---- chart route: flags (the log's, replaced reading by reading by the tech's gauges) → suspects → stops
+function rtChartModel(X, m, b){
+  const C = X.chart[m], L = RT_LINES[C.chPl][m], g = b.g || {}, G = k => isN(g[k]) ? g[k] : null, sat = p => isN(p) ? satF(p, X.ref) : null;
+  const F = new Map(); for (const [f, t] of C.flags) F.set(f, {t, src:'log'});
+  const grp = (name, list) => { for (const k of [...F.keys()]) if (RT_GRP[k] === name) F.delete(k); for (const x of list) if (x) F.set(x[0], {t:x[1], src:'gauge'}); };
+  const calc = {}, td = G('td');
+  if (isN(td)) grp('td', [td > L.td[1] && ['tdHi', `discharge ${f0(td)}°F (over ${L.td[1]})`], td < L.td[0] && ['tdLo', `discharge ${f0(td)}°F (under ${L.td[0]})`]]);
+  if (m === 'cool'){ const hp = G('hp'), lp = G('lp');
+    if (isN(td) && isN(sat(hp))){ const v = calc.dsh = td - sat(hp); grp('dsh', [v > L.dsh[1] && ['dshHi', `discharge SH ${f1s(v)}°F (over ${L.dsh[1]})`], v < L.dsh[0] && ['dshLo', `discharge SH ${f1s(v)}°F (under ${L.dsh[0]})`]]); }
+    if (isN(hp)) grp('hp', [hp > L.hp[1] && ['hpHi', `high pressure ${f0(hp)} psi (over ${L.hp[1]})`], hp < L.hp[0] && ['hpLo', `high pressure ${f0(hp)} psi (under ${L.hp[0]})`]]);
+    if (isN(lp)) grp('lp', [lp > L.lp[1] && ['lpHi', `low pressure ${f0(lp)} psi (over ${L.lp[1]})`], lp < L.lp[0] && ['lpLo', `low pressure ${f0(lp)} psi (under ${L.lp[0]})`]]);
+    if (L.ssh && isN(G('ts')) && isN(sat(lp))){ const v = calc.ssh = G('ts') - sat(lp); grp('ssh', [v > L.ssh[1] && ['sshHi', `suction SH ${f1s(v)}°F at the valve (over ${L.ssh[1]})`], v < L.ssh[0] && ['sshLo', `suction SH ${f1s(v)}°F at the valve (under ${L.ssh[0]})`]]); }
+    if (L.sc && isN(G('tl')) && isN(sat(hp))){ const v = calc.sc = sat(hp) - G('tl'); grp('sc', [v > L.sc[1] && ['scHi', `subcooling ${f1s(v)}°F at the valve (over ${L.sc[1]})`], v < L.sc[0] && ['scLo', `subcooling ${f1s(v)}°F at the valve (under ${L.sc[0]})`]]); }
+  } else { const hs = G('hpssv'), hl = G('hplsv');
+    if (isN(td) && isN(sat(hs))){ const v = calc.dsh = td - sat(hs); grp('dsh', [v > L.dsh[1] && ['dshHi', `discharge SH ${f1s(v)}°F (over ${L.dsh[1]})`], v < L.dsh[0] && ['dshLo', `discharge SH ${f1s(v)}°F (under ${L.dsh[0]})`]]); }
+    if (isN(hs)) grp('hp', [hs > L.hpHi && ['hpHi', `high pressure ${f0(hs)} psi at the gas valve (over ${L.hpHi})`], hs < L.hpssv && ['hpSsvLo', `high pressure ${f0(hs)} psi at the gas valve (under ${L.hpssv})`]]);
+    if (isN(hl)) grp('hplsv', [hl > L.hpHi && !F.has('hpHi') && ['hpHi', `high pressure ${f0(hl)} psi at the liquid valve (over ${L.hpHi})`], hl < L.hplsv && ['hpLsvLo', `high pressure ${f0(hl)} psi at the liquid valve (under ${L.hplsv})`]]);
+    if (L.sc && isN(G('tl')) && isN(sat(hl))){ const v = calc.sc = sat(hl) - G('tl'); grp('sc', [v > L.sc[1] && ['scHi', `subcooling ${f1s(v)}°F at the valve (over ${L.sc[1]})`], v < L.sc[0] && ['scLo', `subcooling ${f1s(v)}°F at the valve (under ${L.sc[0]})`]]); }
+  }
+  const ch = CHARTS[C.chPl][m], all = Object.entries(ch.causes).map(([nm, x]) => ({nm, id:rtCauseId(nm), f:x.f, c:x.c || [], r:x.r || ''}));
+  const fl = [...F.keys()], cmp = (b.cmp || []).filter(k => all.some(x => x.c.includes(k)));
+  const byF = fl.length ? all.filter(x => fl.every(f => x.f.includes(f))) : all, list = byF.filter(x => cmp.every(k => x.c.includes(k)));
+  list.forEach((x, k) => x.L = (k >= 26 ? String.fromCharCode(64 + Math.floor(k / 26)) : '') + String.fromCharCode(65 + k % 26));
+  // stops: the manual's tests that cover a suspect, easiest first, then the one covering the most suspects
+  const ids = new Set(list.map(x => x.id)), cat = rtTests(X, m);
+  const stops = cat.map((t, k) => ({t, k, cov:t.ids.filter(i => ids.has(i)).length})).filter(x => x.cov).sort((a, b2) => a.t.tier - b2.t.tier || b2.cov - a.cov || a.k - b2.k).map(x => x.t);
+  const res = id => { const r = b.res[id]; if (r) return r; const t = stops.find(s => s.id === id); return t && t.auto && !(id in b.res) ? t.auto : null; };
+  stops.forEach((t, k) => t.n = k + 1);
+  const st = {}; for (const x of list){ let s = {k:'open'};
+    for (const t of stops){ const r = res(t.id); if (!r) continue; const o = t.outs.find(o => o.k === r); if (!o) continue;
+      if ((o.confirms || []).includes(x.id)) s = {k:'found', n:t.n}; else if (s.k !== 'found' && (o.clears || []).includes(x.id)) s = {k:'cleared', n:t.n, auto:!b.res[t.id]}; else if (s.k === 'open' && (o.checks || []).includes(x.id)) s = {k:'checked', n:t.n}; }
+    st[x.id] = s; }
+  const live = x => st[x.id].k === 'open' || st[x.id].k === 'checked';
+  const next = stops.find(t => !res(t.id) && t.ids.some(i => list.some(x => x.id === i && live(x))));
+  return {C, L, F, flags:fl, calc, cmp, all, byF, list, stops, st, res, next, found:list.filter(x => st[x.id].k === 'found'), left:list.filter(live)};
+}
+// ---- code route: walk the manual's flowchart with the answers given so far
+function rtFlowModel(f, m, b){
+  const ans = b.ans || {}; let id = typeof f.start === 'object' ? f.start[m] : f.start; const path = [], on = new Set(); let end = null, cur = null, guard = 0;
+  while (id && guard++ < 80){ const n = f.idx[id]; if (!n) break; on.add(id);
+    if (n.when && n.when !== m){ const o = n.opts.find(o => o.a === 'No') || n.opts[n.opts.length - 1]; path.push({id, skip:true}); if (o.act){ end = {act:o.act, from:id}; break; } id = o.go; continue; }
+    const k = ans[id]; if (k == null || !n.opts[k]){ cur = id; break; }
+    const o = n.opts[k]; path.push({id, k}); if (o.act){ end = {act:o.act, from:id}; break; } id = o.go; }
+  return {path, on, end, cur};
+}
+// ---- rendering
+const rtE = synEsc, rtQ = (q, m) => typeof q === 'object' ? q[m] : q, rtW = (w, m) => w && typeof w === 'object' ? w[m] : w;
+const rtTierHtml = t => `<span class="rt-tier t${t}" title="${RT_TIER[t].t}">${RT_TIER[t].s}</span>`;
+function rtField(key, f, val){ return `<label class="rt-f"><span>${rtE(f.l)}</span><input data-rk="${rtE(key)}" inputmode="decimal" autocomplete="off" value="${isN(val) ? val : ''}"><i>${rtE(f.u || '')}</i></label>`; }
+function rtFlowWidget(X, w, c, f, b, nid){
+  if (!w) return '';
+  const rd = (b.rd && b.rd['n:' + nid]) || {}, key = k => `n:${nid}|${k}`, R = RT_DOC[X.plat] || {}, v = c && c.v || {};
+  const fields = list => `<div class="rt-fs">${list.map(x => rtField(key(x.k), x, rd[x.k])).join('')}</div>`, line = t => t ? `<div class="rt-judge">${t}</div>` : '';
+  const hint = t => t ? `<div class="rt-hint">${t}</div>` : '';
+  if (w === 'gaugeLP' || w === 'gaugeHP'){ const lo = w === 'gaugeLP', lv = lo ? v.lp : v.hp;
+    return hint(isN(lv) ? `The log: ${lo ? 'low' : 'high'} pressure ${f0(lv)} psi (median while the code showed).` : '') + fields([{k:'g', l:'Gauge', u:'psig'}, {k:'d', l:'D-Checker', u:'psig'}])
+      + line(isN(rd.g) && isN(rd.d) ? `They differ by ${f0(Math.abs(rd.g - rd.d))} psi. The manual gives no tolerance.` : ''); }
+  if (w === 'sensorV') return hint(`Check the sensor's output voltage against the voltage vs pressure graph (${R.s13 || 'the manual'}).`);
+  if (w === 'hps') return hint(`With the wire on the PCB side removed, check across the PCB-side terminals: it must be continuous (${R.s12 || 'the manual'}).`);
+  if (w === 'coil') return hint(`EEV coil: 40–50 Ω between each coil pin and COM (${R.s26 || 'the manual'}).`) + fields([{k:'a', l:'Pin 1', u:'Ω'}, {k:'b', l:'Pin 2', u:'Ω'}, {k:'c', l:'Pin 3', u:'Ω'}, {k:'d', l:'Pin 4', u:'Ω'}])
+    + line((() => { const a = ['a', 'b', 'c', 'd'].map(k => rd[k]).filter(isN); if (!a.length) return ''; const o = a.filter(x => x < 40 || x > 50); return o.length ? `${o.length} reading${o.length > 1 ? 's' : ''} outside 40–50 Ω` : `All ${a.length} inside 40–50 Ω`; })());
+  if (/^th_/.test(w)){ const col = w === 'th_td' ? 2 : w === 'th_ta' ? 3 : 1, e = rtThermK(rd.t, col);
+    return hint(`Measure its resistance and the temperature at the sensor; compare with the table (${R.th || 'the manual'}).`) + fields([{k:'t', l:'Temp at the sensor', u:'°F'}, {k:'r', l:'Resistance', u:'kΩ'}])
+      + line(isN(e) ? `The table: ${e >= 100 ? f0(e) : e.toFixed(2)} kΩ at ${f0(rd.t)} °F` + (isN(rd.r) ? `; your reading is ${f0((rd.r / e - 1) * 100)} % ${rd.r >= e ? 'above' : 'below'}` : '') : isN(rd.t) ? 'Outside the table\'s range' : ''); }
+  if (w === 'charge'){ const p = rd.p, t = rd.t, s = isN(p) ? satF(p, X.ref) : null;
+    const tgt = X.plat === 'dh9' ? 'CVT target subcooling 11 °F (installation manual p.26)' : X.plat === 'fit410' ? 'the charging table by size (installation manual 3P731493-1 p.29–30)' : 'the installation manual\'s charging table';
+    return hint(`Gauge on the liquid valve port, thermometer on the liquid line at the valve; compare with ${tgt}.`) + fields([{k:'p', l:'Liquid pressure', u:'psig'}, {k:'t', l:'Liquid line', u:'°F'}])
+      + line(isN(s) && isN(t) ? `Subcooling ${f1s(s - t)} °F (saturation ${f1s(s)} °F from the app's ${X.ref === 'R32' ? 'R-32' : 'R-410A'} table)` : ''); }
+  if (w === 'dtEEV' || w === 'drier'){ const d = w === 'drier';
+    return hint(d ? 'A restriction shows as a temperature drop across the drier (RS6215002r10 p.23; method from another manual).' : 'Measure the pipe just before and just after the valve.') + fields([{k:'a', l:'Before', u:'°F'}, {k:'b', l:'After', u:'°F'}])
+      + line(isN(rd.a) && isN(rd.b) ? `${d ? 'Drop' : 'Difference'} ${f1s(d ? rd.a - rd.b : Math.abs(rd.a - rd.b))} °F` : ''); }
+  if (w === 'static') return hint(`Total external static: return plus supply (${R.s203 || 'the manual'}).`) + fields([{k:'r', l:'Return static', u:'in. w.c.'}, {k:'s', l:'Supply static', u:'in. w.c.'}])
+    + line(isN(rd.r) && isN(rd.s) ? `Total ${(Math.abs(rd.r) + Math.abs(rd.s)).toFixed(2)} in. w.c.` : '');
+  if (w === 'td') return hint(isN(v.td) ? `The log: discharge reached ${f0(v.td)} °F while the code showed (the board's thermistor).` : '') + fields([{k:'t', l:'Your probe', u:'°F'}]) + line(isN(rd.t) ? `${f0(rd.t)} °F against the criterion 248 °F` : '');
+  if (w === 'fin') return hint(isN(v.fin) ? `The log: the fin reached ${f0(v.fin)} °F while the code showed.` : '');
+  if (w === 'oat') return hint(isN(v.oat) ? `The log: outdoor air ${f0(v.oat)} °F (median while the code showed).` : '');
+  if (w === 'e41data') return hint([isN(v.dsh) ? `discharge − condensing ${f1s(v.dsh)} °F` : '', isN(v.oatLiq) ? `outdoor air − liquid pipe ${f1s(v.oatLiq)} °F` : ''].filter(Boolean).map((x, k) => (k ? '' : 'The log, median while the code showed: ') + x).join('; '));
+  return '';
+}
+function rtStopHtml(X, m, t, mod, b){
+  const r = mod.res(t.id), isNext = mod.next === t, done = !!r, auto = done && !b.res[t.id], rd = b.rd[t.id] || {};
+  const Lof = ids => (ids || []).map(i => (mod.list.find(x => x.id === i) || {}).L).filter(Boolean).join(', ');
+  const rule = t.outs.map(o => { const p = []; if (Lof(o.clears)) p.push('clears ' + Lof(o.clears)); if (Lof(o.confirms)) p.push('confirms ' + Lof(o.confirms)); if (Lof(o.checks)) p.push('checks ' + Lof(o.checks) + ', not cleared'); return p.length ? `${o.l}: ${p.join('; ')}` : ''; }).filter(Boolean).join(' · ');
+  const J = t.judge ? t.judge(rd) : null, hint = t.hint ? t.hint() : null;
+  const o = done ? t.outs.find(x => x.k === r) : null, cls = done ? (o && o.confirms ? 'fail' : o && o.clears ? 'pass' : 'chk') : '';
+  return `<li class="rt-stop${isNext ? ' next' : ''}${done ? ' done ' + cls : ''}" data-stop="${t.id}"><span class="rt-dot">${t.n}</span><div class="rt-body">
+    <div class="rt-st">${rtTierHtml(t.tier)}<b>${rtE(t.t)}</b>${t.tag ? `<span class="rt-tag">${rtE(t.tag)}</span>` : ''}${isNext ? '<span class="rt-nexttag rt-noprint">next</span>' : ''}</div>
+    ${t.how.map(h => `<div class="rt-how">${rtE(h)}</div>`).join('')}${t.note ? `<div class="rt-how rt-note2">${rtE(t.note)}</div>` : ''}
+    <div class="rt-src">Manual: ${rtE(t.src.join(' · '))}</div>${hint ? `<div class="rt-hint">${rtE(hint)}</div>` : ''}${t.auto && auto ? `<div class="rt-hint">${rtE(t.autoTxt || '')}</div>` : ''}
+    ${t.fields ? `<div class="rt-fs">${t.fields.map(f => rtField(t.id + '|' + f.k, f, rd[f.k])).join('')}</div>` : ''}${J && J.txt ? `<div class="rt-judge">${rtE(J.txt)}${J.sug && !done ? ` <b>Suggests: ${rtE((t.outs.find(x => x.k === J.sug) || {}).l || '')}</b>` : ''}</div>` : ''}
+    <div class="rt-outs">${t.outs.filter(x => r === x.k || [...(x.clears || []), ...(x.confirms || []), ...(x.checks || [])].some(i => mod.list.some(s => s.id === i))).map(x => `<button type="button" class="${r === x.k ? 'on' : ''}${x.confirms ? ' bad' : ''}" data-out="${t.id}|${x.k}">${rtE(x.l)}</button>`).join('')}</div>
+    <div class="rt-rule">${rtE(rule)}</div></div></li>`;
+}
+function rtChartHtml(X, m, b){
+  const mod = rtChartModel(X, m, b), C = mod.C, R = RT_DOC[X.plat] || {}, heat = m === 'heat', L = mod.L, g = b.g || {};
+  const cmpKeys = RT_CMP_ORDER.filter(k => mod.all.some(x => x.c.includes(k)));
+  const flagHtml = [...mod.F].map(([f, v]) => `<span class="rt-chip ${v.src}">${rtE(v.t)} <i>${v.src === 'gauge' ? 'your gauge' : 'log'}</i></span>`).join('') || '<span class="rt-chip none">No reading outside the chart\'s lines</span>';
+  const gF = heat ? [{k:'hpssv', l:'High pressure, gas valve port', u:'psig'}, {k:'hplsv', l:'High pressure, liquid valve port', u:'psig'}, {k:'td', l:'Discharge line', u:'°F'}].concat(L.sc ? [{k:'tl', l:'Liquid line at its valve', u:'°F'}] : [])
+    : [{k:'hp', l:'High pressure, liquid valve port', u:'psig'}, {k:'lp', l:'Low pressure, gas valve port', u:'psig'}, {k:'td', l:'Discharge line', u:'°F'}].concat(L.ssh ? [{k:'ts', l:'Suction line at the gas valve', u:'°F'}] : []).concat(L.sc ? [{k:'tl', l:'Liquid line at its valve', u:'°F'}] : []);
+  const calc = [isN(mod.calc.dsh) ? `discharge SH ${f1s(mod.calc.dsh)} °F` : '', isN(mod.calc.ssh) ? `suction SH ${f1s(mod.calc.ssh)} °F` : '', isN(mod.calc.sc) ? `subcooling ${f1s(mod.calc.sc)} °F` : ''].filter(Boolean);
+  const narrowed = mod.cmp.length && mod.byF.length !== mod.list.length ? ` Your complaint narrowed ${mod.byF.length} to ${mod.list.length}.` : '';
+  const head = !mod.flags.length && !mod.cmp.length ? `Nothing to narrow on yet: no reading crosses a line on the chart, so all ${mod.list.length} of its causes stand. Take the gauge readings at the start of the route, or tap the complaint.`
+    : !mod.flags.length ? `No reading crosses a line; the complaint alone leaves ${mod.list.length} of the chart's causes.${mod.list.length > 12 ? ' Take the gauge readings at the start of the route to narrow it.' : ''}`
+    : `The chart marks ${mod.list.length === 1 ? 'one cause' : mod.list.length + ' causes'} with every flagged reading${mod.cmp.length ? ' and the complaint' : ''}.${narrowed}`;
+  const stat = rtStats(X, m);
+  const sus = mod.list.map(x => { const s = mod.st[x.id], why = s.k === 'found' ? `Found at stop ${s.n}` : s.k === 'cleared' ? `Ruled out ${s.auto ? 'by the log' : 'at stop ' + s.n}` : s.k === 'checked' ? `Checked at stop ${s.n}; not ruled out` : 'Possible';
+    const n = stat && stat.byName[x.nm]; return `<div class="rt-su ${s.k}"><span class="rt-lt">${x.L}</span><div><div class="rt-nm">${rtE(x.nm)}</div>${x.r ? `<div class="rt-rem">Manual remedy: ${rtE(x.r)}</div>` : ''}<div class="rt-why">${why}${n ? ` · Brackett: found ${n} of ${stat.n} closed routes` : ''}</div></div></div>`; }).join('');
+  const start = `<li class="rt-stop start"><span class="rt-dot">S</span><div class="rt-body"><div class="rt-st">${rtTierHtml(2)}<b>Start: confirm the readings with gauges</b></div>
+    <div class="rt-how">The chart is read with gauges at the service valves; the log uses the unit's thermistors${heat ? '' : ' and, in cooling, the board\'s high pressure'}. A reading you enter replaces the log's and re-draws the suspects.</div>
+    <div class="rt-src">Manual: ${rtE(C.cite + (C.field ? ' (field rule)' : ''))}</div><div class="rt-fs">${gF.map(f => rtField('g|' + f.k, f, g[f.k])).join('')}</div>${calc.length ? `<div class="rt-judge">From your readings: ${rtE(calc.join(', '))}</div>` : ''}</div></li>`;
+  const idle = !mod.flags.length && !mod.cmp.length;   // nothing to narrow on: the start (gauges) and the complaint only
+  const stops = idle ? '' : mod.stops.map(t => rtStopHtml(X, m, t, mod, b)).join('');
+  const noTest = mod.list.filter(x => !mod.stops.some(t => t.ids.includes(x.id)));
+  let end;
+  if (idle) end = `<div class="rt-end"><b>The route starts once a reading crosses one of the chart's lines.</b><div class="rt-how">Enter the gauge readings above, or tap the complaint, and the chart's causes and their tests appear here.</div></div>`;
+  else if (mod.found.length) end = `<div class="rt-end found"><b>Found: ${mod.found.map(x => x.L + ' ' + rtE(x.nm)).join('; ')}</b>${mod.found.map(x => x.r ? `<div>Manual remedy: ${rtE(x.r)}</div>` : '').join('')}<div class="rt-how">After the repair, record again in ${heat ? 'heating' : 'cooling'}: the analysis-chart card in the Synopsis should read inside every line.</div>${X.live && D && D.sha ? '<button type="button" class="btn small rt-noprint" data-rt="callnotes">Put it in the call notes</button>' : ''}</div>`;
+  else if (!mod.list.length) end = `<div class="rt-end"><b>No cause on the chart carries every flagged reading${mod.cmp.length ? ' and the complaint' : ''}.</b><div class="rt-how">The chart assumes one fault at a time. Check each flagged reading with gauges, and untick a complaint that may have another cause.</div></div>`;
+  else if (!mod.left.length) end = `<div class="rt-end"><b>Every suspect is ruled out.</b><div class="rt-how">The chart assumes one fault at a time: check the flagged readings with gauges and record again.</div></div>`;
+  else end = `<div class="rt-end"><b>${mod.next ? 'Still standing' : 'Still standing after every stop'}: ${mod.left.map(x => x.L).join(', ')}</b>${mod.next ? '' : `<div class="rt-how">${mod.left.map(x => `${x.L} ${rtE(x.nm)}${x.r ? ' — ' + rtE(x.r) : ''}`).join('<br>')}</div><div class="rt-how">The manual gives no further test for these: they need the system opened or the part replaced.</div>`}${noTest.length ? `<div class="rt-how">No test in the manual: ${noTest.map(x => x.L + ' ' + rtE(x.nm)).join('; ')}.</div>` : ''}</div>`;
+  return {mod, html:`
+    <div class="rt-sec"><div class="rt-lbl">What the ${mod.flags.some(f => mod.F.get(f).src === 'gauge') ? 'log and your gauges show' : 'log shows'}: settled medians over ${C.min} min, ${C.oatRange[0]}–${C.oatRange[1]} °F outdoors (the chart holds for ${C.chartRange[0]}–${C.chartRange[1]} °F)</div>${flagHtml}
+      <div class="rt-note">Judged: ${rtE(C.seen.join(', '))}.${C.notes.length ? ' Note: ' + rtE(C.notes.join('; ')) + '.' : ''}</div></div>
+    ${cmpKeys.length ? `<div class="rt-sec"><div class="rt-lbl">The complaint: tap what the customer reports (the chart's own columns)</div>${cmpKeys.map(k => `<button type="button" class="rt-cmp${mod.cmp.includes(k) ? ' on' : ''}" data-cmp="${k}">${rtE(RT_CMP[k](m))}</button>`).join('')}${rtCallHint()}</div>` : ''}
+    <div class="rt-sec"><div class="rt-lbl">Suspects</div><div class="rt-head2">${rtE(head)}</div>${idle ? '' : `<div class="rt-sus">${sus}</div>`}</div>
+    <div class="rt-sec"><div class="rt-lbl">Route · ${RT_TIER.map(t => t.s + ' ' + t.t).join('  ')}</div><ol class="rt-map">${start}${stops}</ol>${end}</div>`};
+}
+function rtCallHint(){ try { if (!RT_LINK && CALL && CALL.cats && CALL.cats.length) return `<div class="rt-note">The call notes say: ${rtE(CALL.cats.join(', '))}.</div>`; } catch(e){} return ''; }
+function rtFlowHtml(X, src, b){
+  const f = src.f, c = src.c, m = b.mode || c.mode || 'cool', R = RT_DOC[X.plat] || {}, mod = rtFlowModel(f, m, b), pg = `${R.doc || X.doc} p.${f.p}`;
+  const pathIdx = new Map(mod.path.map((p, k) => [p.id, p]));
+  let nn = 0; const nodes = f.nodes.map(n => { const p = pathIdx.get(n.id), cur = mod.cur === n.id, skip = p && p.skip, off = !mod.on.has(n.id); nn++;
+    const q = rtQ(n.q, m), when = n.when ? (n.when === 'heat' ? 'heating only' : 'cooling only') : '';
+    const ans = p && !skip ? p.k : null;
+    return `<li class="rt-stop flow${cur ? ' next' : ''}${ans != null ? ' done' : ''}${skip ? ' skip' : ''}${off && !cur ? ' off' : ''}"><span class="rt-dot">${n.label || nn}</span><div class="rt-body">
+      <div class="rt-st"><b>${rtE(q)}</b>${when ? `<span class="rt-tag">${when}</span>` : ''}${cur ? '<span class="rt-nexttag rt-noprint">next</span>' : ''}</div>
+      ${skip ? `<div class="rt-how">Not in ${m === 'heat' ? 'heating' : 'cooling'}: the chart goes on down its NO line.</div>` : rtFlowWidget(X, rtW(n.w, m), c, f, b, n.id)}
+      <div class="rt-outs">${n.opts.map((o, k) => `<button type="button" class="${ans === k ? 'on' : ''}" data-ans="${n.id}|${k}">${rtE(o.a)} → ${rtE(o.act || ('step ' + (f.idx[o.go].label || (f.nodes.indexOf(f.idx[o.go]) + 1))))}</button>`).join('')}</div></div></li>`; }).join('');
+  const end = mod.end ? `<div class="rt-end found"><b>The flowchart ends at: ${rtE(mod.end.act)}</b><div class="rt-how">${rtE(pg)}. ${/keep running/i.test(mod.end.act) ? 'Record again to confirm the code does not come back.' : 'After the repair, record again: the code should not come back.'}</div>${X.live && D && D.sha ? '<button type="button" class="btn small rt-noprint" data-rt="callnotes">Put it in the call notes</button>' : ''}</div>`
+    : `<div class="rt-end"><b>Answer step ${(f.idx[mod.cur] && (f.idx[mod.cur].label || f.nodes.indexOf(f.idx[mod.cur]) + 1)) || ''} to go on.</b></div>`;
+  const facts = `<span class="rt-chip code">${rtE(c.disp)} · ${rtE(c.t)}</span><span class="rt-chip none">${c.min} min of the recording, first at ${rtE(c.first)}${c.mode ? ', in ' + (c.mode === 'heat' ? 'heating' : 'cooling') : ''}</span>`;
+  return {mod, html:`
+    <div class="rt-sec"><div class="rt-lbl">What the log shows</div>${facts}<div class="rt-note">${c.minor ? `Code ${rtE(c.disp)} is the minor (thermostat-only) form of this fault; the manual's error table gives it the same causes, so its flowchart applies. ` : ''}Error decision: ${rtE(f.cond)}${f.box ? ' ' + rtE(f.box) : ''}${f.sizes ? ` Applies to ${rtE(f.sizes)}.` : ''} Code table: ${rtE(c.src)}.</div></div>
+    <div class="rt-sec rt-noprint"><div class="rt-lbl">Mode for the flowchart's [When cooling] / [When heating] steps</div>${['cool', 'heat'].map(x => `<button type="button" class="rt-cmp${m === x ? ' on' : ''}" data-mode="${x}">${x === 'heat' ? 'Heating' : 'Cooling'}</button>`).join('')}</div>
+    <div class="rt-sec"><div class="rt-lbl">The manual's flowchart, step by step: ${rtE(f.t)} (${rtE(pg)})</div><ol class="rt-map">${nodes}</ol>${f.note ? `<div class="rt-note">${rtE(f.note)}</div>` : ''}${end}</div>`};
+}
+function rtStats(X, m){
+  try { const calls = Object.values(LIB_CALLS || {}).map(c => c.found).filter(s => s && s.includes(`Route (${X.doc} ${m === 'heat' ? 'heating' : 'cooling'} chart) found:`)); if (!calls.length) return null;
+    const byName = {}; for (const s of calls){ const mm = s.match(/found: ([^\n]*)/); if (!mm) continue; for (const nm of mm[1].split('; ')) byName[nm.replace(/^[A-Z] /, '')] = (byName[nm.replace(/^[A-Z] /, '')] || 0) + 1; } return {n:calls.length, byName}; } catch(e){ return null; }
+}
+function buildRoute(){
+  const host = $('#routehost'); if (!host) return;
+  const X = rtCtx(); if (!X){ host.innerHTML = '<p class="note" style="padding:14px">Open a recording to build a route.</p>'; return; }
+  const st = rtLoad(), srcs = rtSources(X); let src = srcs.find(s => s.id === st.src) || srcs[0];
+  const keep = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.rk ? {k:document.activeElement.dataset.rk, s:document.activeElement.selectionStart} : null;
+  const linkBar = RT_LINK ? `<div class="rt-linkbar rt-noprint">Opened from a shared route link (recorded ${rtE(X.rec)}). Changes are kept in this link. <button type="button" class="btn small" data-rt="closelink">Close the link</button></div>` : '';
+  if (!src){
+    const why = X.multi ? 'Multi-split manuals have no analysis chart, and their error-code flowcharts are not in the route builder yet. The Synopsis error cards list each code\'s checks from its manual.'
+      : !X.doc ? 'No service manual is on file for this model, so there is nothing to route from.'
+      : (X.plat === 'fit32' || X.plat === 'dh9') ? `${X.doc} has no analysis chart, and no error code with a flowchart was logged in this recording. With Settings → Field rules on, the R-410A FIT chart can be used, labelled as a field rule.`
+      : Object.keys(X.chartOut).length ? `The analysis chart holds only inside its outdoor range (${Object.entries(X.chartOut).map(([mm, o]) => `${mm === 'heat' ? 'heating' : 'cooling'} ${o.range[0]}–${o.range[1]} °F`).join(', ')}); this recording's settled running was outside it.`
+      : 'This recording has no settled running inside the chart\'s range and no error code with a flowchart.';
+    host.innerHTML = linkBar + `<div class="rt-sheet"><div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''}</div></div></div><p class="rt-head2">${rtE(why)}</p></div>`; return; }
+  st.src = src.id; const b = rtBy(st, src.id);
+  const body = src.kind === 'chart' ? rtChartHtml(X, src.m, b) : rtFlowHtml(X, src, b);
+  const mode = src.kind === 'chart' ? src.m : (b.mode || src.c.mode || 'cool'), R = RT_DOC[X.plat] || {};
+  const docLine = src.kind === 'chart' ? (X.chart[src.m].field ? `SiUS612209EA ${RT_DOC.fit410.chart[src.m]} (R-410A FIT chart, field rule)` : `${R.chartDoc ? R.chartDoc + ' ' : X.doc + ' '}${(R.chart || {})[src.m] || ''} analysis chart`) : `${X.doc} p.${src.f.p} flowchart`;
+  host.innerHTML = linkBar + `<div class="rt-tools rt-noprint">${srcs.length > 1 ? `<div class="rt-srcs">${srcs.map(s => `<button type="button" class="rt-src-b${s === src ? ' on' : ''}" data-src="${rtE(s.id)}">${rtE(s.label)}</button>`).join('')}</div>` : ''}
+      <div class="rt-btns"><button type="button" class="btn small" data-rt="print">Print / PDF</button><button type="button" class="btn small" data-rt="share">Share link</button><button type="button" class="btn small" data-rt="mail">Email</button><button type="button" class="btn small" data-rt="reset">Start over</button></div></div>
+    <div class="rt-sheet">
+      <div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''} · ${X.ref === 'R32' ? 'R-32' : 'R-410A'} · ${mode === 'heat' ? 'heating' : 'cooling'} · recorded ${rtE(X.rec)}</div></div><div class="rt-docr">${rtE(docLine)}${src.kind === 'chart' && X.plat === 'dx9vc' ? '<br>tests: RSD6115001r14' : ''}</div></div>
+      ${src.kind === 'chart' && X.chart[src.m].field ? '<div class="rt-fieldbar">Field rule: this unit\'s manual has no analysis chart. The R-410A FIT chart and its lines are used as a guide only; its pressures are R-410A numbers.</div>' : ''}
+      ${body.html}
+      <div class="rt-foot">${src.kind === 'chart' ? 'Every line on this sheet is from the service manual named beside it; a borrowed method carries its source. The order of stops is the app\'s (easiest first, then the stop that covers the most suspects): the manual gives none for chart causes.' : 'The steps and their wording are the manual\'s own flowchart, in its order.'} D-Checker Cycle Viewer ${APP_VERSION}.
+        <span class="rt-sign">Tech ____________________ Date __________ Readings taken with gauges ☐</span></div>
+    </div>`;
+  rtSave(st);
+  if (keep){ const el = host.querySelector(`[data-rk="${CSS.escape(keep.k)}"]`); if (el){ el.focus(); try { el.setSelectionRange(keep.s, keep.s); } catch(e){} } }
+  RT_LAST = {X, src, body, b};
+}
+let RT_LAST = null;
+// ---- actions
+function rtOnClick(e){
+  const el = e.target.closest('button'); if (!el || !$('#routehost').contains(el)) return; const st = rtLoad(), X = rtCtx();
+  if (el.dataset.src){ st.src = el.dataset.src; rtSave(st); buildRoute(); return; }
+  const b = rtBy(st, st.src || (rtSources(X)[0] || {}).id || 'x');
+  if (el.dataset.cmp){ const k = el.dataset.cmp; b.cmp = b.cmp.includes(k) ? b.cmp.filter(x => x !== k) : [...b.cmp, k]; rtSave(st); buildRoute(); return; }
+  if (el.dataset.out){ const [id, k] = el.dataset.out.split('|'); if (b.res[id] === k) delete b.res[id]; else b.res[id] = k; rtSave(st); buildRoute(); logEvent('route_result', {src:st.src, stop:id, out:k}); return; }
+  if (el.dataset.ans){ const [id, k] = el.dataset.ans.split('|'), src = rtSources(X).find(s => s.id === st.src); if (!src || src.kind !== 'code') return;
+    const m = b.mode || src.c.mode || 'cool', before = rtFlowModel(src.f, m, b), pos = before.path.findIndex(p => p.id === id);
+    if (pos >= 0) for (const p of before.path.slice(pos + 1)) delete b.ans[p.id];
+    if (b.ans[id] === +k && pos >= 0) delete b.ans[id]; else b.ans[id] = +k; rtSave(st); buildRoute(); return; }
+  if (el.dataset.mode){ b.mode = el.dataset.mode; rtSave(st); buildRoute(); return; }
+  const act = el.dataset.rt;
+  if (act === 'print') rtPrint();
+  else if (act === 'share') rtShare();
+  else if (act === 'mail') rtMail();
+  else if (act === 'reset'){ if (!confirm('Clear the readings and answers on this route?')) return; delete st.by[st.src]; rtSave(st); buildRoute(); }
+  else if (act === 'closelink'){ RT_LINK = null; try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} buildRoute(); }
+  else if (act === 'callnotes') rtCallNotes();
+}
+function rtOnInput(e){
+  const el = e.target; if (!el.dataset || !el.dataset.rk) return; const st = rtLoad(), b = rtBy(st, st.src || 'x'), [id, k] = el.dataset.rk.split('|'), v = parseFloat(el.value.replace(',', '.'));
+  if (id === 'g'){ if (isN(v)) b.g[k] = v; else delete b.g[k]; }
+  else { const r = b.rd[id] || (b.rd[id] = {}); if (isN(v)) r[k] = v; else delete r[k]; }
+  rtSave(st); clearTimeout(rtOnInput.t); rtOnInput.t = setTimeout(buildRoute, 350);
+}
+function rtText(){
+  const L = RT_LAST; if (!L) return ''; const host = $('#routehost .rt-sheet'); if (!host) return '';
+  const lines = []; host.querySelectorAll('.rt-title, .rt-sub, .rt-docr, .rt-lbl, .rt-chip, .rt-head2, .rt-su, .rt-stop, .rt-end').forEach(el => {
+    if (el.closest('.rt-stop') && !el.classList.contains('rt-stop')) return; if (el.closest('.rt-su') && !el.classList.contains('rt-su')) return;
+    if (el.classList.contains('rt-stop')){ const n = el.querySelector('.rt-dot').textContent, t = el.querySelector('.rt-st b').textContent, on = el.querySelector('.rt-outs .on'); lines.push(`  ${n}. ${t}${on ? ' → ' + on.textContent : ''}`); return; }
+    if (el.classList.contains('rt-su')){ lines.push('  ' + el.querySelector('.rt-lt').textContent + ' ' + el.querySelector('.rt-nm').textContent + ' (' + el.querySelector('.rt-why').textContent + ')'); return; }
+    lines.push(el.textContent.replace(/\s+/g, ' ').trim()); });
+  return lines.join('\n');
+}
+function rtB64(s){ const u = new TextEncoder().encode(s); let b = ''; for (let i = 0; i < u.length; i += 8192) b += String.fromCharCode(...u.subarray(i, i + 8192)); return btoa(b).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function rtUnB64(s){ const b = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return new TextDecoder().decode(Uint8Array.from(b, c => c.charCodeAt(0))); }
+function rtLinkUrl(){ const X = rtCtx(), st = rtLoad(); return location.origin + location.pathname + '#route=' + rtB64(JSON.stringify({v:1, app:APP_VERSION, X, st})); }
+async function rtShare(){
+  const url = rtLinkUrl(); logEvent('route_share', {});
+  if (navigator.share){ try { await navigator.share({title:'Diagnostic route', text:'Diagnostic route from the D-Checker Cycle Viewer', url}); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(url); toast('Route link copied: paste it into a text or an email'); } catch(e){ window.prompt('Copy this link', url); }
+}
+function rtMail(){ const url = rtLinkUrl(), t = rtText(); location.href = 'mailto:?subject=' + encodeURIComponent('Diagnostic route') + '&body=' + encodeURIComponent(t.slice(0, 1500) + '\n\nOpen it on your phone: ' + url); }
+function rtPrint(){ document.body.classList.add('rt-print'); const done = () => { document.body.classList.remove('rt-print'); window.removeEventListener('afterprint', done); }; window.addEventListener('afterprint', done); setTimeout(() => window.print(), 50); }
+function rtCallNotes(){
+  const L = RT_LAST; if (!L || RT_LINK || !L.X.live || !D || !D.sha || !CALL) return; const X = L.X, src = L.src; let found = '', fix = '';
+  if (src.kind === 'chart'){ const mod = L.body.mod; if (!mod.found.length) return; found = `Route (${X.doc} ${src.m === 'heat' ? 'heating' : 'cooling'} chart) found: ${mod.found.map(x => x.nm).join('; ')}`; fix = mod.found.map(x => x.r).filter(Boolean).join('; '); }
+  else { const mod = L.body.mod; if (!mod.end) return; found = `Route (${X.doc} ${src.c.disp} flowchart) found: ${mod.end.act}`; }
+  CALL.found = CALL.found && !CALL.found.includes(found) ? CALL.found + '\n' + found : (CALL.found || found); if (fix && !(CALL.fix || '').includes(fix)) CALL.fix = CALL.fix ? CALL.fix + '\n' + fix : fix;
+  callChanged(); toast('Added to the call notes (Synopsis tab)'); logEvent('route_callnotes', {src:src.id});
+}
+function rtFromHash(){
+  const h = location.hash || ''; if (!h.startsWith('#route=')) return false;
+  try { const s = rtUnB64(h.slice(7)), j = JSON.parse(s); if (!j || !j.X) return false; let id = 0; for (let i = 0; i < Math.min(s.length, 4000); i++) id = (id * 31 + s.charCodeAt(i)) | 0;
+    j.X.live = false; RT_LINK = {id:(id >>> 0).toString(36), X:j.X, st:j.st || {}}; RT_XC = null; return true; } catch(e){ toast('That route link could not be read'); return false; }
+}
+function rtRefresh(){ const p = $('#panel-route'); if (p && !p.hidden) buildRoute(); }
+
 function drawTicks(){
   if (!D || !evalCache || evalCache.length !== D.n) return;
   const c = $('#ticks'), dpr = window.devicePixelRatio || 1;
@@ -5166,7 +5892,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v102';
+const APP_VERSION = 'v103';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -6273,6 +6999,8 @@ function setMode3D(on){ MODE3D = !!on; saveJSON('dchk3.mode3d', MODE3D); logEven
 
 /* ---------- load ---------- */
 function load(text, name, model){
+  if (RT_LINK){ RT_LINK = null; try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} }
+  RT_XC = null;
   try { D = buildDataset(text, name, model || null); D._text = text; D.model = model || null; analyze(); } catch(err){ toast('Could not read that CSV: ' + err.message); return; }
   { const dd = D; sha256(new TextEncoder().encode(text)).then(h => { if (D === dd){ D.sha = h; callCardLoad(); } }).catch(() => {}); }
   { const v = loadJSON('dchk.zvis.' + name, null); ZVIS = Array.isArray(v) && v.length ? new Set(v.filter(k => D.zones.includes(k))) : null; if (ZVIS && !ZVIS.size) ZVIS = null; }
@@ -6295,6 +7023,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
   const ic = {cycle:'<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>',
     trends:'<path d="M3 17l5-6 4 3 6-8 3 3"/><path d="M3 21h18"/>',
     synopsis:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+    route:'<circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="5" r="2.2"/><path d="M8.2 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.8"/>',
     data:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M10 4v16"/>',
     mine:'<path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4M8 13h8M8 17h5"/>',
     fleet:'<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="7" cy="6" r="1"/><circle cx="7" cy="12" r="1"/><circle cx="7" cy="18" r="1"/>'};
@@ -6397,6 +7126,7 @@ $('#tabs').addEventListener('click', e => {
   if (b.dataset.tab === 'mine') mineRender();
   rememberPlace();
   if (b.dataset.tab === 'synopsis' && D) buildSynopsis();
+  if (b.dataset.tab === 'route') buildRoute();
   syncAnim();
 });
 $('#scrub').addEventListener('input', e => setCur(+e.target.value));
@@ -6448,6 +7178,7 @@ document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListe
   if (k === 'volts' && D){ computeCapacity(); buildCapCard(); buildDataTable(); buildSynopsis(); drawAllStrips(); }
   if (k === 'rate' && D){ buildCapCard(); buildSynopsis(); }
   if (k === 'share'){ shareStatus(); if (S.share) flushQueue(); }
+  if (k === 'provisional') rtRefresh();
   if (k === 'land') setLayout(); else if (D && !/^sb|^sync/.test(k)) renderCycle(cur);
 }));
 // boot
@@ -6464,6 +7195,10 @@ const sample = $('#sample-csv').textContent;
   if (last && last.sha){ try { x = (await mineAll()).find(r => r.sha === last.sha); } catch(e){} }
   if (x){ load(x.text, x.fileName || 'recording.csv', x.model); if (D){ D.sha = x.sha; callCardLoad(); $('#savecsv').hidden = true; if (isN(last.cur)) setCur(last.cur); if (last.tab && last.tab !== 'cycle' && last.tab !== 'fleet') showTab(last.tab); } }
   else if (sample && sample.length > 100) load(sample, '(REC only)_20251126-090117.csv');
+  if (rtFromHash()) showTab('route');
 })();
+$('#routehost').addEventListener('click', rtOnClick);
+$('#routehost').addEventListener('input', rtOnInput);
+window.addEventListener('hashchange', () => { if (rtFromHash()) showTab('route'); });
 })();
 </script>
