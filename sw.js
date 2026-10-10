@@ -1,5 +1,5 @@
 // D-Checker Cycle Viewer service worker: cache the app shell so it opens offline
-const CACHE = 'dchecker-v99';
+const CACHE = 'dchecker-v100';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/dchk-v2-192.png', './icons/dchk-v2-512.png', './icons/dchk-v2-maskable-512.png', './icons/dchk-v2-apple.png', './icons/dchk-v2-64.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

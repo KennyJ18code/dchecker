@@ -72,7 +72,7 @@ def decode_value(lbl, gl):
         elif k == 2: v = v * PSI_PER_KGF
         return f1(v)
     if t == 151: return str(struct.unpack_from('<H', g, o)[0])
-    if t == 152 and lbl['kind'] == 3: return str(round(g[o] * 1.8))      # multi ΔD: °C steps → °F
+    if t == 152 and lbl['kind'] == 3: return str(round(g[o] * 1.8))      # multi ΔD: the PC export prints the 0-15 demand signal x 1.8 under (F); it is not a temperature (SiUS121736EA PDF 107)
     if t in (152, 220): return str(g[o])
     if t == 211: return 'OFF' if g[o] == 0 else str(g[o])
     if t == 161:                                          # FIT demand % (÷2); multi half-degree °C setpoint / discharge / fin

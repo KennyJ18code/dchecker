@@ -2,6 +2,77 @@
 
 Diagnostic rules for Daikin residential inverter equipment: FIT split systems (DX6VS, DZ6VS, R-32 DC6VS/DH6VS) and mini splits (Aurora cold-climate, standard wall mounts, ducted and multi-zone). Each rule turns sensor readings from the Daikin service app and technician probes into a diagnosis before the question gets asked.
 
+## Rule sources in the app (v100)
+
+This file is the original rules spec. Since v100 (2026-10-09) the app follows the owner's rule: **every rule matches the platform's service manual, always**. Where a manual gives a line, the app uses that line and the card names the manual and page; where this file's numbers differ from the manual, the manual wins. A rule with no manual page behind it is a **field rule**: it is kept, but the app shows it only with Settings → Field rules and provisional patterns on, labels the card "Field rule, not from a service manual", and never shows it above a warning. **Law** means refrigerant physics (for example water freezing at 32 °F).
+
+Manuals: SiUS612209EA (FIT R-410A), SiUS612412E (FIT R-32), DH9VS / DH7VS / DC9VS installation manual, RS6215002r10 (Goodman / Amana *VZC20), DX9VC installation and service reference, SiUS121736EA (MXS), SiUS121632EA (MXL), SiUS122410EC (MXM / MXT), IOD-4054B (DFVE air handler). Page numbers are PDF pages.
+
+### Rules from this file
+
+| Rule | What the app does | Source |
+|---|---|---|
+| L1 Lock the speed | Gates the refrigerant rules on a locked speed (within ±5 % for 10 min); data-quality cards for locked time and recording gaps | field numbers (gate only) |
+| L2 Prove the sensors | Thermistors vs outdoor air after 30 min off (3 °F) | field |
+| L2 (X1–X3) | Stuck, implausible and noisy sensors, the column check | the app's own wide margins on impossible readings; the thermistor error codes come from each manual |
+| L3 Discharge temperature | S2t and S2h below | manual |
+| L4 Pinned at max speed | L4 (needs the rated maximum in `RPS_MAX`), L4h hunting | field |
+| L5 Protection control | L5: a limiter or drop flag holding the speed for 10 min | field number; the flags are the board's own. The multi limiter cards use each family's zones (manual) |
+| L6 Coil must beat the dew point | Calculated capacity and COP card (information) | law (calculation) |
+| S1 Liquid returning | Discharge SH under the analysis chart's 20 °F line inside the chart's outdoor range (SiUS612209EA p.12–13; RS6215002r10 p.95–96; DX9VC p.21), and on the R-410A FIT in cooling suction SH under 4 °F (SiUS612209EA p.12). R-32 FIT (no chart): the E21 condition, discharge SH under 9 °F with the indoor EEV at its 50-pulse minimum (SiUS612412E p.50) | manual |
+| S2 Starved compressor, high discharge | S2t: discharge past the board's trip line, 248 °F (E22; SiUS612209EA p.52, SiUS612412E p.51). S2h: discharge above the analysis chart's 200 °F line inside its outdoor range (SiUS612209EA p.12–13; RS6215002r10 p.95–96; DX9VC p.21) | manual |
+| S3 Power quality | Not a rule; the voltage and current error codes come from the manuals | — |
+| S4 Indoor coil freezing | Indoor coil saturation under 32 °F for 10 min in cooling | law (32 °F); the 10 min is a field number |
+| S5 Suction transducer vs gauge | Not in the app (needs a gauge) | — |
+| S6 Pinned at max speed | Folded into L4 | field |
+| S7 High head | Condensing more than 25 °F over outdoor air at speed | field; the manual's test is the analysis-chart card |
+| S8 Airflow | Present airflow under 90 % of requested | field; the board's own fault is b9 / Eb9. Present CFM is the blower's estimate (IOD-4054B p.15) |
+| S9 Heating outdoor coil split | S9w wider than 28 °F; S9n narrower than 5 °F at speed | field |
+| S10 Defrost behaviour | More than 2 defrosts an hour | field. The manuals' defrost maximum (120 min on the FIT, SiUS612209EA p.44; 30 min factory setting on the *VZC20, RS6215002r10 p.64) is used by pattern A9 |
+| S11 Shoulder-season humidity | 65–80 °F outdoors near the lowest speed | field |
+| S12 Continuous fan | Blower running with the compressor off, after the 120 s Cool Airflow OFF Delay (SiUS612209EA p.43) | field |
+| S13 Return leak, S14 Settings | Not in the app | — |
+| S15 Fault history | A code repeated 3+ times | field |
+| M1 Low charge | A port valve at the most the board gives an operating room (450 pulses on the MXS / MXL, 480 on the MXM / MXT) with discharge over its target, after the starting control (SiUS121736EA PDF 119–121; SiUS121632EA PDF 105–107; SiUS122410EC PDF 162–163) | manual |
+| M2 Cross-piped | Not a rule in the app | — |
+| M3 Flooding | M3o / M3s: discharge SH under 20 °F with the port valves mostly closed / one mostly open | field |
+| M4 Drive stress | Input-current limiter holding the speed (SiUS121736EA PDF 110), or the fin above the temperature its L4 trip clears at (SiUS121736EA PDF 219; SiUS121632EA PDF 199; SiUS122410EC PDF 318) | manual |
+| M5 Freeze-up | Freeze-up limiter holding the speed, or the coldest operating head coil under the family's drop line (SiUS121736EA PDF 111; SiUS121632EA PDF 99; SiUS122410EC PDF 149) | manual |
+| M6 Peak-cut | Hottest head coil at or above the family's "up" line with the peak-cut limiter holding (SiUS121736EA PDF 113; SiUS121632EA PDF 99; SiUS122410EC PDF 150) | manual |
+| M7 Cold-weather capacity | M7e, M7c | field |
+| M8 Base pan ice | Outdoor fan under 70 % of its target below 32 °F | field |
+| M9 Cooling in cold weather | Head coil under the freeze-up "up" line with outdoor air under 60 °F | field (the line is the manual's, the 60 °F gate is not) |
+| M10 Thermistor codes | Error reference per family; the multi discharge-thermistor disconnection test (discharge 10.8 °F below the coil after the starting control; SiUS121736EA PDF 120, SiUS122410EC PDF 163) | manual |
+| M11 Communication errors | Error reference per family | manual |
+| M12 Short cycles | A head that satisfies in under 10 min on average | field |
+| M13 Fan on high, humid | Fan at maximum with a coil at or above 52 °F | field |
+| M14 Fan after the compressor stops | Port closed, fan on, coil at room temperature. The factory fan behaviour is cited (SiUS121736EA PDF 249; SiUS122410EC PDF 364) | field |
+| M15 Head reads the ceiling | Keeps calling (ΔD signal 5 or more) with return air below setpoint | field |
+| M16–M18 | Advice; not rules in the app | — |
+
+### Rules from the manuals that this file did not have
+
+| Rule | Line | Source |
+|---|---|---|
+| Analysis chart | Every reading outside the chart's lines inside its outdoor range (cooling 67–115 °F, heating 17–62 °F), and the causes whose X marks cover all of them, with the chart's remedy | SiUS612209EA p.12–13; RS6215002r10 p.95–96; DX9VC p.21 |
+| E13 high pressure | 605 psig | SiUS612209EA p.49; SiUS612412E p.48; RS6215002r10 p.15 (HPS) |
+| E15 low pressure | 17 psig for 5 min | SiUS612209EA p.50; SiUS612412E p.49 |
+| E21 low discharge SH | under 9 °F with the indoor EEV at its 50-pulse minimum (R-32 FIT) | SiUS612412E p.50 |
+| E22 discharge | 248 °F | SiUS612209EA p.52; SiUS612412E p.51 |
+| E32 inverter fin | 203 °F (R-410A) / 214 °F (R-32) on 1.5–3 ton, 230 °F on 3.5–5 ton | SiUS612209EA p.53–54; SiUS612412E p.52–53 |
+| E41 refrigerant shortage, heating | discharge SH over 117 °F (R-410A) / 135 °F (R-32); liquid pipe more than 3.6 °F below outdoor air on 3.5–5 ton | SiUS612209EA p.55; SiUS612412E p.54 |
+| Charge figure (information only) | 11 ±1 °F (DH9VS, CVT), 8 ±1 °F (*VZC20 and DX9VC charge mode); applies only in the manual's own charge test | DH9VS installation manual p.26; RS6215002r10 p.23–24; DX9VC p.10–12 |
+| Multi limiter zones | Freeze-up, peak-cut, discharge drop and stop, input current, and the fin's L4 line: each family's own values | SiUS121736EA PDF 106–113, 219; SiUS121632EA PDF 97–99, 199; SiUS122410EC PDF 147–150, 318 |
+| Error codes | One table per family, from its manual | each manual's error-code pages |
+
+### Signatures, patterns and the colour bands
+
+- **Signatures** (the per-row flags): low discharge SH at speed uses the manual's line above; "held" uses the board's own drop flags. EV pinned or closed, discharge climbing, LP falling, outdoor vs indoor pressure, outdoor coil, current, thermistor order, short cycles and "SC never reached" are field rules. The outdoor EEV is judged only in heating: in cooling it is bypassed by its check valve (SiUS612209EA p.9; SiUS612412E p.7, p.9; RS6215002r10 p.12–13).
+- **Fault library and EEV-response checks (V1 / V2)**: field rules. V1 follows what the outdoor EEV controls in heating (suction − outdoor coil middle on the R-32 FIT, SiUS612412E p.7); V2 only in cooling (the indoor EEV is fully open in heating, p.7).
+- **Cause → effect patterns** (A–H): shown only when confirmed on a real repair, or with the switch on. Where a manual gives a line the pattern uses it (defrost maximum, the board's discharge drop flag, the R-32 FIT outdoor superheat, the high-pressure line).
+- **Colour bands**: the Rules tab's "From the service manual" list is built from the lines above for the loaded platform; bands a user adds are listed apart as "Your own bands (not from a manual)".
+- **Logged targets**: Target SH is the indoor EEV's cooling target (SiUS612412E p.7). No manual describes a subcooling control, so the logged Target SC is shown for reference only and the rules that compare subcooling with it are field rules.
+
 ## How to use this file
 
 This is a spec for building a rules engine and a technician-facing reference. Each rule has:
@@ -30,7 +101,7 @@ This is a spec for building a rules engine and a technician-facing reference. Ea
 - **Gate every refrigerant rule on `speed_locked` (Law L1).** Readings taken while the compressor is ramping are invalid.
 - **Gate every calculation on sensor validity (Law L2).** If a sensor fails the at-rest check, suppress rules that use it and raise `sensor_drift` instead.
 - **Source mapping changes by equipment and mode.** See the derived variables table. On a mini split, `t_evap_sat` is the indoor coil thermistor in cooling but the outdoor coil thermistor in heating.
-- **Thresholds are field starting points, not Daikin published limits.** Store them as configurable parameters per model and refrigerant, not constants. R-32 runs hotter discharge temperatures than R-410A; its discharge limit must come from the model's service manual.
+- **Thresholds are field starting points, not Daikin published limits.** (In the app, superseded by the service manuals where they give a line: see Rule sources above.) Store them as configurable parameters per model and refrigerant, not constants. R-32 runs hotter discharge temperatures than R-410A; its discharge limit must come from the model's service manual.
 - **Fault codes** (U0, F3, A5, E7, J3, etc.) match most Daikin mini split families. Verify per model before hard-coding.
 
 ### To verify before production

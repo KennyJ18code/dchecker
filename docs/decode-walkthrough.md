@@ -117,7 +117,7 @@ PC export (outdoor 1–95, head k at 97 + 28·k).
 | type | bytes | rule | example |
 |---|---|---|---|
 | 151 | uint16 | as is | port EV pulses, fan rpm |
-| 152 | uint8 | as is; kind 3 (ΔD) = °C steps → `round(v × 1.8)` °F | `04` → **7** |
+| 152 | uint8 | as is; kind 3 (ΔD): the 0–15 demand signal (SiUS121736EA p.107); the PC export multiplies it by 1.8 (`round(v × 1.8)`) and heads it (F) — it is not a temperature | `04` → **7** (signal 4, at target) |
 | 155 | uint16 | ÷10 | `df07` → **201.5** V |
 | 161 | uint8 | ÷2 = °C → °F (kind 1) | `2c` → **71.6** (setpoint) |
 | 162 | uint8 | 0 = `---`; (v − 64) ÷ 2 = °C → °F | `54` → **50** (coil) |
@@ -140,7 +140,7 @@ decode (fan tap). The app exports every visible column; the extra columns are em
 maps channels by column number so they do no harm. Unconnected ports still log EV = 0, so the zone count comes from
 gas/liquid thermistors, a non-zero EV, or an indoor address, not from the EV column alone.
 
-## 8. DH9VS (R-32, vapour injection) — a different column layout (verified 2026-10-02, app v53)
+## 8. DH9VS (R-32, liquid injection) — a different column layout (verified 2026-10-02, app v53)
 
 `header.txt` names `INV_Unitary_DH9VS.txt`. Recording `samples/dh9vs-20261002.tgz` (customer file blanked) against the PC export of
 the same recording, `samples/dh9vs-20261002.csv`.
@@ -152,8 +152,11 @@ the same recording, `samples/dh9vs-20261002.csv`.
   Verified: on the DZ6VS header every pattern picks the same column the number did.
 - **Indoor operation mode** (type 313, upper nibble): 0 prints `Fan Only`, 1 `Heating`, 2 `Cooling`.
 - **Unit suffix on temperature differences.** `Out Target SC`, `IDU Target SH`, `IDU Target SC` (kind 3) get `(F)` in the header only when the
-  column holds a value somewhere in the recording. The same rule reproduces the DZ6VS and multi headers.
-- **Outdoor EV** is 480 pulses full open here (327 on the DZ6VS); the app takes the scale from the log.
+  column holds a value somewhere in the recording. The same rule reproduces the DZ6VS and multi headers; on a multi it also puts
+  `(F)` on Delta-D, which is a 0–15 signal, not a temperature (SiUS121736EA p.107).
+- **Outdoor EV.** The DH9VS held its outdoor EV at 480 in cooling (no count in its manual), so the app takes the scale from the log.
+  The R-32 FIT manual also says 480 (SiUS612412E p.7), although its logs hold 327; for those the app shows pulses only and flags
+  the difference.
 - **Standby speed.** With the compressor commanded OFF and zero inverter current the board still reports `Comp (rps)` 10. A run now needs
   the command to be ON as well.
 - **Time stamps.** The phone stamps each record at :15 / :45; the PC export prints the same records at :00 / :30, and this newer PC app
@@ -162,25 +165,30 @@ the same recording, `samples/dh9vs-20261002.csv`.
 - **Gaps.** The raw log itself has only 50 of 83 expected samples: eight stretches of 60–210 s with nothing written. The synopsis now
   reports that ("Recording has gaps").
 
-## 9. Error codes (app v57)
+## 9. Error codes (app v57; decode revised in v100)
 
 The log stores an error as one byte: two hex digits in a FIT export (`38:OU Error code`, `Indoor err code` / `Error code`), a decimal
 in a multi export (`3:Error code`, per-head `Error code`). `37:OU Error type` is the board's error *type* (`Normal` / `Error n`), not the
-code. The app reads the code letter from the high nibble (0 A, 1 C, 2 E, 3 F, 4 H, 5 J, 6 L, 7 P, 8 U) and the second character from the
-low nibble (0–9, then A C E F H J): 0x84 = U4, 0x33 = F3, 0x80 = U0, 0x05 = A5. This follows Daikin's bus convention and **has not yet
-been confirmed against a recording of a real fault** (every recording so far is clean), so the raw byte is always shown with the code.
-The code table (`ERRCODES`) is the general Daikin inverter list with first checks; the model's service manual has the last word.
+code; no manual defines it, so the app shows it raw. On FIT, DH9VS, Goodman and air-handler logs the byte is the code itself, in hex:
+0x15 = code 15 (board LED E15), 0xB0 = Eb0, indoor 0x73 = 73 (SiUS612209EA p.45–48). Daikin's PC app prints it the same way: the shop
+recording's indoor byte 0xE7 is `E7` in `sample.csv` (from the recordings). Goodman \*VZC20 uses ComfortBridge codes
+(RS6215002r10 p.97–100). On multi logs nothing published shows how the decimal byte maps to a letter code, so the app's letter
+reading (high nibble 0 A, 1 C, 2 E, 3 F, 4 H, 5 J, 6 L, 7 P, 8 U; low nibble 0–9, then A C E F H J) is marked **unconfirmed** and the
+raw byte is always shown with it. Each platform has its own code table (`ERR_TABLES`) from its own service manual; a code missing from that manual is
+shown as its byte, never with a meaning borrowed from another family. Neither reading has yet been checked against a recording where
+the board's own display was noted beside the logged code. The evidence is in the error-code audit (2026-10-09).
 
 ## 10. Capacity and COP (app v62)
 
 Mass flow is found from the compressor's electrical input: `ṁ = V·I·PF·(1−loss) / (h_discharge − h_suction)` with V from Settings (240 V default; a FIT log has no
-voltage column), I = `66:INV prim cur(A)` (the compressor drive alone; `71:Sys. Op. Current` = INV + fan on every row checked), PF 0.97, loss 7 %.
+voltage column), I = `66:INV prim cur(A)` (the compressor drive alone; `71:Sys. Op. Current` = INV + fan on every row checked), PF 0.97 and loss 7 % (both assumed; no manual gives them).
 Enthalpies come from CoolProp 8 tables (IIR reference; R-410A dew point) embedded as `PROP`: sat. liquid / vapour by temperature and a superheat ×
-saturation grid for vapour enthalpy and density. Saturation temperatures are taken from the transducers via the PT tables, not the board's Tc / Te.
+saturation grid for vapour enthalpy and density. Saturation temperatures are taken from the logged pressures via the PT tables, not the board's Tc / Te;
+on the FIT in cooling the logged high pressure is itself the board's figure from Tm (SiUS612209EA p.49).
 
 Sensitivity: the flow error from a 10 °F discharge-thermistor error is `(h(Tc, DSH+10) − h2) / (h2 − h1)`; ≤ 0.12 good, ≤ 0.20 fair, else poor. On the
 DZ6VS shop log (heating, 67 °F outdoor, lift 40 → 97 °F) every row is fair; on the DH9VS log (cooling, 68 °F outdoor, 32 rps) every row is poor, which is
-honest: both logs were made in mild weather. The apparent isentropic efficiency on the DZ6 rows is 0.72, which is where a swing compressor sits, so the
+honest: both logs were made in mild weather. The apparent isentropic efficiency on the DZ6 rows is 0.72, which is where a rotary compressor typically sits (engineering figure, not from the manual), so the
 discharge thermistor is not obviously lying.
 
 Good + steady rows (≥ 5 min into the run) give an implied displacement `ṁ / (rps · ρ_suction · η_v)` with `η_v = 0.97 − 0.035·(PR − 2)` clipped to
@@ -189,7 +197,8 @@ capped at 400 samples) so the next log of that model starts calibrated. Daikin d
 list model numbers (2YC63BXD etc.), hence the learning instead of a table.
 
 Capacity: cooling `ṁ · (h_vap(Te, igas − Te) − h_liq(liquid pipe))` (indoor gas thermistor is the coil outlet; suction temp if the log lacks it); heating
-`ṁ · (h2 − h_liq(indoor liquid))`. Line-set heat gain / loss is ignored, and on a DH9 in heating the injection flow is part of ṁ, which is right for the condenser.
+`ṁ · (h2 − h_liq(indoor liquid))`. Line-set heat gain / loss is ignored, and on a DH9 in heating the app assumes the injection flow is part of ṁ, which is right for the condenser (the install manual names the liquid
+injection circuit, p.32, p.34, but does not say when it runs).
 COP = capacity ÷ (V · system current · PF). AHRI nameplate figures in `RATED` are from SS-DZ6VS (09/24) and SS-DH9VS-R32 (10/25).
 
 Air-side check (Data tab): ASHRAE psychrometrics at 14.696 psia, `h = 0.240·T + W·(1061 + 0.444·T)`, W from wet bulb via the saturation-pressure
