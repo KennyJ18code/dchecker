@@ -99,7 +99,7 @@ The Route tab turns what the recording shows into a short list of suspects and a
   - A pass rules the suspect out; a fail confirms it.
   - A test that can only find a fault marks the suspect "checked", not cleared. Examples: a kink you can see, or a temperature difference the flowchart moves on from.
   - Suspects the manual gives no test for are listed as such.
-- **Order of stops.** By effort first (● look, ■ meter with the power off, ◆ gauges or thermometer, ◆◆ opens the system), then by how many suspects a stop covers. The manual gives no order for chart causes, and the sheet says so.
+- **Order of stops: easiest first.** The groups run ● look, ■ meter with the power off, ◆ gauges or thermometer, ◆◆ opens the system. Inside a group, quick checks come before long ones: outside looks before the stop-valve caps, the line set walk and the control box; quick running readings before the bulb and valve tests, charge mode, compressor efficiency, a 15-minute shutdown and a leak search. How many suspects a stop covers only breaks ties. The manual gives no order for chart causes, and the sheet says so. A code route keeps the manual's own flowchart order.
 - **Code route** (R-410A FIT, R-32 FIT, DH9VS family). For an error code in the recording, the sheet follows the manual's own flowchart step by step, in its order and wording: E13, E15, E21, E22, E32, E41, E44, 57, E58, b9 / 9b, 70, 73, 74 and 75.
   - A minor code takes its critical code's flowchart.
   - Where a step asks about a reading, the sheet shows what the recording held while the code showed.

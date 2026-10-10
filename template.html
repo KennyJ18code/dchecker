@@ -4793,6 +4793,11 @@ function buildSynopsis(){
    A borrowed test (a flowchart step used without its code, or another Daikin / Goodman manual's method) is always tagged with its source.
    On the R-32 FIT and DH9VS the manuals have no analysis chart: with Settings → Field rules on, the R-410A FIT chart can be used, labelled. */
 const RT_TIER = [{s:'●', t:'look'}, {s:'■', t:'meter, power off'}, {s:'◆', t:'gauges or thermometer'}, {s:'◆◆', t:'opens the system'}];
+// effort inside a group, easiest first: outside looks, stop-valve caps, the line set walk, the control box; meter checks; quick running
+// readings, then the bulb and valve tests, then charge mode, compressor efficiency (needs the charge right), a 15-minute shutdown, a leak search
+const RT_EFF = {odcoil:0, odair:0, odfan:0, idcoil:0, idair:0, dualfuel:0, oat:0, stopv:1, linelen:2, kinks:2, loop:5,
+  rat:20, psensor:20, airflow:21, drier:21, eevdt_i:21, eevdt_o:21, sv:21, txv:22, rv:22, charge:25, comp:26, nc:27, leak:28};
+const rtEff = t => isN(RT_EFF[t.id]) ? RT_EFF[t.id] : t.tier * 10 + 1;
 const RT_CMP = {weak:m => m === 'heat' ? 'Weak heating' : 'Weak cooling', repeat:() => 'Repeated stop/start', noise:() => 'Noise', stop:() => 'Stop operation',
   noswitch:m => m === 'heat' ? 'No switch heating' : 'No switch cooling', defrost:() => 'Incomplete defrost operation', sweat:() => 'Sweating liquid line',
   dmdHi:() => 'Requested % demand > actual', dmdLo:() => 'Requested % demand < actual'};
@@ -5183,7 +5188,7 @@ function rtChartModel(X, m, b){
   list.forEach((x, k) => x.L = (k >= 26 ? String.fromCharCode(64 + Math.floor(k / 26)) : '') + String.fromCharCode(65 + k % 26));
   // stops: the manual's tests that cover a suspect, easiest first, then the one covering the most suspects
   const ids = new Set(list.map(x => x.id)), cat = rtTests(X, m);
-  const stops = cat.map((t, k) => ({t, k, cov:t.ids.filter(i => ids.has(i)).length})).filter(x => x.cov).sort((a, b2) => a.t.tier - b2.t.tier || b2.cov - a.cov || a.k - b2.k).map(x => x.t);
+  const stops = cat.map((t, k) => ({t, k, cov:t.ids.filter(i => ids.has(i)).length})).filter(x => x.cov).sort((a, b2) => rtEff(a.t) - rtEff(b2.t) || b2.cov - a.cov || a.k - b2.k).map(x => x.t);
   const res = id => { const r = b.res[id]; if (r) return r; const t = stops.find(s => s.id === id); return t && t.auto && !(id in b.res) ? t.auto : null; };
   stops.forEach((t, k) => t.n = k + 1);
   const st = {}; for (const x of list){ let s = {k:'open'};
@@ -5330,7 +5335,7 @@ function buildRoute(){
       <div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''} · ${X.ref === 'R32' ? 'R-32' : 'R-410A'} · ${mode === 'heat' ? 'heating' : 'cooling'} · recorded ${rtE(X.rec)}</div></div><div class="rt-docr">${rtE(docLine)}${src.kind === 'chart' && X.plat === 'dx9vc' ? '<br>tests: RSD6115001r14' : ''}</div></div>
       ${src.kind === 'chart' && X.chart[src.m].field ? '<div class="rt-fieldbar">Field rule: this unit\'s manual has no analysis chart. The R-410A FIT chart and its lines are used as a guide only; its pressures are R-410A numbers.</div>' : ''}
       ${body.html}
-      <div class="rt-foot">${src.kind === 'chart' ? 'Every line on this sheet is from the service manual named beside it; a borrowed method carries its source. The order of stops is the app\'s (easiest first, then the stop that covers the most suspects): the manual gives none for chart causes.' : 'The steps and their wording are the manual\'s own flowchart, in its order.'} D-Checker Cycle Viewer ${APP_VERSION}.
+      <div class="rt-foot">${src.kind === 'chart' ? 'Every line on this sheet is from the service manual named beside it; a borrowed method carries its source. The order of stops is the app\'s, easiest first: looks, then meter checks with the power off, then quick readings, then the long tests (charge mode, a 15-minute shutdown, a leak search); the manual gives none for chart causes.' : 'The steps and their wording are the manual\'s own flowchart, in its order.'} D-Checker Cycle Viewer ${APP_VERSION}.
         <span class="rt-sign">Tech ____________________ Date __________ Readings taken with gauges ☐</span></div>
     </div>`;
   rtSave(st);
