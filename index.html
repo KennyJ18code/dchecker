@@ -958,6 +958,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <label class="srow"><span class="t"><b>Pinned trend strips</b><small>The bottom bar under the diagram</small></span><input type="checkbox" class="sw" data-s="dock"></label>
       <label class="srow"><span class="t"><b>Synopsis at the end</b><small>Open the full synopsis when playback reaches the last row</small></span><input type="checkbox" class="sw" data-s="synEnd"></label>
       <label class="srow"><span class="t"><b>Field rules and provisional patterns (testing only)</b><small>Rules with no service-manual page behind them, and cause → effect chains not yet confirmed on a real repair. Off for techs: the app then shows the recording's facts, rules from the service manuals and confirmed patterns only.</small></span><input type="checkbox" class="sw" data-s="provisional"></label>
+      <label class="srow"><span class="t"><b>Route evidence</b><small>The Route tab's "What the recording leans toward": the manuals' control loops and sensor positions read against the recording, marking each suspect ▲ toward or ▼ away. The relationships are the manuals'; what counts as a lean is the app's. It never removes a suspect or changes the order of the stops.</small></span><input type="checkbox" class="sw" data-s="routeEv"></label>
     </section>
     <section class="sgroup"><h3>Size and layout</h3>
       <label class="srow"><span class="t"><b>Desktop layout</b><small>Side-by-side drawing on a wide screen</small></span><select data-s="land"><option value="auto">Auto by screen</option><option value="on">Always</option><option value="off">Never</option></select></label>
@@ -1606,7 +1607,7 @@ function renderMulti(i, m, running){
 let VIEW = 'spark';   // readings always show their trail (the last 10 minutes); the 123 / Bars / Deviation modes are kept in setView but have no control
 // layout: portrait (phone) or landscape (desktop) — same local coordinates, units moved as groups
 let LAND = null;   // null = automatic (set from settings)
-const S_DEF = {sbUrl:'https://qowsaogbijuwzunuxoty.supabase.co', sbKey:'sb_publishable_kdmWouVV5XfqQCDdwJpL_Q_A5akIuKV', share:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15, provisional:false};
+const S_DEF = {sbUrl:'https://qowsaogbijuwzunuxoty.supabase.co', sbKey:'sb_publishable_kdmWouVV5XfqQCDdwJpL_Q_A5akIuKV', share:true, land:'auto', kPort:1, kLand:0.44, leaders:true, arrows:true, air:true, flow:true, sv:true, legend:true, chips:true, dock:true, physics:false, faults:false, sigs:true, events:true, cabinet:true, parts:true, narr:true, synEnd:true, anim:'play', rulebook:true, volts:240, rate:0.15, provisional:false, routeEv:true};
 let S = Object.assign({}, S_DEF, loadJSON('dchk.settings', {}));
 // phones start with the legend and hint hidden unless the tech turned them on
 if (!('legend' in loadJSON('dchk.settings', {})) && window.matchMedia && window.matchMedia('(max-width: 600px)').matches) S.legend = false;
@@ -5377,7 +5378,7 @@ function rtMFlows(fam){
 }
 // logged multi codes → flowchart: outdoor unit (the error byte) and the heads (each zone's error byte)
 const RT_MCODEFLOW = {outdoor:{U0:'U0', F3:'F3', F6:'F6', L4:'L4', A5:'A5o'}, head:{A5:'A5h'}};
-// ---- evidence from the recording (field rule, v105). The relationships are the manuals': the control loops (which part holds which
+// ---- evidence from the recording (v105; Settings → Route evidence, on by default). The relationships are the manuals': the control loops (which part holds which
 // reading), the sensor positions, and the E21 / 54 pattern. What counts as an answer, a hold or a disagreement is the app's, measured
 // on Brackett's recordings. Evidence leans a suspect toward or away; it never clears or confirms one (the manual's test does that).
 const RT_EVK = {tAns:-3, pairs:15, moves:8, band:3, hold:80, steady:6, shBad:60, pOk:15, pBad:30, gOk:15, gBad:30, fan:30, fanPct:90, fanLow:100, cfm:0.9, dsh:9, pinHi:470, pinLo:60, share:50, rest:30, restOk:5, restBad:15, liqBad:15, liqOk:8, a5:18};
@@ -5542,7 +5543,7 @@ function rtEvHtml(X, m, fam){
   const it = E.items.filter(x => !x.m || !m || x.m === m); if (!it.length) return '';
   const ord = {toward:0, note:1, away:2}, rows = it.slice().sort((a, b) => ord[a.lean] - ord[b.lean]);
   const mark = l => l === 'toward' ? '▲' : l === 'away' ? '▼' : '•';
-  return `<div class="rt-sec"><div class="rt-lbl">What the recording leans toward · field rule</div>${rows.map(x => `<div class="rt-ev ${x.lean}"><span class="rt-evm">${mark(x.lean)}</span><div><b>${rtE(x.name)}</b>${x.outside ? ' <span class="rt-tag">not on the chart</span>' : ''} ${rtE(x.txt)}<div class="rt-src">${rtE(x.srcF && fam && x.srcF[fam] ? x.srcF[fam] : x.src)}</div></div></div>`).join('')}
+  return `<div class="rt-sec"><div class="rt-lbl">What the recording leans toward · the app's reading</div>${rows.map(x => `<div class="rt-ev ${x.lean}"><span class="rt-evm">${mark(x.lean)}</span><div><b>${rtE(x.name)}</b>${x.outside ? ' <span class="rt-tag">not on the chart</span>' : ''} ${rtE(x.txt)}<div class="rt-src">${rtE(x.srcF && fam && x.srcF[fam] ? x.srcF[fam] : x.src)}</div></div></div>`).join('')}
     <div class="rt-note">▲ leans toward, ▼ leans away. The relationships are the manual's; what counts as a lean is the app's, measured on Brackett's recordings. Evidence only leans: the manual's test still decides, and the route keeps its order.</div></div>`;
 }
 let RT_LINK = null, RT_XC = null;
@@ -5550,7 +5551,7 @@ function rtCtx(){
   if (RT_LINK) return RT_LINK.X;
   if (!D) return null;
   const pl = unitPlat(), multi = D.fam === 'multi', sz = sizeInfo(), mf = multi ? multiFam() : null, mfKey = mf ? mf.cands.join(',') : '';
-  if (RT_XC && RT_XC.D === D && RT_XC.prov === !!S.provisional && RT_XC.size === SIZE && RT_XC.ref === REF.ref && RT_XC.mf === mfKey) return RT_XC.X;
+  if (RT_XC && RT_XC.D === D && RT_XC.prov === !!S.provisional && RT_XC.ev === !!S.routeEv && RT_XC.size === SIZE && RT_XC.ref === REF.ref && RT_XC.mf === mfKey) return RT_XC.X;
   const u = UNI[pl] || {}, num = D.num, s = D.str, dt = D.interval / 60;
   const med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
   const mname = mf ? (mf.cands.length === 1 ? MULTI[mf.cands[0]].name : 'Multi-split, model not settled: ' + mf.cands.map(f => MULTI[f].short).join(' or ')) : '';
@@ -5591,8 +5592,8 @@ function rtCtx(){
       zs.push({L:MZ.letters[k], on:{n:on.length, ev:pick(on, 'pev'), liq:pick(on, 'rmliq'), coil:pick(on, 'ihx'), ra:pick(on, 'ra')}, off:{n:off.length, ev:pick(off, 'pev'), liq:pick(off, 'rmliq'), coil:pick(off, 'ihx'), ra:pick(off, 'ra')}}); }
     X.mz = {oat:med(run.map(i => num.oat[i])), cur:num.syscur ? med(run.map(i => num.syscur[i])) : null, spd:med(run.map(i => num.rps[i])), fan:num.fan ? med(run.map(i => num.fan[i])) : null, zones:zs};
   }
-  try { if (fieldOn()) X.ev = rtEvidence(X, pl, multi); } catch(e){ console.warn('route evidence', e); }
-  RT_XC = {D, prov:!!S.provisional, size:SIZE, ref:REF.ref, mf:mfKey, X};
+  try { if (S.routeEv) X.ev = rtEvidence(X, pl, multi); } catch(e){ console.warn('route evidence', e); }
+  RT_XC = {D, prov:!!S.provisional, ev:!!S.routeEv, size:SIZE, ref:REF.ref, mf:mfKey, X};
   return X;
 }
 const rtFlowDoc = (X, f) => f.multi ? `${RT_MDOC[f.fam].doc} PDF ${f.p}` : `${(RT_DOC[X.plat] || {}).doc || X.doc} p.${f.p}`;
@@ -7777,7 +7778,7 @@ document.querySelectorAll('#settings [data-s]').forEach(inp => inp.addEventListe
   if (k === 'volts' && D){ computeCapacity(); buildCapCard(); buildDataTable(); buildSynopsis(); drawAllStrips(); }
   if (k === 'rate' && D){ buildCapCard(); buildSynopsis(); }
   if (k === 'share'){ shareStatus(); if (S.share) flushQueue(); }
-  if (k === 'provisional') rtRefresh();
+  if (k === 'provisional' || k === 'routeEv') rtRefresh();
   if (k === 'land') setLayout(); else if (D && !/^sb|^sync/.test(k)) renderCycle(cur);
 }));
 // boot
