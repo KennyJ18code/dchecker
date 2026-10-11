@@ -621,7 +621,10 @@ body.no-cabinet #indoor-var .cab{display:none}
 .rt-headrow > div:first-child{flex:1 1 300px;min-width:0}.rt-docr{flex:0 1 auto}
 .rt-qr{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;line-height:1.2;color:var(--muted);text-align:center;width:112px}
 .rt-qr a{display:block;line-height:0}.rt-qr svg{background:#fff;border-radius:4px}
-.rt-fams{margin-top:6px;align-items:center}.rt-fams .rt-lbl{margin:0 4px 0 0}
+.rt-fams{margin-top:6px;align-items:center}
+.rt-ev{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.4;margin:5px 0}.rt-evm{flex:none;width:14px;font-weight:800;line-height:1.4}
+.rt-ev.toward .rt-evm,.rt-lean.toward{color:var(--alarm)}.rt-ev.away .rt-evm,.rt-lean.away{color:var(--ok)}.rt-ev.note .rt-evm{color:var(--muted)}.rt-ev .rt-src{margin:1px 0 0}
+.rt-lean{font-size:11.5px;font-weight:700;margin-top:3px;line-height:1.3}.rt-fams .rt-lbl{margin:0 4px 0 0}
 @media (max-width:600px){
   .rt-sheet{padding:10px 10px}
   .rt-docr{text-align:left}
@@ -1150,12 +1153,12 @@ const NUM = [
   {id:'disch', col:57, mcol:47, label:'Discharge temp',     short:'Discharge',  unit:'°F', kind:'temp', note:'Td, the discharge pipe thermistor.'},
   {id:'suct',  col:58, label:'Suction temp',       short:'Suction',    unit:'°F', kind:'temp', note:'Ts, the suction pipe thermistor before the accumulator (SiUS612209EA p.9). Not fitted on the Goodman *VZC20 or on multi-splits.'},
   {id:'ocmid', col:59, label:'ODU coil mid temp',  short:'OD coil mid',unit:'°F', kind:'temp', note:'Tm, the mid-coil thermistor. In cooling the FIT and Goodman boards use it in place of a high-side pressure sensor (E13 detection, SiUS612209EA p.49); in heating the R-32 FIT outdoor EEV holds suction − Tm at 7 °F (SiUS612412E p.7). A DH9VS has no Tm.'},
-  {id:'liq',   col:60, label:'Liquid pipe temp',   short:'Liquid pipe',unit:'°F', kind:'temp', note:'Tl, at the liquid stop valve. Cooling: liquid leaving the outdoor unit (the outdoor EEV is bypassed by its check valve). Heating: liquid coming back from the indoor coil, before the outdoor EEV (SiUS612412E p.7, p.9).'},
+  {id:'liq',   col:60, label:'Liquid pipe temp',   short:'Liquid pipe',unit:'°F', kind:'temp', note:'Tl, at the liquid stop valve. Cooling: liquid leaving the outdoor unit (the outdoor EEV is held fully open in cooling, beside its check valve). Heating: liquid coming back from the indoor coil, before the outdoor EEV (SiUS612412E p.7, p.9).'},
   {id:'hp',    col:61, label:'High pressure',      short:'High press', unit:'psi', kind:'press'},
-  {id:'lp',    col:62, label:'Low pressure',       short:'Low press',  unit:'psi', kind:'press', note:'The outdoor suction-side pressure sensor: after the accumulator on heat pumps, by the gas stop valve on air conditioners (SiUS612412E p.8–9).'},
+  {id:'lp',    col:62, label:'Low pressure',       short:'Low press',  unit:'psi', kind:'press', note:'The outdoor suction-side pressure sensor: after the accumulator on heat pumps, by the gas stop valve on air conditioners (SiUS612412E p.8–9). On the Goodman *VZC20 the transducer sits on the gas line before the reversing valve, so it reads suction pressure in cooling and discharge pressure in heating (RS6215002r10 p.15).'},
   {id:'cond',  col:63, label:'Cond. sat temp (Tc)',short:'Tc sat',     unit:'°F', kind:'temp'},
   {id:'evap',  col:64, label:'Evap. sat temp (Te)',short:'Te sat',     unit:'°F', kind:'temp'},
-  {id:'tsc', lab:/^(Out )?Target SC/i,   col:65, label:'Target SC (logged)',  short:'Target SC',  unit:'°F', kind:'dtemp', note:'The board\'s logged "Target SC". No service manual describes a subcooling control or says what this column is (in heating the FIT outdoor EEV controls superheat, SiUS612412E p.7), so it is shown beside the subcooling tag for reference only. The manuals charge by subcooling only in their own charge test, measured with a gauge at the liquid stop valve.'},
+  {id:'tsc', lab:/^(Out )?Target SC/i,   col:65, label:'Target SC (logged)',  short:'Target SC',  unit:'°F', kind:'dtemp', note:'The board\'s logged "Target SC". The FIT manuals describe no subcooling control (in heating the FIT outdoor EEV controls superheat, SiUS612412E p.7) and do not say what this column is, so it is shown beside the subcooling tag for reference only. The DH9VS family does hold a subcooling, at the indoor coil in heating (1.8–9 °F, SiUS612415E p.9): that target is the "IDU Target SC" column. The manuals charge by subcooling only in their own charge test (the R-32 FIT shows subcooling at the liquid service valve during it, SiUS612412E p.70).'},
   {id:'inv1',  col:66, label:'INV primary current',short:'INV current',unit:'A', note:'D-Checker item; not defined in the service manual.'},
   {id:'inv2',  col:67, label:'INV secondary current',short:'INV 2nd',  unit:'A', note:'D-Checker item; not defined in the service manual.'},
   {id:'fin',   col:68, mcol:62, label:'INV fin temp',       short:'Fin temp',   unit:'°F', kind:'temp'},
@@ -1170,8 +1173,8 @@ const NUM = [
   {id:'iliq', lab:/^Indoor liquid temp/i,  col:121,label:'Indoor liquid temp', short:'ID liquid',  unit:'°F', kind:'temp', note:'Tli, between the indoor EEV and the coil distributor: two-phase refrigerant entering the coil in cooling, liquid leaving the coil in heating (SiUS612412E p.9; RS6215002r10 p.91).'},
   {id:'igas', lab:/^Indoor gas temp/i,  col:122,label:'Indoor gas temp',    short:'ID gas',     unit:'°F', kind:'temp', note:'Tgi, on the gas pipe at the coil: the coil outlet in cooling, the hot-gas inlet in heating (SiUS612412E p.9).'},
   {id:'iev', lab:/^IDU EV/i,   col:123,label:'Indoor EV pulses',   short:'Indoor EV',  unit:'pls', dec:0, max:480, note:'480 = fully open, 50 = minimum (SiUS612412E p.7, p.10–11). The Goodman AVPEC manual gives no pulse range.'},
-  {id:'reqcfm', lab:/^(Request CFM|Req IDU air vol)/i,col:125,label:'Requested airflow',  short:'Req CFM',    unit:'cfm', scale:10, note:'Requested indoor airflow, logged ×10 (SiUS612412E p.41). The outdoor unit sets it in cooling and heat-pump heating (IOD-4054B p.20–21).'},
-  {id:'cfm', lab:/^(Present CFM|Pre IDU air vol)/i,   col:126,label:'Reported airflow',    short:'Airflow',    unit:'cfm', scale:10, note:'The air handler\'s own airflow estimate, logged ×10; not a measurement (SiUS612412E p.41, p.47; IOD-4054B p.15).'},
+  {id:'reqcfm', lab:/^(Request CFM|Req IDU air vol)/i,col:125,label:'Requested airflow',  short:'Req CFM',    unit:'cfm', scale:10, note:'Requested indoor airflow, logged in tens of cfm, as the board\'s monitor list gives it ("Multiply by 10", SiUS612412E p.41). The outdoor unit sets it in cooling and heat-pump heating (IOD-4054B p.20–21).'},
+  {id:'cfm', lab:/^(Present CFM|Pre IDU air vol)/i,   col:126,label:'Reported airflow',    short:'Airflow',    unit:'cfm', scale:10, note:'The air handler\'s own airflow estimate, logged in tens of cfm ("Multiply by 10", SiUS612412E p.41); not a measurement (SiUS612412E p.47; IOD-4054B p.15).'},
   {id:'ipress', lab:/^Indoor pressure/i,col:127,label:'Indoor pressure',    short:'ID pressure',unit:'psi', kind:'press', note:'The indoor pressure sensor on the coil\'s gas pipe: the suction side in cooling; the discharge side in heating, where the FIT board uses it as its high pressure (SiUS612412E p.48).'},
   {id:'tsh', lab:/^(IDU )?Target SH/i,   col:128,label:'Target superheat',   short:'Target SH',  unit:'°F', kind:'dtemp', note:'The indoor EEV\'s superheat target in cooling, shown on the ID coil SH tag. On the R-32 FIT Daikin sets 9 °F, or 14 °F with outdoor air below 70 °F (SiUS612412E p.7); on the DH9VS family 5.4–18 °F, "may vary based on the system status" (SiUS612415E p.9). Other values do appear in logs and are shown as recorded.'},
   {id:'demand',col:53, label:'Demand',             short:'Demand',     unit:'%'},
@@ -1198,18 +1201,18 @@ const NUM = [
   {id:'volt',   mcol:65, label:'AC voltage',             short:'Voltage',  unit:'V', note:'Supply voltage (D-Checker check range 187–253 VAC, SiUS612209EA p.134).'},
 ];
 // per port (A–E): gas / liquid pipe thermistors and the port EV; per indoor head (address 0–4): the 28-column block starting at 97
-const MZ = {ports:5, letters:'ABCDE', evMax:480, evMaxNow:null};   // 480 = full travel (SiUS122410EC PDF 162); an operating room runs 64–450 on MXS / MXL (SiUS121736EA PDF 119), 42/44–480 on MXM / MXT. evMaxNow: the family's running ceiling for % open (null while the family is not settled)
+const MZ = {ports:5, letters:'ABCDE', evMax:480, evMaxNow:null};   // 480 = the most an operating room gets on MXM / MXT (SiUS122410EC PDF 162); an operating room runs 64–450 on MXS / MXL (SiUS121736EA PDF 119), 42/44–480 on MXM / MXT. evMaxNow: the family's running ceiling for % open (null while the family is not settled)
 for (let k = 0; k < MZ.ports; k++){
   const L = MZ.letters[k], b = 97 + 28*k;
   NUM.push(
     {id:'rmgas'+k, mcol:48+k, label:`Port ${L} gas temp`,    short:`${L} gas`,    unit:'°F', kind:'temp', zone:k, note:'The port gas-pipe thermistor inside the outdoor unit; Daikin balances these between rooms in cooling (SiUS121736EA PDF 103, 120).'},
     {id:'rmliq'+k, mcol:55+k, label:`Port ${L} liquid temp`, short:`${L} liquid`, unit:'°F', kind:'temp', zone:k, note:'The port liquid-pipe thermistor, just past the port EEV inside the outdoor unit: two-phase refrigerant leaving the EEV in cooling, liquid coming back from the head in heating (SiUS121736EA PDF 103–104).'},
     {id:'pev'+k,   mcol:84+k, label:`Port ${L} EV pulses`,   short:`${L} EV`,     unit:'pls', dec:0, max:MZ.evMax, zone:k, note:'Port EEV pulses. With the compressor stopped the board opens the valves to equalize pressure (SiUS121736EA PDF 119).'},
-    {id:'dd'+k,    mcol:b+6,  label:`Zone ${L} ΔD demand signal`, short:`${L} ΔD`, unit:'', kind:'signal', dec:0, zone:k, note:'The head\'s demand signal 0–15: 0 = thermostat off, 4 = room at its target, one step more per 0.5 °C (0.9 °F) still to go (SiUS121736EA PDF 107). The PC export multiplies it by 1.8 and heads it (F); the app divides that back out.'},
+    {id:'dd'+k,    mcol:b+6,  label:`Zone ${L} ΔD demand signal`, short:`${L} ΔD`, unit:'', kind:'signal', dec:0, zone:k, note:'The head\'s demand signal 0–15: 0 = thermostat off, 4 = room at its target, one step more per 0.5 °C (0.9 °F) still to go (SiUS121736EA PDF 107; MXM / MXT: thermostat off at −1.0 °C and finer steps, SiUS122410EC PDF 144). The PC export multiplies it by 1.8 and heads it (F); the app divides that back out.'},
     {id:'ra'+k,    mcol:b+7,  label:`Zone ${L} return air`,  short:`${L} return`, unit:'°F', kind:'temp', zone:k, note:'The head\'s room thermistor at its air intake; it can differ from the true room temperature (SiUS121736EA PDF 61).'},
     {id:'ihx'+k,   mcol:b+8,  label:`Zone ${L} coil temp`,   short:`${L} coil`,   unit:'°F', kind:'temp', zone:k, note:'The head\'s coil thermistor (ducted and cassette heads have two; the export does not say which it logs). Daikin\'s D-Checker check: 38–48 °F in cooling, above 97 °F in heating (SiUS612209EA p.134, instructional values).'},
     {id:'ifan'+k,  mcol:b+14, label:`Zone ${L} fan`,         short:`${L} fan`,    unit:'rpm', zone:k, note:'"Fan Frequency" on the D-Checker screen; rpm, as the manual drives head fans (SiUS121736EA PDF 76).'},
-    {id:'sp'+k,    mcol:b+19, label:`Zone ${L} setpoint`,    short:`${L} set`,    unit:'°F', kind:'temp', zone:k, note:'The remote\'s set temperature (64.4–86 °F on wall heads); the head\'s target is the set temperature plus a correction (SiUS121736EA PDF 69).'},
+    {id:'sp'+k,    mcol:b+19, label:`Zone ${L} setpoint`,    short:`${L} set`,    unit:'°F', kind:'temp', zone:k, note:'The remote\'s set temperature (64.4–86 °F on wall heads); the head\'s target is the set temperature plus a correction the manual prints as 0 °C, so the target is the set temperature (SiUS121736EA PDF 69).'},
   );
 }
 // R-410A saturation table (psig → °F), used only to sanity-check the unit's own Tc/Te against its transducers
@@ -1228,12 +1231,12 @@ function satF(psig, ref){ if (!isN(psig)) return null; const T = PTS[ref || REF.
 const DERIVED = [
   {id:'sh',  label:'Suction superheat', short:'Suction SH', unit:'°F', calc:r => sub(r.suct, r.evap), note:'Suction thermistor Ts − the board\'s Te from the outdoor suction-side sensor. Neither EEV controls this number (SiUS612412E p.7); the analysis charts\' suction superheat is taken with a gauge at the suction service valve. Not available on the Goodman *VZC20 or on multi-splits.'},
   {id:'sc',  label:'Subcooling at the outdoor liquid pipe (Tc − Tl)', short:'Subcooling', unit:'°F', calc:r => sub(r.cond, r.liq), note:m => m === 'heat' ? 'The board\'s Tc (the indoor pressure sensor on a FIT) − Tl: liquid coming back from the indoor coil, before the outdoor EEV.' : 'The board\'s Tc (the coil thermistor Tm on FIT and Goodman units) − Tl at the liquid stop valve. Close to, but not the same as, the gauge subcooling the manuals charge by at the stop valve (SiUS612412E p.70, p.73).'},
-  {id:'scerr',label:'SC − logged Target SC', short:'SC − tgt', unit:'°F', calc:r => sub(sub(r.cond, r.liq), r.tsc), note:'A plain difference. The service manuals describe no subcooling control, so it is not a control error.'},
+  {id:'scerr',label:'SC − logged Target SC', short:'SC − tgt', unit:'°F', calc:r => sub(sub(r.cond, r.liq), r.tsc), note:'A plain difference. The FIT manuals describe no subcooling control, so it is not a control error. (The DH9VS family\'s subcooling control works on the indoor coil in heating, SiUS612415E p.9: see IDU Target SC.)'},
   {id:'scid', label:'Subcooling at indoor coil', short:'SC at ID coil', unit:'°F', calc:(r,m) => m === 'heat' ? (isN(r.ipress) && r.ipress > 20 ? sub(satF(r.ipress, REF.ref), r.iliq) : sub(r.cond, r.iliq)) : null, note:'Heating: saturation at the indoor pressure sensor (the condenser inlet) − Tli (the coil\'s liquid outlet), the indoor subcooling the Goodman AVPEC shows (RS6215002r10 p.91); the board\'s Tc where there is no indoor sensor. On the DH9VS family the outdoor EEV holds this at the IDU Target SC in heating (SiUS612415E p.9).'},
   {id:'linedt', label:'Liquid line ΔT (indoor → outdoor)', short:'Line ΔT', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.iliq, r.liq) : null, note:'ID liquid − liquid pipe in heating: the drop along the line set, through the fully open indoor EEV, its filters and the field drier (SiUS612412E p.7, p.9).'},
   {id:'dsh', label:'Discharge superheat', short:'Disch SH', unit:'°F', calc:r => sub(r.disch, r.cond), note:'Discharge − the board\'s Tc (the coil thermistor Tm in FIT and Goodman cooling). The analysis charts mark it abnormal under 20 °F and over 70 °F (80 °F in R-410A FIT heating) (SiUS612209EA p.12–13; RS6215002r10 p.95–96).'},
   {id:'cr',  label:'Compression ratio', short:'Comp ratio', unit:'', dec:2, calc:r => (isN(r.hp)&&isN(r.lp)&&r.lp>-14) ? (r.hp+14.7)/(r.lp+14.7) : null, note:'(HP+14.7)/(LP+14.7). In FIT cooling the HP is the board\'s figure from Tm, not a measured pressure.'},
-  {id:'coildt',label:'Indoor coil gas − liquid', short:'ID gas−liq', unit:'°F', calc:r => sub(r.igas, r.iliq), note:m => m==='heat' ? 'Indoor gas − indoor liquid thermistor (condenser drop)' : 'Indoor gas − indoor liquid thermistor. The liquid thermistor sits between the indoor EEV and the coil (SiUS612412E p.9), so in cooling it reads the two-phase refrigerant entering the coil: this is outlet temperature minus inlet saturation, which reads lower than the outlet superheat by the coil\'s pressure drop (SiUS612412E p.9)'},
+  {id:'coildt',label:'Indoor coil gas − liquid', short:'ID gas−liq', unit:'°F', calc:r => sub(r.igas, r.iliq), note:m => m==='heat' ? 'Indoor gas − indoor liquid thermistor (condenser drop)' : 'Indoor gas − indoor liquid thermistor. The liquid thermistor sits between the indoor EEV and the coil (SiUS612412E p.9), so in cooling it reads the two-phase refrigerant entering the coil: this is outlet temperature minus inlet saturation, which reads lower than the outlet superheat by the coil\'s pressure drop'},
   {id:'ish', label:'Indoor coil superheat', short:'ID coil SH', unit:'°F', calc:(r,m) => (m === 'cool' && isN(r.ipress) && r.ipress > 20 && isN(r.igas)) ? r.igas - satF(r.ipress, REF.ref) : null, note:() => `Indoor gas − ${REFNAME[REF.ref]} saturation at the indoor pressure sensor, which sits on the gas pipe at the coil outlet (SiUS612412E p.9). In cooling the indoor EEV holds indoor gas temp − evaporator temp at the logged Target SH (SiUS612412E p.7); the manual does not say which sensor gives its evaporator temperature, so the board's own figure can differ from this one.`},
   {id:'appr',label:'Outdoor coil approach', short:'Approach', unit:'°F', calc:(r,m) => m==='heat' ? sub(r.oat, r.evap) : sub(r.cond, r.oat), note:m => m==='heat' ? 'OAT − Te' : 'Tc − OAT'},
   {id:'evpct', label:'Outdoor EV % open', short:'Outdoor EV', unit:'%', dec:0, max:100, calc:r => isN(r.ev) && isN(EVMAX) && EVMAX > 0 ? r.ev/EVMAX*100 : null, note:() => D && D.evInfo ? (isN(EVMAX) ? `pulses ÷ ${EVMAX}: ${D.evInfo.how}` : D.evInfo.how) : ''},
@@ -3345,7 +3348,7 @@ function evChecks(){
   const k3 = Math.max(1, Math.round(XT.evSettle / dt)), k8 = Math.max(k3 + 1, Math.round(XT.evWindow / dt));
   const valves = [];
   if (!multi){
-    // heating: the outdoor EEV holds suction − Tm on the R-32 FIT (SiUS612412E p.7); in cooling it is bypassed by its check valve. Not on the Goodman (no Ts).
+    // heating: the outdoor EEV holds suction − Tm on the R-32 FIT (SiUS612412E p.7); in cooling it is held fully open beside its check valve (p.7, p.9). Not on the Goodman (no Ts).
     if (chById.ev.present && !VC_NOW && EQ.out !== 'ac') valves.push({id:'V1', name:'Outdoor EV', pls:'ev', thr:XT.evMove.ev, modes:{heat:unitPlat() === 'dh9' ? {ch:'scid', sign:-1, what:'indoor subcooling (SiUS612415E p.9)'} : {ch:D.num.osh && D.num.osh.some(isN) ? 'osh' : 'sh', sign:-1, what:D.num.osh && D.num.osh.some(isN) ? 'suction − coil middle superheat' : 'suction superheat'}}});
     // the indoor EEV controls coil superheat in cooling and sits fully open in heating (SiUS612412E p.7)
     if (chById.iev.present) valves.push({id:'V2', name:'Indoor EV', pls:'iev', thr:XT.evMove.iev, modes:{cool:{ch:'ish', sign:-1, what:'indoor coil superheat'}}});
@@ -5374,6 +5377,174 @@ function rtMFlows(fam){
 }
 // logged multi codes → flowchart: outdoor unit (the error byte) and the heads (each zone's error byte)
 const RT_MCODEFLOW = {outdoor:{U0:'U0', F3:'F3', F6:'F6', L4:'L4', A5:'A5o'}, head:{A5:'A5h'}};
+// ---- evidence from the recording (field rule, v105). The relationships are the manuals': the control loops (which part holds which
+// reading), the sensor positions, and the E21 / 54 pattern. What counts as an answer, a hold or a disagreement is the app's, measured
+// on Brackett's recordings. Evidence leans a suspect toward or away; it never clears or confirms one (the manual's test does that).
+const RT_EVK = {tAns:-3, pairs:15, moves:8, band:3, hold:80, steady:6, shBad:60, pOk:15, pBad:30, gOk:15, gBad:30, fan:30, fanPct:90, fanLow:100, cfm:0.9, dsh:9, pinHi:470, pinLo:60, share:50, rest:30, restOk:5, restBad:15, liqBad:15, liqOk:8, a5:18};
+const RT_EVM = {   // the manual pages each relationship stands on, per platform
+  fit410:{doc:'SiUS612209EA', ieev:'p.10', oeev:'p.11', sens:'p.8–9', air:'p.10', fan:'p.10–11', e21:'p.51', note:'The R-410A FIT manual gives no superheat target.'},
+  fit32:{doc:'SiUS612412E', ieev:'p.7, p.10', oeev:'p.7, p.11', sens:'p.8–9', air:'p.10', fan:'p.10–11', e21:'p.46, p.50'},
+  dh9:{doc:'SiUS612415E', ieev:'p.9, p.11', oeev:'p.9, p.12', sens:'p.10', air:'p.11', fan:'p.11–12', e21:'p.48, p.52'},
+  vzc:{doc:'RS6215002r10', ieev:'p.53', sens:'p.13, p.15, p.91', air:'p.31', e21:'p.97', note:'RS6215002r10 gives no superheat target or pulse range for the indoor EEV.'},
+  dx9vc:{doc:'RSD6115001r14', ieev:'p.33', sens:'p.17, p.22', air:'p.40', e21:'p.88', note:'RSD6115001r14 gives no superheat target or pulse range for the indoor EEV.'}};
+// multi: per family, the gas-pipe isothermal control, the stopped room's closed valve in cooling, the anti-icing causes, the check items
+const RT_MEVP = {mxs:{iso:'PDF 120', stop:'PDF 119', a5:'PDF 198'}, mxl:{iso:'PDF 106', stop:'PDF 105', a5:'PDF 178'}, mxmS:{iso:'PDF 163', stop:'PDF 162', a5:'PDF 290'},
+  mxmL:{iso:'PDF 163', stop:'PDF 162', a5:'PDF 290'}, mxsT:{iso:'PDF 125', stop:'PDF 124', a5:'PDF 208'}};
+function rtEvRows(m){ const s = D.str, out = []; for (let i = 0; i < D.n; i++){ if (D.runSec[i] < 600 || (m && D.mode[i] !== m)) continue;
+  if ((s.defrost && s.defrost[i] === 'ON') || (s.oilret && s.oilret[i] === 'ON') || (D.sinceDefrost && D.sinceDefrost[i] <= 10)) continue; out.push(i); } return out; }
+// least squares of the held reading's change over the next L minutes on the part's change over the last W minutes, with the compressor
+// speed change beside it when the speed moved (an inverter moves both together)
+function rtResp(y, u, R, W, L){
+  const num = D.num, dt = D.interval / 60, w = Math.max(1, Math.round(W / dt)), l = Math.max(1, Math.round(L / dt)), S = new Set(R), X = [];
+  for (const i of R){ if (!S.has(i - w) || !S.has(i + l) || D.mode[i - w] !== D.mode[i] || D.mode[i + l] !== D.mode[i]) continue;
+    const du = num[u][i] - num[u][i - w], ds = isN(num.rps[i]) && isN(num.rps[i - w]) ? num.rps[i] - num.rps[i - w] : 0, dy = num[y][i + l] - num[y][i];
+    if ([du, ds, dy].every(isN)) X.push([du, ds, dy]); }
+  const moves = X.filter(x => x[0] !== 0).length; if (X.length < RT_EVK.pairs || moves < RT_EVK.moves) return null;
+  const N = X.length, mu = [0, 1, 2].map(k => X.reduce((s, x) => s + x[k], 0) / N), c = (a, b) => X.reduce((s, x) => s + (x[a] - mu[a]) * (x[b] - mu[b]), 0);
+  let b1, se;
+  if (!(c(1, 1) > 1e-9)){ const s11 = c(0, 0); if (!(s11 > 0)) return null; b1 = c(0, 2) / s11; const r = X.map(x => (x[2] - mu[2]) - b1 * (x[0] - mu[0])); se = Math.sqrt(r.reduce((s, e) => s + e * e, 0) / Math.max(1, N - 2) / s11); }
+  else { const s11 = c(0, 0), s22 = c(1, 1), s12 = c(0, 1), det = s11 * s22 - s12 * s12; if (!(Math.abs(det) > 1e-9)) return null;
+    b1 = (c(0, 2) * s22 - c(1, 2) * s12) / det; const b2 = (c(1, 2) * s11 - c(0, 2) * s12) / det;
+    const r = X.map(x => (x[2] - mu[2]) - b1 * (x[0] - mu[0]) - b2 * (x[1] - mu[1])); se = Math.sqrt(r.reduce((s, e) => s + e * e, 0) / Math.max(1, N - 3) * s22 / det); }
+  return {n:N, moves, per10:b1 * 10, t:se > 0 ? b1 / se : 0};
+}
+function rtEvidence(X, pl, multi){
+  const num = D.num, dt = D.interval / 60, items = [], K = RT_EVK, has = id => !!(num[id] && num[id].some(isN));
+  const med = a => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  const q = (a, p) => { const v = a.filter(isN).sort((x, y) => x - y); return v.length ? v[Math.min(v.length - 1, Math.floor(p * v.length))] : null; };
+  const share = (R, f) => R.length ? Math.round(100 * R.filter(f).length / R.length) : 0, mins = R => Math.round(R.length * dt);
+  const add = (o) => items.push(o);
+  if (!multi){
+    const M = RT_EVM[pl]; if (!M) return null; const doc = M.doc, c = `${doc} `;
+    // ---- indoor EEV, cooling: superheat control; the R-32 FIT and DH9VS manuals give the target and say opening lowers superheat
+    const Rc = rtEvRows('cool');
+    if (has('iev') && has('ish') && Rc.length >= 20){
+      const R = Rc.filter(i => isN(num.iev[i]) && isN(num.ish[i])), sh = R.map(i => num.ish[i]);
+      const hiOK = pl === 'fit32' || pl === 'dh9' || pl === 'fit410', hi = hiOK ? R.filter(i => num.iev[i] >= K.pinHi) : [], lo = R.filter(i => num.iev[i] <= K.pinLo), hiS = new Set(hi), loS = new Set(lo), free = R.filter(i => !hiS.has(i) && !loS.has(i));
+      const tgt = pl === 'fit32' ? (i => isN(num.oat[i]) ? (num.oat[i] < 70 ? 14 : 9) : null) : null, rng = pl === 'dh9' ? [5.4, 18] : null;
+      const tgtTxt = pl === 'fit32' ? '9 °F, or 14 °F with outdoor air below 70 °F' : pl === 'dh9' ? '5.4–18 °F' : null;
+      const pHi = share(R, i => hiS.has(i)), pLo = share(R, i => loS.has(i)), shHi = med(hi.map(i => num.ish[i])), shLo = med(lo.map(i => num.ish[i]));
+      const uMin = Math.min(...R.map(i => num.iev[i])), uMax = Math.max(...R.map(i => num.iev[i]));
+      // sensor agreement on the suction side in cooling: the indoor pressure sensor and the outdoor one; the indoor gas pipe and the suction pipe
+      const dP = has('ipress') && has('lp') ? med(R.map(i => num.ipress[i] - num.lp[i])) : null, dG = has('igas') && has('suct') ? med(R.map(i => num.igas[i] - num.suct[i])) : null;
+      const shG = has('igas') && has('evap') ? med(R.map(i => num.igas[i] - num.evap[i])) : null, shS = has('suct') && has('evap') ? med(R.map(i => num.suct[i] - num.evap[i])) : null;
+      if (pHi >= K.share && isN(shHi) && shHi > K.shBad){
+        const gasOut = (isN(dG) && dG > K.gBad) || (isN(shG) && shG > K.shBad && (!isN(shS) || shS < K.shBad));
+        add({m:'cool', lean:'toward', sus:[], outside:true, name:gasOut ? 'Indoor gas thermistor' : 'The superheat reading',
+          txt:`The indoor EEV sat wide open (${uMax} pulses on ${pHi} % of the settled cooling rows) chasing ${f0(shHi)} °F of coil superheat, which no working cooling coil shows.${isN(dG) ? ` The indoor gas pipe read ${f0(dG)} °F above the outdoor suction pipe on the same suction line` : ''}${isN(dP) ? `${isN(dG) ? ', while' : ' The'} the indoor and outdoor pressure sensors agreed within ${f0(Math.max(1, Math.abs(dP)))} psi` : ''}. ${gasOut ? 'That points at the indoor gas thermistor, not the valve: the valve did what the reading told it.' : 'The valve did what the reading told it; check the sensors behind that reading before the valve.'}`,
+          src:`${c}${M.ieev} (superheat control); ${M.sens} (sensor positions)`});
+        if (isN(shS) && shS < 5) add({m:'cool', lean:'away', sus:['ieev', 'ieevcoil'], name:'Indoor EEV and its coil',
+          txt:`The board told the valve to open fully and refrigerant flooded through: suction superheat at the outdoor unit was ${f1s(shS)} °F. A valve stuck shut would starve the coil instead, so the valve did open.`, src:`${c}${M.ieev}; ${M.sens}`}); }
+      else {
+        const r = rtResp('ish', 'iev', R, 1, 2);
+        if (r && r.t <= K.tAns) add({m:'cool', lean:'away', sus:['ieev', 'ieevcoil'], name:'Indoor EEV and its coil',
+          txt:`When the valve opened, coil superheat fell, as the manual's superheat control says it should: about ${f1s(Math.abs(r.per10))} °F less for every 10 pulses opened, over ${r.n} settled samples. The valve answers.`, src:`${c}${M.ieev}`});
+        if (free.length >= 0.8 * R.length && R.length >= 20){
+          if (tgt){ const e = free.filter(i => isN(tgt(i))).map(i => num.ish[i] - tgt(i)), w = e.length ? Math.round(100 * e.filter(x => Math.abs(x) <= K.band).length / e.length) : 0;
+            if (w >= K.hold) add({m:'cool', lean:'away', sus:['ieev', 'ieevcoil'], name:'Indoor EEV superheat control',
+              txt:`Coil superheat stayed within ${K.band} °F of the manual's target (${tgtTxt}) on ${w} % of the settled cooling rows, with the valve moving between ${uMin} and ${uMax} pulses. The loop holds.`, src:`${c}${M.ieev}`}); }
+          else if (rng){ const w = share(free, i => num.ish[i] >= rng[0] - 1 && num.ish[i] <= rng[1] + 1);
+            if (w >= K.hold) add({m:'cool', lean:'away', sus:['ieev', 'ieevcoil'], name:'Indoor EEV superheat control',
+              txt:`Coil superheat stayed inside the manual's target range (${tgtTxt}) on ${w} % of the settled cooling rows, with the valve moving between ${uMin} and ${uMax} pulses. The loop holds.`, src:`${c}${M.ieev}`}); }
+          else { const a = q(free.map(i => num.ish[i]), .1), b = q(free.map(i => num.ish[i]), .9);
+            if (isN(a) && isN(b) && b - a <= K.steady && a > -2) add({m:'cool', lean:'away', sus:['ieev', 'ieevcoil'], name:'Indoor EEV superheat control',
+              txt:`Coil superheat held steady between ${f0(a)} and ${f0(b)} °F on the settled cooling rows, with the valve moving between ${uMin} and ${uMax} pulses. ${M.note || ''}`.trim(), src:`${c}${M.ieev}`}); }
+        }
+        if (pLo >= K.share && isN(shLo) && shLo < (tgt ? 9 : rng ? rng[0] : 5) - K.band){
+          const dsh = has('dsh') ? med(lo.map(i => num.dsh[i])) : null, e21 = isN(dsh) && dsh < K.dsh && M.e21;
+          add({m:'cool', lean:'toward', sus:['ieev'], name:'Indoor EEV not closing',
+            txt:`The board held the indoor EEV at its smallest opening (${uMin} pulses on ${pLo} % of the settled cooling rows), yet coil superheat stayed at ${f1s(shLo)} °F${tgtTxt ? `, below the manual's target (${tgtTxt})` : ''}, so refrigerant left the coil barely evaporated. The valve is as closed as the board can make it and the coil is still overfed.${e21 ? ` Discharge superheat sat at ${f0(dsh)} °F with the valve at its minimum: the manual's E21 / 54 condition, which names the indoor EEV in cooling.` : ''}`,
+            src:`${c}${M.ieev}${e21 ? '; ' + M.e21 + ' (E21 / 54)' : ''}`}); }
+        if (pHi >= K.share && isN(shHi) && shHi <= K.shBad && shHi > (tgt ? 9 : rng ? rng[1] : 20) + K.band)
+          add({m:'cool', lean:'toward', sus:['under', 'drier', 'lineset', 'lsv'], name:'The valve has nothing more to give',
+            txt:`The indoor EEV sat wide open (${uMax} pulses on ${pHi} % of the settled cooling rows) and coil superheat still stayed at ${f0(shHi)} °F. The causes that starve the coil fit this (low charge, a restriction, a closed liquid valve). A valve stuck shut looks the same in this log: the D-Checker records the pulses the board sends, not where the valve really is.`,
+            src:`${c}${M.ieev}`});
+      }
+      if (isN(dP)){ if (Math.abs(dP) <= K.pOk) add({m:'cool', lean:'away', sus:['psensor'], name:'Pressure sensors',
+          txt:`The indoor pressure sensor and the outdoor one, both on the suction side in cooling, agreed within ${f0(Math.max(1, Math.abs(dP)))} psi (median over the settled rows).`, src:`${c}${M.sens}`});
+        else if (Math.abs(dP) >= K.pBad) add({m:'cool', lean:'toward', sus:['psensor'], name:'Pressure sensors disagree',
+          txt:`The indoor pressure sensor read ${f0(Math.abs(dP))} psi ${dP > 0 ? 'above' : 'below'} the outdoor one, though both sit on the suction side in cooling.`, src:`${c}${M.sens}`}); }
+      if (isN(dG) && !(pHi >= K.share && isN(shHi) && shHi > K.shBad)){
+        if (Math.abs(dG) <= K.gOk) add({m:'cool', lean:'away', sus:['th_ts'], name:'Gas line thermistors',
+          txt:`The indoor gas pipe and the outdoor suction pipe, on the same suction line in cooling, read within ${f0(Math.max(1, Math.abs(dG)))} °F of each other.`, src:`${c}${M.sens}`});
+        else if (Math.abs(dG) >= K.gBad){ const sOut = isN(shS) && (shS > K.shBad || shS < -10);
+          add({m:'cool', lean:'toward', sus:sOut ? ['th_ts'] : [], outside:!sOut, name:sOut ? 'Suction thermistor' : 'Indoor gas thermistor',
+            txt:`The indoor gas pipe read ${f0(Math.abs(dG))} °F ${dG > 0 ? 'above' : 'below'} the outdoor suction pipe on the same suction line; the ${sOut ? 'suction pipe' : 'indoor gas pipe'} is the one that disagrees with the pressure sensors.`, src:`${c}${M.sens}`}); } }
+    }
+    // ---- outdoor EEV, heating: superheat (FIT, Ts − Tm) or indoor subcooling (DH9VS)
+    const Rh = rtEvRows('heat'), hy = pl === 'dh9' ? 'scid' : 'osh';
+    if (has('ev') && has(hy) && Rh.length >= 20 && M.oeev){
+      const R = Rh.filter(i => isN(num.ev[i]) && isN(num[hy][i])), u = R.map(i => num.ev[i]), uMin = Math.min(...u), uMax = Math.max(...u);
+      if (uMax === uMin) add({m:'heat', lean:'note', sus:[], name:'Outdoor EEV',
+        txt:`The outdoor EEV column read ${uMin} pulses on every settled heating row, though the manual has the valve on ${pl === 'dh9' ? 'subcooling' : 'superheat'} control in heating, so this recording can't show whether the valve answers.`, src:`${c}${M.oeev}`});
+      else { const r = rtResp(hy, 'ev', R, 1, 2);
+        if (r && r.t <= K.tAns) add({m:'heat', lean:'away', sus:['oeev', 'oeevcoil'], name:'Outdoor EEV and its coil',
+          txt:`When the valve opened, ${pl === 'dh9' ? 'indoor subcooling' : 'suction superheat (Ts − Tm)'} fell: about ${f1s(Math.abs(r.per10))} °F for every 10 pulses, over ${r.n} settled samples. The valve answers.`, src:`${c}${M.oeev}`});
+        const lo = R.filter(i => num.ev[i] <= K.pinLo), dsh = has('dsh') ? med(lo.map(i => num.dsh[i])) : null;
+        if (Math.round(100 * lo.length / R.length) >= K.share && isN(dsh) && dsh < K.dsh && M.e21) add({m:'heat', lean:'toward', sus:['oeev'], name:'Outdoor EEV',
+          txt:`The outdoor EEV sat at its minimum while discharge superheat stayed at ${f0(dsh)} °F: the manual's E21 / 54 condition, which names the outdoor EEV in heating.`, src:`${c}${M.e21} (E21 / 54)`}); }
+    }
+    // ---- outdoor fan and indoor airflow against what the board asked for
+    for (const m of ['cool', 'heat']){ const R = rtEvRows(m); if (R.length < 20) continue;
+      for (const [f, tf, nm] of [['fan', 'tfan', 'Outdoor fan'], ['fan2', 'tfan2', 'Outdoor fan 2']]){ if (!has(f) || !has(tf)) continue;
+        const Rf = R.filter(i => isN(num[f][i]) && isN(num[tf][i]) && num[tf][i] > 0); if (Rf.length < 20) continue;
+        const ok = share(Rf, i => Math.abs(num[f][i] - num[tf][i]) <= K.fan), low = share(Rf, i => num[f][i] < num[tf][i] - K.fanLow);
+        if (ok >= K.fanPct) add({m, lean:'away', sus:['odfan'], name:nm, txt:`It ran within ${K.fan} rpm of the speed the board asked for on ${ok} % of the settled rows. The manual gives the fan's steps but no target reading; this compares the board's own target column with the fan's measured speed.`, src:`${c}${M.fan || M.air}`});
+        else if (low >= 20) add({m, lean:'toward', sus:['odfan'], name:nm, txt:`It ran more than ${K.fanLow} rpm below the speed the board asked for on ${low} % of the settled rows.`, src:`${c}${M.fan || M.air}`}); }
+      if (has('cfm') && has('reqcfm')){ const Ra = R.filter(i => airSettled(i) && isN(num.cfm[i]) && isN(num.reqcfm[i]) && num.reqcfm[i] > 0); if (Ra.length >= 20){
+        const ok = share(Ra, i => num.cfm[i] >= K.cfm * num.reqcfm[i]), c0 = med(Ra.map(i => num.cfm[i])), q0 = med(Ra.map(i => num.reqcfm[i]));
+        if (ok >= 90) add({m, lean:'away', sus:['lowcfm'], name:'Indoor airflow', txt:`The air handler reported ${f0(c0)} cfm against ${f0(q0)} cfm requested (medians), at or above 90 % of the request on ${ok} % of the settled rows.`, src:`${c}${M.air}`});
+        else if (ok <= 70) add({m, lean:'toward', sus:['lowcfm'], name:'Indoor airflow', txt:`The air handler reported ${f0(c0)} cfm against ${f0(q0)} cfm requested (medians), under 90 % of the request on ${100 - ok} % of the settled rows.`, src:`${c}${M.air}`}); } }
+    }
+    // ---- at rest: every outdoor thermistor reads the air around it after a long stop
+    { const R = []; let off = 0; for (let i = 0; i < D.n; i++){ off = D.runSec[i] < 0 ? off + dt : 0; if (off >= K.rest) R.push(i); }
+      if (R.length >= 5 && has('oat')){ const ok = [], bad = [];
+        for (const [ch, id, nm] of [['disch', 'th_td', 'discharge'], ['suct', 'th_ts', 'suction'], ['ochex', 'th_tb', 'outdoor coil (Tb)'], ['ocmid', 'th_tm', 'outdoor coil middle (Tm)'], ['liq', 'th_tl', 'liquid pipe']]){
+          if (!has(ch)) continue; const d = med(R.map(i => isN(num[ch][i]) && isN(num.oat[i]) ? num[ch][i] - num.oat[i] : null)); if (!isN(d)) continue;
+          if (Math.abs(d) <= K.restOk) ok.push([id, nm, d]); else if (Math.abs(d) >= K.restBad) bad.push([id, nm, d]); }
+        if (ok.length) add({m:null, lean:'away', sus:ok.map(x => x[0]), name:'Outdoor thermistors at rest', txt:`After ${K.rest} minutes or more with the compressor off, the ${ok.map(x => x[1]).join(', ')} thermistor${ok.length > 1 ? 's' : ''} read within ${K.restOk} °F of outdoor air (${mins(R)} min at rest).`, src:`${c}${M.sens} (thermistor positions)`});
+        for (const [id, nm, d] of bad) add({m:null, lean:'toward', sus:[id], name:`The ${nm} thermistor`, txt:`After ${K.rest} minutes or more with the compressor off it read ${f0(Math.abs(d))} °F ${d > 0 ? 'above' : 'below'} outdoor air (${mins(R)} min at rest).`, src:`${c}${M.sens} (thermistor positions)`}); } }
+  } else {
+    // ---- multi: each port's valve, in cooling (stopped rooms are closed then; calling rooms are steered on their gas pipe)
+    const fams = (X.mfam || []).filter(f => RT_MEVP[f]); if (!fams.length) return null;
+    const fp = k => fams.map(f => `${RT_MDOC[f].doc} ${RT_MEVP[f][k]}`).filter((v, i, a) => a.indexOf(v) === i).join(' / ');
+    const per = fn => Object.fromEntries(fams.map(f => [f, fn(RT_MDOC[f].doc, RT_MEVP[f], RT_MDOC[f])]));   // the same line for each candidate manual
+    const R = rtEvRows('cool'), L = k => MZ.letters[k];
+    if (R.length >= 20){
+      const calling = (k, i) => !zoneOff(k, i) && num['dd' + k] && isN(num['dd' + k][i]) && num['dd' + k][i] >= 1 && isN(num['pev' + k][i]) && num['pev' + k][i] > 0;
+      for (const k of D.zones){ if (!has('rmgas' + k) || !has('pev' + k)) continue;
+        const Rk = R.filter(i => calling(k, i)), r = Rk.length >= 20 ? rtResp('rmgas' + k, 'pev' + k, Rk, 1, 2) : null;
+        if (r && r.t <= K.tAns) add({m:'cool', zone:k, lean:'away', sus:[], name:`Port ${L(k)} valve`, txt:`When it opened, room ${L(k)}'s gas pipe got colder: about ${f1s(Math.abs(r.per10))} °F for every 10 pulses, over ${r.n} samples with the room calling. The valve answers.`, src:fp('iso'), srcF:per((d, p) => `${d} ${p.iso}`)}); }
+      // the check items' own test: with the rooms cooling, compare the liquid pipes; a port far warmer than the others is not passing refrigerant
+      const rowsMulti = R.filter(i => D.zones.filter(k => calling(k, i) && has('rmliq' + k) && isN(num['rmliq' + k][i])).length >= 2);
+      if (rowsMulti.length >= 20){ const diffs = {};
+        for (const i of rowsMulti){ const ks = D.zones.filter(k => calling(k, i) && isN(num['rmliq' + k][i])), lo = Math.min(...ks.map(k => num['rmliq' + k][i])); for (const k of ks) (diffs[k] = diffs[k] || []).push(num['rmliq' + k][i] - lo); }
+        const md = Object.entries(diffs).filter(([, v]) => v.length >= 10).map(([k, v]) => [+k, med(v)]);
+        const genP = fams.map(f => `${RT_MDOC[f].doc} PDF ${RT_MDOC[f].gen}`).filter((v, i, a) => a.indexOf(v) === i).join(' / ');
+        for (const [k, d] of md) if (d >= K.liqBad) add({m:'cool', zone:k, lean:'toward', sus:[], name:`Port ${L(k)} valve`, txt:`With two or more rooms cooling, port ${L(k)}'s liquid pipe ran ${f0(d)} °F warmer than the coldest calling port (median of ${diffs[k].length} rows): that port is not passing refrigerant like the others.`, src:`${genP} (compare the liquid pipes to see if each valve works)`, srcF:per((d, p, r) => `${d} PDF ${r.gen} (compare the liquid pipes to see if each valve works)`)});
+        if (md.length >= 2 && md.every(([, d]) => d <= K.liqOk)) add({m:'cool', lean:'away', sus:[], name:'Port valves', txt:`With two or more rooms cooling, the calling ports' liquid pipes ran within ${K.liqOk} °F of each other (ports ${md.map(([k]) => L(k)).join(', ')}).`, src:`${genP} (compare the liquid pipes to see if each valve works)`, srcF:per((d, p, r) => `${d} PDF ${r.gen} (compare the liquid pipes to see if each valve works)`)}); }
+      // a stopped room in cooling: its valve is shut, so its coil should sit near the room's air; a coil running cold points at a valve letting refrigerant by
+      for (const k of D.zones){ if (!has('ihx' + k) || !has('ra' + k)) continue;
+        const Rs = R.filter(i => (zoneOff(k, i) || (num['dd' + k] && num['dd' + k][i] === 0)) && num['pev' + k][i] === 0 && isN(num['ihx' + k][i]) && isN(num['ra' + k][i]));
+        if (Rs.length < 20) continue; const d = med(Rs.map(i => num['ra' + k][i] - num['ihx' + k][i])), coil = med(Rs.map(i => num['ihx' + k][i]));
+        if (d >= K.a5 || coil <= 30.2) add({m:'cool', zone:k, lean:'toward', sus:[], name:`Port ${L(k)} valve letting refrigerant by`, txt:`With room ${L(k)} stopped and its valve shut (0 pulses), its coil still ran ${f0(d)} °F below the room's air (coil ${f0(coil)} °F, median of ${Rs.length} rows). A shut valve leaves a stopped room's coil near room temperature; the manual's anti-icing (A5) causes list a defective EEV.`, src:`${fp('stop')} (stopped room closed in cooling); ${fp('a5')} (A5)`, srcF:per((d, p) => `${d} ${p.stop} (stopped room closed in cooling); ${p.a5} (A5)`)});
+        else if (d <= 5) add({m:'cool', zone:k, lean:'away', sus:[], name:`Port ${L(k)} valve sealing`, txt:`With room ${L(k)} stopped and its valve shut, its coil stayed within ${f0(Math.max(0, d))} °F of the room's air (median of ${Rs.length} rows): no refrigerant got by.`, src:`${fp('stop')} (stopped room closed in cooling)`, srcF:per((d, p) => `${d} ${p.stop} (stopped room closed in cooling)`)}); }
+    }
+  }
+  if (!items.length) return null;
+  const bySus = {};
+  for (const it of items){ for (const s of it.sus || []){ const key = (it.m || 'any') + ':' + s, cur = bySus[key]; if (!cur || (cur.lean !== 'toward' && it.lean === 'toward')) bySus[key] = {lean:it.lean, name:it.name}; } }
+  return {items, bySus};
+}
+function rtEvFor(X, m, id){ const B = X.ev && X.ev.bySus; if (!B) return null; return B[m + ':' + id] || B['any:' + id] || null; }
+function rtEvHtml(X, m, fam){
+  const E = X.ev; if (!E || !E.items) return '';
+  const it = E.items.filter(x => !x.m || !m || x.m === m); if (!it.length) return '';
+  const ord = {toward:0, note:1, away:2}, rows = it.slice().sort((a, b) => ord[a.lean] - ord[b.lean]);
+  const mark = l => l === 'toward' ? '▲' : l === 'away' ? '▼' : '•';
+  return `<div class="rt-sec"><div class="rt-lbl">What the recording leans toward · field rule</div>${rows.map(x => `<div class="rt-ev ${x.lean}"><span class="rt-evm">${mark(x.lean)}</span><div><b>${rtE(x.name)}</b>${x.outside ? ' <span class="rt-tag">not on the chart</span>' : ''} ${rtE(x.txt)}<div class="rt-src">${rtE(x.srcF && fam && x.srcF[fam] ? x.srcF[fam] : x.src)}</div></div></div>`).join('')}
+    <div class="rt-note">▲ leans toward, ▼ leans away. The relationships are the manual's; what counts as a lean is the app's, measured on Brackett's recordings. Evidence only leans: the manual's test still decides, and the route keeps its order.</div></div>`;
+}
 let RT_LINK = null, RT_XC = null;
 function rtCtx(){
   if (RT_LINK) return RT_LINK.X;
@@ -5420,6 +5591,7 @@ function rtCtx(){
       zs.push({L:MZ.letters[k], on:{n:on.length, ev:pick(on, 'pev'), liq:pick(on, 'rmliq'), coil:pick(on, 'ihx'), ra:pick(on, 'ra')}, off:{n:off.length, ev:pick(off, 'pev'), liq:pick(off, 'rmliq'), coil:pick(off, 'ihx'), ra:pick(off, 'ra')}}); }
     X.mz = {oat:med(run.map(i => num.oat[i])), cur:num.syscur ? med(run.map(i => num.syscur[i])) : null, spd:med(run.map(i => num.rps[i])), fan:num.fan ? med(run.map(i => num.fan[i])) : null, zones:zs};
   }
+  try { if (fieldOn()) X.ev = rtEvidence(X, pl, multi); } catch(e){ console.warn('route evidence', e); }
   RT_XC = {D, prov:!!S.provisional, size:SIZE, ref:REF.ref, mf:mfKey, X};
   return X;
 }
@@ -5586,7 +5758,7 @@ function rtChartHtml(X, m, b){
     : `The chart marks ${mod.list.length === 1 ? 'one cause' : mod.list.length + ' causes'} with every flagged reading${mod.cmp.length ? ' and the complaint' : ''}.${narrowed}`;
   const stat = rtStats(X, m);
   const sus = mod.list.map(x => { const s = mod.st[x.id], why = s.k === 'found' ? `Found at stop ${s.n}` : s.k === 'cleared' ? `Ruled out ${s.auto ? 'by the log' : 'at stop ' + s.n}` : s.k === 'checked' ? `Checked at stop ${s.n}; not ruled out` : 'Possible';
-    const n = stat && stat.byName[x.nm]; return `<div class="rt-su ${s.k}"><span class="rt-lt">${x.L}</span><div><div class="rt-nm">${rtE(x.nm)}</div>${x.r ? `<div class="rt-rem">Manual remedy: ${rtE(x.r)}</div>` : ''}<div class="rt-why">${why}${n ? ` · Brackett: found ${n} of ${stat.n} closed routes` : ''}</div></div></div>`; }).join('');
+    const n = stat && stat.byName[x.nm]; return `<div class="rt-su ${s.k}"><span class="rt-lt">${x.L}</span><div><div class="rt-nm">${rtE(x.nm)}</div>${x.r ? `<div class="rt-rem">Manual remedy: ${rtE(x.r)}</div>` : ''}<div class="rt-why">${why}${n ? ` · Brackett: found ${n} of ${stat.n} closed routes` : ''}</div>${(() => { const e = rtEvFor(X, m, x.id); return e && e.lean !== 'note' ? `<div class="rt-lean ${e.lean}">${e.lean === 'toward' ? '▲ The recording leans toward this' : '▼ The recording leans away'}: ${rtE(e.name)}</div>` : ''; })()}</div></div>`; }).join('');
   const start = `<li class="rt-stop start"><span class="rt-dot">S</span><div class="rt-body"><div class="rt-st">${rtTierHtml(2)}<b>Start: confirm the readings with gauges</b></div>
     <div class="rt-how">The chart is read with gauges at the service valves; the log uses the unit's thermistors${heat ? '' : ' and, in cooling, the board\'s high pressure'}. A reading you enter replaces the log's and re-draws the suspects.</div>
     <div class="rt-src">Manual: ${rtE(C.cite + (C.field ? ' (field rule)' : ''))}</div><div class="rt-fs">${gF.map(f => rtField('g|' + f.k, f, g[f.k])).join('')}</div>${calc.length ? `<div class="rt-judge">From your readings: ${rtE(calc.join(', '))}</div>` : ''}</div></li>`;
@@ -5604,6 +5776,7 @@ function rtChartHtml(X, m, b){
       <div class="rt-note">Judged: ${rtE(C.seen.join(', '))}.${C.notes.length ? ' Note: ' + rtE(C.notes.join('; ')) + '.' : ''}</div></div>
     ${cmpKeys.length ? `<div class="rt-sec"><div class="rt-lbl">The complaint: tap what the customer reports (the chart's own columns)</div>${cmpKeys.map(k => `<button type="button" class="rt-cmp${mod.cmp.includes(k) ? ' on' : ''}" data-cmp="${k}">${rtE(RT_CMP[k](m))}</button>`).join('')}${rtCallHint()}</div>` : ''}
     <div class="rt-sec"><div class="rt-lbl">Suspects</div><div class="rt-head2">${rtE(head)}</div>${idle ? '' : `<div class="rt-sus">${sus}</div>`}</div>
+    ${rtEvHtml(X, m)}
     <div class="rt-sec"><div class="rt-lbl">Route · ${RT_TIER.map(t => t.s + ' ' + t.t).join('  ')}</div><ol class="rt-map">${start}${stops}</ol>${end}</div>`};
 }
 function rtCallHint(){ try { if (!RT_LINK && CALL && CALL.cats && CALL.cats.length) return `<div class="rt-note">The call notes say: ${rtE(CALL.cats.join(', '))}.</div>`; } catch(e){} return ''; }
@@ -5631,6 +5804,7 @@ function rtFlowHtml(X, src, b){
   const famNote = f.multi && X.mfam && X.mfam.length > 1 ? ` The recording does not settle the model, so this is the ${rtE(MULTI[f.fam].short)} manual's version: pick the manual that matches the outdoor unit's nameplate, or set Model in the toolbar.` : '';
   return {mod, html:`
     <div class="rt-sec"><div class="rt-lbl">What the log shows</div>${facts}${mfacts ? `<div class="rt-hint">${rtE(mfacts)}</div>` : ''}<div class="rt-note">${c.minor ? `Code ${rtE(c.disp)} is the minor (thermostat-only) form of this fault; the manual's error table gives it the same causes, so its flowchart applies. ` : ''}${f.gen ? '' : 'Error decision: '}${rtE(f.cond)}${f.box ? ' ' + rtE(f.box) : ''}${f.sizes ? ` Applies to ${rtE(f.sizes)}.` : ''}${f.gen ? '' : ` Code table: ${rtE(c.src)}.`}${famNote}</div></div>
+    ${rtEvHtml(X, f.gen ? null : (c.mode || null), f.multi ? f.fam : null)}
     ${byMode ? `<div class="rt-sec rt-noprint"><div class="rt-lbl">Mode for the flowchart's [When cooling] / [When heating] steps</div>${['cool', 'heat'].map(x => `<button type="button" class="rt-cmp${m === x ? ' on' : ''}" data-mode="${x}">${x === 'heat' ? 'Heating' : 'Cooling'}</button>`).join('')}</div>` : ''}
     <div class="rt-sec"><div class="rt-lbl">The manual's ${f.gen ? 'check items' : 'flowchart'}, step by step: ${rtE(f.t)} (${rtE(pg)})</div><ol class="rt-map">${nodes}</ol>${f.note ? `<div class="rt-note">${rtE(f.note)}</div>` : ''}${end}</div>`};
 }
@@ -5651,7 +5825,7 @@ function buildRoute(){
       : (X.plat === 'fit32' || X.plat === 'dh9') ? `${X.doc} has no analysis chart, and no error code with a flowchart was logged in this recording. With Settings → Field rules on, the R-410A FIT chart can be used, labelled as a field rule.`
       : Object.keys(X.chartOut).length ? `The analysis chart holds only inside its outdoor range (${Object.entries(X.chartOut).map(([mm, o]) => `${mm === 'heat' ? 'heating' : 'cooling'} ${o.range[0]}–${o.range[1]} °F`).join(', ')}); this recording's settled running was outside it.`
       : 'This recording has no settled running inside the chart\'s range and no error code with a flowchart.';
-    host.innerHTML = linkBar + `<div class="rt-sheet"><div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''}</div></div></div><p class="rt-head2">${rtE(why)}</p></div>`; return; }
+    host.innerHTML = linkBar + `<div class="rt-sheet"><div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''}</div></div></div><p class="rt-head2">${rtE(why)}</p>${rtEvHtml(X, null)}</div>`; return; }
   st.src = src.id; const b = rtBy(st, src.id);
   const body = src.kind === 'chart' ? rtChartHtml(X, src.m, b) : rtFlowHtml(X, src, b);
   const mode = src.kind === 'chart' ? src.m : rtByMode(src.f) ? (b.mode || src.c.mode || 'cool') : src.c.mode, R = RT_DOC[X.plat] || {};
@@ -6317,7 +6491,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v104';
+const APP_VERSION = 'v105';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device

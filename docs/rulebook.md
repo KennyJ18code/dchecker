@@ -65,7 +65,7 @@ Manuals: SiUS612209EA and installation manual 3P731493-1 (FIT R-410A), SiUS61241
 | Multi limiter zones | Freeze-up, peak-cut, discharge drop and stop, input current, and the fin's L4 line: each family's own values | SiUS121736EA PDF 106–113, 219; SiUS121632EA PDF 97–99, 199; SiUS122410EC PDF 147–150, 318 |
 | Error codes | One table per family, from its manual | each manual's error-code pages |
 
-### The diagnostic route (v103; multi-splits and short links v104)
+### The diagnostic route (v103; multi-splits and short links v104; evidence from the recording v105)
 
 | Part | Source |
 |---|---|
@@ -79,6 +79,8 @@ Manuals: SiUS612209EA and installation manual 3P731493-1 (FIT R-410A), SiUS61241
 | Multi-split problem checklist (v104) | "General problem symptoms and check items": SiUS121736EA PDF 146, SiUS121632EA PDF 129, SiUS122410EC PDF 187, SiUS121827E PDF 151, in the manual's order. The Fine / Not fine boxes are the app's. |
 | Multi-split thermistor table (v104) | Check No.01, the same values in all four manuals (R25 °C = 20 kΩ, B = 3950 K). The MXS and MXL manuals call it reference data. |
 | Printed as is, with a note (v104) | Check No.12's stuck-open test (a room not in operation whose liquid pipe reads about the outdoor temperature → replace that room's valve). The manual's own piping diagram (SiUS121736EA PDF 267) puts that thermistor between the room's valve and the room. |
+| Evidence from the recording (v105, field rule) | The relationships are the manuals': indoor EEV superheat control (SiUS612209EA p.10; SiUS612412E p.7, p.10; SiUS612415E p.9, p.11; RS6215002r10 p.53; RSD6115001r14 p.33), the outdoor EEV in heating (SiUS612209EA p.11; SiUS612412E p.7, p.11; SiUS612415E p.9, p.12), the E21 / 54 pattern (SiUS612412E p.46, p.50; SiUS612415E p.48, p.52; RSD6115001r14 p.88), sensor positions (SiUS612412E p.8–9; SiUS612415E p.10; RS6215002r10 p.13, p.15, p.91), requested airflow (SiUS612412E p.10; RS6215002r10 p.31), and the multi port valves (SiUS121736EA PDF 119–120, 146 and 198, and the matching pages of the other three multi manuals). What counts as answering, holding or agreeing is the app's, set from Brackett's recordings. Evidence never clears or confirms a suspect. |
+| Notes corrected to the manuals (v105) | Target SC and SC − target (SiUS612415E p.9; SiUS612412E p.70); low pressure on the Goodman *VZC20 (RS6215002r10 p.15); the outdoor EEV held fully open in cooling (SiUS612412E p.7); airflow in tens of cfm (SiUS612412E p.41); a multi head's target is its set temperature (SiUS121736EA PDF 69); MXM / MXT ΔD steps (SiUS122410EC PDF 144). |
 | Short links and the QR code (v104) | The app's own. A snapshot of the route in the shop library's routes table (supabase/migration-2026-10-10-routes.sql) under a random 10-character code, with no customer details; without the library, the long link. |
 
 ### Signatures, patterns and the colour bands
