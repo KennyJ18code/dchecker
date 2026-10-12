@@ -334,7 +334,9 @@ body.no-parts #parts{display:none}
 .tag.tall{height:calc(10.4cqw * var(--k))}
 .tag .l{line-height:calc(2.2cqw * var(--k))}.tag .v{line-height:calc(3.4cqw * var(--k))}.tag .s{line-height:calc(2.1cqw * var(--k));margin-top:0}
 .tag:hover{border-color:var(--accent)}
-.tag.thv .l{letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
+.tag .vk{display:none}
+.tag.thv .v{position:relative}
+.tag.thv .vk{display:block;position:absolute;right:0;bottom:calc(.4cqw * var(--k));font-family:var(--mono);font-weight:700;font-size:calc(1.5cqw * var(--k));line-height:1;color:var(--accent);background:var(--panel);padding-left:calc(.3cqw * var(--k))}
 .tag.pinned{outline:2px solid var(--accent);outline-offset:1px}
 .tag .l{display:block;font-size:calc(2cqw * var(--k));font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 .tag .v{display:block;font-family:var(--mono);font-weight:700;font-size:calc(3.1cqw * var(--k));color:var(--ink);white-space:nowrap;margin-top:calc(.15cqw * var(--k))}
@@ -757,7 +759,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <div class="viewbar">
         <div class="viewsel" role="group" id="dimsel"><button type="button" data-dim="3d" aria-pressed="false" title="Rotatable 3D model">3D</button><button type="button" data-dim="2d" aria-pressed="true" title="Flat schematic with every reading">2D</button></div>
         <label class="thermtog"><input type="checkbox" id="thermal"> Thermal pipes</label>
-        <label class="thermtog" id="thermo-lab" title="Each thermistor chip shows the service manual's resistance at its logged temperature"><input type="checkbox" id="thermo"> Thermistor Ω</label>
+        <label class="thermtog" id="thermo-lab" title="Each thermistor chip also shows, in small type beside its name, the service manual's resistance at its logged temperature"><input type="checkbox" id="thermo"> Thermistor Ω</label>
         <button class="btn small" id="settingsbtn" type="button">⚙ Settings</button>
         <label class="eqtog">Equipment <select id="eqsel">
           <option value="auto">Auto-detect</option>
@@ -944,7 +946,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     <div class="sbody">
     <section class="sgroup"><h3>Diagram</h3>
       <label class="srow"><span class="t"><b>Thermal pipes</b><small>Colour the tubing by its logged temperature</small></span><input type="checkbox" class="sw" id="thermal2"></label>
-      <label class="srow"><span class="t"><b>Thermistor Ω on the chips</b><small>Each thermistor chip shows the resistance the service manual's thermistor chart gives at its logged temperature, with the temperature on the label line: a baseline for checking the sensor with a meter. The chip's card also gives the volts at the board where the manual prints them.</small></span><input type="checkbox" class="sw" id="thermo2"></label>
+      <label class="srow"><span class="t"><b>Thermistor Ω on the chips</b><small>Each thermistor chip also shows, in small type beside its name, the resistance the service manual's thermistor chart gives at its logged temperature: a baseline for checking the sensor with a meter. The temperature stays the big number. The chip's card also gives the volts at the board where the manual prints them.</small></span><input type="checkbox" class="sw" id="thermo2"></label>
       <label class="srow"><span class="t"><b>Motion</b><small>Flow dashes, air streams and fans</small></span><select data-s="anim"><option value="play">While playing</option><option value="always">Always</option><option value="off">Off</option></select></label>
       <label class="srow"><span class="t"><b>Sensor markers and leader lines</b></span><input type="checkbox" class="sw" data-s="leaders"></label>
       <label class="srow"><span class="t"><b>Change arrows</b><small>▲▼ against the previous row on each reading</small></span><input type="checkbox" class="sw" data-s="arrows"></label>
@@ -3860,7 +3862,7 @@ function buildTags(){
     const [px, py] = P(tg.x, tg.y);
     e.style.left = (px / LAY.W * 100) + '%'; e.style.top = (py / LAY.H * 100) + '%';
     e.id = 'tag-' + k;
-    e.innerHTML = `<span class="l"></span><span class="v"><span class="n">—</span><small></small><span class="tr"></span><span class="dz"></span></span><span class="viz"><i class="fill"></i><i class="ghost"></i><i class="tgt"></i></span><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="base" points="0,15 100,15"></polyline><polyline class="line" points=""></polyline><circle r="2.2" cx="100" cy="15"></circle></svg>` + ((tg.sub || tg.target) ? `<span class="s"></span>` : '') + (tg.bar ? `<span class="bar"><i></i></span>` : '');
+    e.innerHTML = `<span class="l"></span><span class="v"><span class="n">—</span><small></small><span class="tr"></span><span class="dz"></span><span class="vk"></span></span><span class="viz"><i class="fill"></i><i class="ghost"></i><i class="tgt"></i></span><svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="base" points="0,15 100,15"></polyline><polyline class="line" points=""></polyline><circle r="2.2" cx="100" cy="15"></circle></svg>` + ((tg.sub || tg.target) ? `<span class="s"></span>` : '') + (tg.bar ? `<span class="bar"><i></i></span>` : '');
     if (tg.custom){
       e.classList.add('custom');
       let drag = null;
@@ -3996,16 +3998,16 @@ function renderCycle(i){
     if (!id || (tg.adv && !S.physics) || (tg.hp && EQ.out === 'ac') || (tg.zone != null && !zoneCols().includes(tg.zone)) || (D.num[id] && !chHas(id) && !(id === 'dtp' && dtpRangeHas()))){ e.hidden = true; return; } e.hidden = false;
     const ch = chById[id]; const v = D.num[id][i], pv = provTip(id, i), drg = id === 'dtp' ? dtpRange(i) : null, thv = THERMO && !drg && isN(v) ? thermAt(id, v) : null;
     { const lab0 = (drg ? 'Calc air drop' : ((pv && pv.label) || pick(tg.label, m) || ch.short)) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
-      e.querySelector('.l').textContent = thv ? `${fmt(v, ch)}° ${lab0}` : lab0; }
-    const pr = !isN(v) && D.placeRows && D.placeRows[id]; e.querySelector('.n').textContent = drg ? `${drg[0]}–${drg[1]}` : thv ? (thv.out ? '—' : thermK(thv.k)) : (pr && pr.rows.has(i)) ? pr.word : fmt(v, ch);
+      e.querySelector('.l').textContent = lab0; }
+    const pr = !isN(v) && D.placeRows && D.placeRows[id]; e.querySelector('.n').textContent = drg ? `${drg[0]}–${drg[1]}` : (pr && pr.rows.has(i)) ? pr.word : fmt(v, ch);
     if (id === 'hp') document.querySelectorAll(`#leaders [data-tag="${k}"], #markers [data-tag="${k}"]`).forEach(x => x.style.display = hpSrcAt(i) === 'sensor' ? '' : 'none');   // a pressure-sensor marker only where the unit has one
-    e.querySelector('.v small').textContent = thv ? (thv.out ? 'off chart' : 'kΩ') : ch.unit;
+    e.querySelector('.v small').textContent = ch.unit;
+    e.querySelector('.vk').textContent = thv && !thv.out ? thermK(thv.k) + 'kΩ' : '';
     e.querySelector('.tr').innerHTML = trendMark(id, i);
     const subId0 = pick(tg.sub, m), subId = subId0 === id ? null : subId0, tgtId = pick(tg.target, m);   // a % tag showing its pulses drops the pulses sub-line
     const se = e.querySelector('.s');
     if (se){
-      if (thv){ se.textContent = ''; se.hidden = true; }   // Ω on: a °F target line under a kΩ number would mix units
-      else if (drg){ se.textContent = 'wet … dry coil'; se.hidden = false; }
+      if (drg){ se.textContent = 'wet … dry coil'; se.hidden = false; }
       else if (tgtId && isN(D.num[tgtId][i]) && isN(v)){
         // a logged target no manual describes: the difference, uncoloured (on the DH9VS family the IDU Target SC is the manual's own target, SiUS612415E p.9)
         const dh9Sc = tgtId === 'tsci' && unitPlat() === 'dh9', lab0 = pick(tg.targetLabel, m) || 'target', t = D.num[tgtId][i], d = v - t, dec = (Math.abs(d) >= 100 ? 0 : 1), ref = !dh9Sc && /^logged/.test(lab0);
@@ -4048,7 +4050,7 @@ function renderCycle(i){
     } else { e.style.removeProperty('--devbg'); e.style.removeProperty('--devline'); dz.textContent = ''; }
     const ids = (tg.states && (Array.isArray(tg.states) ? tg.states : pick(tg.states, m))) || [id];
     const st = worstOf(ids, i);
-    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + (thv ? ' thv' : '') + (((ch.calc && !/pct$/.test(id) && !ch.custom) || (pv && pv.label)) ? ' calc' : '') + (ch.custom ? ' custom' : '') + ' ' + ((isN(v) || drg) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '') + (chainState(id, i) ? ' ' + chainState(id, i) : '') + (implausAt(id, i) ? ' implaus' : '');
+    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + (thv && !thv.out ? ' thv' : '') + (((ch.calc && !/pct$/.test(id) && !ch.custom) || (pv && pv.label)) ? ' calc' : '') + (ch.custom ? ' custom' : '') + ' ' + ((isN(v) || drg) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '') + (chainState(id, i) ? ' ' + chainState(id, i) : '') + (implausAt(id, i) ? ' implaus' : '');
     e.removeAttribute('title'); const cmap = D.colmap && D.colmap.find(x => x.id === id); e._tip = {label:ch.label, note:pv ? pv.note : (ch.note ? (typeof ch.note === 'function' ? ch.note(m) : ch.note) : ''), kind:pv ? pv.kind : (ch.custom ? 'custom' : (ch.calc ? 'calc' : 'meas')), src:cmap && cmap.hdr && cmap.how !== 'mismatch' ? `File column ${cmap.at}: "${cmap.hdr}"` : '', therm:thermTxt(id, v)};
   });
 }
@@ -7429,8 +7431,8 @@ var V3 = (() => {
     renderCard(); phDraw();
     for (const l of labels){ if (l.name) continue; const c = chById[l.ch], v = num[l.ch][i], st = stateOf(l.ch, i), pv = provTip(l.ch, i), rg = l.ch === 'dtp' ? dtpRange(i) : null;
       const tv = THERMO && !rg && isN(v) ? thermAt(l.ch, v) : null;
-      l.el.querySelector('b').textContent = rg ? 'Calc air drop' : ((pv && pv.label) || c.short) + (tv ? ` ${fmt(v, c)} °F` : '');
-      l.el.querySelector('.v').textContent = rg ? `${rg[0]}–${rg[1]} °F` : tv ? (tv.out ? 'off chart' : thermK(tv.k) + ' kΩ') : fmt(v, c) + (c.unit ? ' ' + c.unit : ''); l.el.className = 'v3chip' + (st === 'warn' || st === 'alarm' ? ' ' + st : '') + (pins.includes(l.ch) ? ' pin' : '') + (chainState(l.ch, i) ? ' ' + chainState(l.ch, i) : '') + (implausAt(l.ch, i) ? ' implaus' : ''); leadCls(l); }
+      l.el.querySelector('b').textContent = rg ? 'Calc air drop' : ((pv && pv.label) || c.short) + (tv ? ` · ${tv.out ? 'off chart' : thermK(tv.k) + ' kΩ'}` : '');
+      l.el.querySelector('.v').textContent = rg ? `${rg[0]}–${rg[1]} °F` : fmt(v, c) + (c.unit ? ' ' + c.unit : ''); l.el.className = 'v3chip' + (st === 'warn' || st === 'alarm' ? ' ' + st : '') + (pins.includes(l.ch) ? ' pin' : '') + (chainState(l.ch, i) ? ' ' + chainState(l.ch, i) : '') + (implausAt(l.ch, i) ? ' implaus' : ''); leadCls(l); }
     dirty = true; kick();
   }
   // ---- drawing ----
