@@ -334,6 +334,7 @@ body.no-parts #parts{display:none}
 .tag.tall{height:calc(10.4cqw * var(--k))}
 .tag .l{line-height:calc(2.2cqw * var(--k))}.tag .v{line-height:calc(3.4cqw * var(--k))}.tag .s{line-height:calc(2.1cqw * var(--k));margin-top:0}
 .tag:hover{border-color:var(--accent)}
+.tag.thv .l{letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
 .tag.pinned{outline:2px solid var(--accent);outline-offset:1px}
 .tag .l{display:block;font-size:calc(2cqw * var(--k));font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 .tag .v{display:block;font-family:var(--mono);font-weight:700;font-size:calc(3.1cqw * var(--k));color:var(--ink);white-space:nowrap;margin-top:calc(.15cqw * var(--k))}
@@ -756,6 +757,7 @@ body.no-cabinet #indoor-var .cab{display:none}
       <div class="viewbar">
         <div class="viewsel" role="group" id="dimsel"><button type="button" data-dim="3d" aria-pressed="false" title="Rotatable 3D model">3D</button><button type="button" data-dim="2d" aria-pressed="true" title="Flat schematic with every reading">2D</button></div>
         <label class="thermtog"><input type="checkbox" id="thermal"> Thermal pipes</label>
+        <label class="thermtog" id="thermo-lab" title="Each thermistor chip shows the service manual's resistance at its logged temperature"><input type="checkbox" id="thermo"> Thermistor Ω</label>
         <button class="btn small" id="settingsbtn" type="button">⚙ Settings</button>
         <label class="eqtog">Equipment <select id="eqsel">
           <option value="auto">Auto-detect</option>
@@ -942,6 +944,7 @@ body.no-cabinet #indoor-var .cab{display:none}
     <div class="sbody">
     <section class="sgroup"><h3>Diagram</h3>
       <label class="srow"><span class="t"><b>Thermal pipes</b><small>Colour the tubing by its logged temperature</small></span><input type="checkbox" class="sw" id="thermal2"></label>
+      <label class="srow"><span class="t"><b>Thermistor Ω on the chips</b><small>Each thermistor chip shows the resistance the service manual's thermistor chart gives at its logged temperature, with the temperature on the label line: a baseline for checking the sensor with a meter. The chip's card also gives the volts at the board where the manual prints them.</small></span><input type="checkbox" class="sw" id="thermo2"></label>
       <label class="srow"><span class="t"><b>Motion</b><small>Flow dashes, air streams and fans</small></span><select data-s="anim"><option value="play">While playing</option><option value="always">Always</option><option value="off">Off</option></select></label>
       <label class="srow"><span class="t"><b>Sensor markers and leader lines</b></span><input type="checkbox" class="sw" data-s="leaders"></label>
       <label class="srow"><span class="t"><b>Change arrows</b><small>▲▼ against the previous row on each reading</small></span><input type="checkbox" class="sw" data-s="arrows"></label>
@@ -1357,7 +1360,7 @@ function manualBands(){
 
 /* ---------- state ---------- */
 let D = null, rules = loadRules(), evalCache = null, cur = 0, playing = false, timer = null;
-window.dchkDbg = () => ({D, cur, REF, S, AIRIN, CURRENT_REC, air:airSideCalc(), KB, cycleAt, RT:{ctx:rtCtx, srcs:() => rtSources(rtCtx()), last:() => RT_LAST, text:rtText, build:buildRoute, load:rtLoad, save:rtSave, link:() => RT_LINK, url:rtLinkUrl, short:rtShortUrl, shortNow:() => rtShortFor(rtCtx(), rtLoad())}});   // read-only hook for tools/shot.html (KB / cycleAt: the tabled 3D part cards)
+window.dchkDbg = () => ({D, cur, REF, S, AIRIN, CURRENT_REC, air:airSideCalc(), KB, cycleAt, thermAt, RT:{ctx:rtCtx, srcs:() => rtSources(rtCtx()), last:() => RT_LAST, text:rtText, build:buildRoute, load:rtLoad, save:rtSave, link:() => RT_LINK, url:rtLinkUrl, short:rtShortUrl, shortNow:() => rtShortFor(rtCtx(), rtLoad())}});   // read-only hook for tools/shot.html (KB / cycleAt: the tabled 3D part cards)
 let pins = loadJSON('dchk.pins', []);
 const SCENE_PORT = `          <!-- INDOOR UNIT (local coordinates; moved as a group in landscape) -->
           <g id="g-in">
@@ -2337,6 +2340,8 @@ function buildZoneBar(){
   const all = document.createElement('button'); all.type = 'button'; all.textContent = 'All'; all.setAttribute('aria-pressed', !ZVIS || ZVIS.size === D.zones.length); all.addEventListener('click', () => { ZVIS = null; saveJSON('dchk.zvis.' + D.name, null); buildZoneBar(); setLayout(); if (evalCache && evalCache.length === D.n) renderCycle(cur); }); bar.appendChild(all);
 }
 let THERMAL = !!loadJSON('dchk.thermal', false);
+let THERMO = !!loadJSON('dchk.thermo', false);
+function setThermo(on){ if (THERMO !== !!on) logEvent('thermo', {on:!!on}); THERMO = !!on; saveJSON('dchk.thermo', THERMO); if ($('#thermo')) $('#thermo').checked = THERMO; if ($('#thermo2')) $('#thermo2').checked = THERMO; if (D) renderCycle(cur); }
 function setThermal(on){ if (THERMAL !== !!on) logEvent('thermal', {on:!!on}); THERMAL = !!on; saveJSON('dchk.thermal', THERMAL); $('#diag').classList.toggle('thermal', THERMAL); $('#thermal').checked = THERMAL; if ($('#thermal2')) $('#thermal2').checked = THERMAL; $('#thermscale').hidden = !THERMAL; if (D) renderCycle(cur); }
 const VIEWNOTE = {num:'', bar:'fill = where the reading sits in this log\'s range · grey tick = steady-state norm · black tick = target', spark:'trail behind each number = its last 10 minutes · dashed = steady-state norm', dev:'tint = distance from this log\'s steady-state norm (σ) · red high, blue low'};
 function setView(v){ if (VIEW !== v) logEvent('view', {view:v}); VIEW = v; saveJSON('dchk.view', v); const dg = $('#diag'); dg.classList.remove('view-num','view-bar','view-spark','view-dev'); dg.classList.add('view-' + v); $('#viewnote').textContent = ''; if (D) renderCycle(cur); }
@@ -3928,6 +3933,7 @@ function fwText(v){
 }
 function renderCycle(i){
   const m = D.mode[i] === 'cool' ? 'cool' : 'heat', running = D.runSec[i] >= 0;
+  { const tl = document.getElementById('thermo-lab'); if (tl) tl.hidden = !thermoAvail(); }
   $('#diag').classList.toggle('idle', !running);
   // a head whose port EEV sits at 0 pulses gets no refrigerant: its line set and coil go idle (no flow, idle colour) while the compressor serves the others
   const zoneOn = k => running && !(isN(D.num['pev'+k][i]) && D.num['pev'+k][i] === 0);
@@ -3988,16 +3994,18 @@ function renderCycle(i){
     const e = document.getElementById('tag-' + k);
     let id = tagCh(tg, m); if (tg.alt && id && D.num[id] && !chHas(id) && chHas(tg.alt)) id = tg.alt;   // e.g. pulses when the % open cannot be judged
     if (!id || (tg.adv && !S.physics) || (tg.hp && EQ.out === 'ac') || (tg.zone != null && !zoneCols().includes(tg.zone)) || (D.num[id] && !chHas(id) && !(id === 'dtp' && dtpRangeHas()))){ e.hidden = true; return; } e.hidden = false;
-    const ch = chById[id]; const v = D.num[id][i], pv = provTip(id, i), drg = id === 'dtp' ? dtpRange(i) : null;
-    e.querySelector('.l').textContent = (drg ? 'Calc air drop' : ((pv && pv.label) || pick(tg.label, m) || ch.short)) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
-    const pr = !isN(v) && D.placeRows && D.placeRows[id]; e.querySelector('.n').textContent = drg ? `${drg[0]}–${drg[1]}` : (pr && pr.rows.has(i)) ? pr.word : fmt(v, ch);
+    const ch = chById[id]; const v = D.num[id][i], pv = provTip(id, i), drg = id === 'dtp' ? dtpRange(i) : null, thv = THERMO && !drg && isN(v) ? thermAt(id, v) : null;
+    { const lab0 = (drg ? 'Calc air drop' : ((pv && pv.label) || pick(tg.label, m) || ch.short)) + ((id === 'evpct' && (D.sig[i] || []).some(x => x.code === 'ev-open')) ? ' · PINNED' : '');
+      e.querySelector('.l').textContent = thv ? `${fmt(v, ch)}° ${lab0}` : lab0; }
+    const pr = !isN(v) && D.placeRows && D.placeRows[id]; e.querySelector('.n').textContent = drg ? `${drg[0]}–${drg[1]}` : thv ? (thv.out ? '—' : thermK(thv.k)) : (pr && pr.rows.has(i)) ? pr.word : fmt(v, ch);
     if (id === 'hp') document.querySelectorAll(`#leaders [data-tag="${k}"], #markers [data-tag="${k}"]`).forEach(x => x.style.display = hpSrcAt(i) === 'sensor' ? '' : 'none');   // a pressure-sensor marker only where the unit has one
-    e.querySelector('.v small').textContent = ch.unit;
+    e.querySelector('.v small').textContent = thv ? (thv.out ? 'off chart' : 'kΩ') : ch.unit;
     e.querySelector('.tr').innerHTML = trendMark(id, i);
     const subId0 = pick(tg.sub, m), subId = subId0 === id ? null : subId0, tgtId = pick(tg.target, m);   // a % tag showing its pulses drops the pulses sub-line
     const se = e.querySelector('.s');
     if (se){
-      if (drg){ se.textContent = 'wet … dry coil'; se.hidden = false; }
+      if (thv){ se.textContent = ''; se.hidden = true; }   // Ω on: a °F target line under a kΩ number would mix units
+      else if (drg){ se.textContent = 'wet … dry coil'; se.hidden = false; }
       else if (tgtId && isN(D.num[tgtId][i]) && isN(v)){
         // a logged target no manual describes: the difference, uncoloured (on the DH9VS family the IDU Target SC is the manual's own target, SiUS612415E p.9)
         const dh9Sc = tgtId === 'tsci' && unitPlat() === 'dh9', lab0 = pick(tg.targetLabel, m) || 'target', t = D.num[tgtId][i], d = v - t, dec = (Math.abs(d) >= 100 ? 0 : 1), ref = !dh9Sc && /^logged/.test(lab0);
@@ -4040,8 +4048,8 @@ function renderCycle(i){
     } else { e.style.removeProperty('--devbg'); e.style.removeProperty('--devline'); dz.textContent = ''; }
     const ids = (tg.states && (Array.isArray(tg.states) ? tg.states : pick(tg.states, m))) || [id];
     const st = worstOf(ids, i);
-    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + (((ch.calc && !/pct$/.test(id) && !ch.custom) || (pv && pv.label)) ? ' calc' : '') + (ch.custom ? ' custom' : '') + ' ' + ((isN(v) || drg) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '') + (chainState(id, i) ? ' ' + chainState(id, i) : '') + (implausAt(id, i) ? ' implaus' : '');
-    e.removeAttribute('title'); const cmap = D.colmap && D.colmap.find(x => x.id === id); e._tip = {label:ch.label, note:pv ? pv.note : (ch.note ? (typeof ch.note === 'function' ? ch.note(m) : ch.note) : ''), kind:pv ? pv.kind : (ch.custom ? 'custom' : (ch.calc ? 'calc' : 'meas')), src:cmap && cmap.hdr && cmap.how !== 'mismatch' ? `File column ${cmap.at}: "${cmap.hdr}"` : ''};
+    e.className = 'tag' + (tg.anchor ? ' ' + tg.anchor : '') + (tg.tall ? ' tall' : '') + (thv ? ' thv' : '') + (((ch.calc && !/pct$/.test(id) && !ch.custom) || (pv && pv.label)) ? ' calc' : '') + (ch.custom ? ' custom' : '') + ' ' + ((isN(v) || drg) ? tagClass(st) : 'na') + (pins.includes(id) ? ' pinned' : '') + (chainState(id, i) ? ' ' + chainState(id, i) : '') + (implausAt(id, i) ? ' implaus' : '');
+    e.removeAttribute('title'); const cmap = D.colmap && D.colmap.find(x => x.id === id); e._tip = {label:ch.label, note:pv ? pv.note : (ch.note ? (typeof ch.note === 'function' ? ch.note(m) : ch.note) : ''), kind:pv ? pv.kind : (ch.custom ? 'custom' : (ch.calc ? 'calc' : 'meas')), src:cmap && cmap.hdr && cmap.how !== 'mismatch' ? `File column ${cmap.at}: "${cmap.hdr}"` : '', therm:thermTxt(id, v)};
   });
 }
 // change from the previous row: ▲ green / ▼ red, as a percentage (absolute when the previous value is near zero)
@@ -4978,6 +4986,28 @@ const RT_THERM = [[-30, 364.43, 4759.15, 362.48], [-25, 267.00, 3454.24, 265.99]
 // expected kΩ at °F for column col (1 = Tm group, 2 = Td, 3 = Ta), interpolated on ln R between the table's 5 °C rows
 function rtThermK(tF, col){ if (!isN(tF)) return null; const c = (tF - 32) / 1.8; const R = RT_THERM.filter(r => isN(r[col])); if (c < R[0][0] || c > R[R.length - 1][0]) return null;
   for (let k = 1; k < R.length; k++) if (c <= R[k][0]){ const a = R[k - 1], b = R[k], f = (c - a[0]) / (b[0] - a[0]); return Math.exp(Math.log(a[col]) + f * (Math.log(b[col]) - Math.log(a[col]))); } return null; }
+// the same chart's DC volts at the board for each 5 °C row (coil group, Td, Ta), printed beside the resistance in every one of these manuals
+const RT_THERMV = [[-30, 4.58, 4.96, 4.58], [-25, 4.45, 4.94, 4.45], [-20, 4.29, 4.92, 4.28], [-15, 4.09, 4.90, 4.09], [-10, 3.86, 4.86, 3.86], [-5, 3.61, 4.82, 3.61], [0, 3.33, 4.77, 3.33], [5, 3.04, 4.70, 3.04], [10, 2.74, 4.62, 2.74], [15, 2.44, 4.53, 2.44], [20, 2.16, 4.41, 2.16], [25, 1.89, 4.28, 1.89], [30, 1.64, 4.13, 1.64], [35, 1.42, 3.95, 1.42], [40, 1.22, 3.76, 1.22], [45, 1.04, 3.56, 1.05], [50, 0.89, 3.34, 0.89], [55, 0.76, 3.11, null], [60, 0.65, 2.87, null], [65, 0.56, 2.64, null], [70, 0.48, 2.41, null], [75, 0.41, 2.18, null], [80, 0.35, 1.97, null], [85, 0.30, 1.77, null], [90, 0.26, 1.58, null], [95, 0.23, 1.41, null], [100, 0.20, 1.25, null], [105, 0.17, 1.11, null], [110, 0.15, 0.99, null], [115, 0.13, 0.87, null], [120, 0.12, 0.77, null], [125, 0.10, 0.68, null], [130, 0.09, 0.61, null], [135, 0.08, 0.54, null], [140, 0.07, 0.48, null], [145, 0.06, 0.42, null], [150, 0.06, 0.37, null]];
+function rtThermV(tF, col){ if (!isN(tF)) return null; const c = (tF - 32) / 1.8, R = RT_THERMV.filter(r => isN(r[col])); if (c < R[0][0] || c > R[R.length - 1][0]) return null;
+  for (let k = 1; k < R.length; k++) if (c <= R[k][0]){ const a = R[k - 1], b = R[k], f = (c - a[0]) / (b[0] - a[0]); return a[col] + f * (b[col] - a[col]); } return null; }
+// which chart curve each logged thermistor reads on: the coil group (Tm, Tl, Ts, Tb, Tgi, Tli), the discharge Td, the outdoor air Ta
+const TH_UNI = {ocmid:1, ochex:1, liq:1, suct:1, igas:1, iliq:1, disch:2, oat:3};
+const TH_UNI_DOC = {fit410:'SiUS612209EA p.72', fit32:'SiUS612412E p.71', dh9:'SiUS612415E p.72', vzc:'RS6215002r10 p.104', dx9vc:'RSD6115001r14 p.78'};
+const TH_MULTI = /^(oat|ochex|disch|rmgas\d|rmliq\d|ra\d|ihx\d)$/;   // a multi's thermistors all read on Check No.01's one chart, heads included
+function thermChart(id){
+  if (!D) return null;
+  if (D.fam === 'multi'){ if (!TH_MULTI.test(id)) return null; const f = (multiFam().cands || [])[0] || 'mxs', R = RT_MDOC[f]; return R ? {multi:true, src:`${R.doc} PDF ${R.ck['01']}`, ref:!R.tSure} : null; }
+  const doc = TH_UNI_DOC[unitPlat()], col = TH_UNI[id]; return doc && col ? {col, src:doc} : null;
+}
+const thermoAvail = () => !!D && (D.fam === 'multi' || !!TH_UNI_DOC[unitPlat()]);
+// the chart's resistance (kΩ) and board volts at a logged temperature; out:true past the chart's range
+function thermAt(id, tF){ const c = thermChart(id); if (!c || !isN(tF)) return null;
+  if (c.multi){ const k = rtMThermK(tF); return isN(k) ? {k, v:null, src:c.src, ref:c.ref} : {out:true, src:c.src, range:'−4 to 122 °F'}; }
+  const k = rtThermK(tF, c.col); return isN(k) ? {k, v:rtThermV(tF, c.col), src:c.src} : {out:true, src:c.src, range:c.col === 3 ? '−22 to 122 °F' : '−22 to 302 °F'}; }
+const thermK = k => k >= 100 ? f0(k) : k >= 10 ? k.toFixed(1) : k.toFixed(2);
+function thermTxt(id, tF){ const t = thermAt(id, tF); if (!t) return '';
+  if (t.out) return `Thermistor chart (${t.src}): ${f1s(tF)} °F is outside its range (${t.range}).`;
+  return `Thermistor chart (${t.src}): ${thermK(t.k)} kΩ at ${f1s(tF)} °F${isN(t.v) ? `, ${t.v.toFixed(2)} V DC at the board` : ''}. Unplugged at this temperature, the sensor should measure about this.${t.ref ? ' This manual calls its chart reference data.' : ''}`; }
 const RT_THS = {th_td:{col:2, sym:'Td', nm:'discharge thermistor', ch:'disch'}, th_tm:{col:1, sym:'Tm', nm:'outdoor coil thermistor', ch:'ocmid'}, th_ta:{col:3, sym:'Ta', nm:'outdoor air thermistor', ch:'oat'},
   th_ts:{col:1, sym:'Ts', nm:'suction thermistor', ch:'suct'}, th_tb:{col:1, sym:'Tb', nm:'defrost thermistor', ch:'ochex'}, th_tl:{col:1, sym:'Tl', nm:'outdoor liquid thermistor', ch:'liq'}};
 // each platform's pages for the tests (printed folio = PDF page in these manuals)
@@ -5042,7 +5072,7 @@ function rtTests(X, m){
   for (const [id, th] of Object.entries(RT_THS)) add({id, tier:1, t:`${th.nm[0].toUpperCase() + th.nm.slice(1)} (${th.sym}) against the table`,
     how:['Unplug it at the board; measure its resistance and the temperature at the sensor with your own probe.'], src:src(`${R.s26}; table ${R.th}`, rem(id)),
     hint:() => X.hintTh && X.hintTh[m] && X.hintTh[m][id], fields:[{k:'t', l:'Temp at the sensor', u:'°F'}, {k:'r', l:'Resistance', u:'kΩ'}],
-    judge:r => { const e = rtThermK(rd(r, 't'), th.col); if (!isN(e)) return isN(rd(r, 't')) ? {txt:'Outside the table\'s range'} : null; return {txt:`The table: ${e >= 100 ? f0(e) : e.toFixed(2)} kΩ at ${f0(rd(r, 't'))} °F (between its rows)` + (isN(rd(r, 'r')) ? `; your reading is ${f0((rd(r, 'r') / e - 1) * 100)} % ${rd(r, 'r') >= e ? 'above' : 'below'}. The manual sets no tolerance: replace it if it is open, shorted or outside the valid range.` : '')}; },
+    judge:r => { const e = rtThermK(rd(r, 't'), th.col); if (!isN(e)) return isN(rd(r, 't')) ? {txt:'Outside the table\'s range'} : null; return {txt:`The table: ${e >= 100 ? f0(e) : e.toFixed(2)} kΩ at ${f0(rd(r, 't'))} °F (between its rows), ${rtThermV(rd(r, 't'), th.col).toFixed(2)} V DC at the board` + (isN(rd(r, 'r')) ? `; your reading is ${f0(Math.abs(rd(r, 'r') / e - 1) * 100)} % ${rd(r, 'r') >= e ? 'above' : 'below'}. The manual sets no tolerance: replace it if it is open, shorted or outside the valid range.` : '')}; },
     outs:[ok('Matches the table', [id]), bad('Open, shorted or off the table', [id])]});
   add({id:'hps', tier:1, t:'High pressure switch', how:[vc ? 'With the wire removed, check continuity across the switch' + (pl === 'vzc' ? ' at X32A' : '') + '; then in charge mode with the coil blocked it must cut out at 605 psig (−17 psig).' : 'With the wire on the PCB side removed, check across the PCB-side terminals: it must be continuous.'],
     src:src(R.s12, rem('hps')), outs:[ok('Continuous / cuts out right', ['hps']), bad('Open or cuts out low', ['hps'])]});
@@ -5431,7 +5461,7 @@ function rtEvidence(X, pl, multi){
       const shG = has('igas') && has('evap') ? med(R.map(i => num.igas[i] - num.evap[i])) : null, shS = has('suct') && has('evap') ? med(R.map(i => num.suct[i] - num.evap[i])) : null;
       if (pHi >= K.share && isN(shHi) && shHi > K.shBad){
         const gasOut = (isN(dG) && dG > K.gBad) || (isN(shG) && shG > K.shBad && (!isN(shS) || shS < K.shBad));
-        add({m:'cool', lean:'toward', sus:[], outside:true, name:gasOut ? 'Indoor gas thermistor' : 'The superheat reading',
+        add({m:'cool', lean:'toward', sus:[], outside:true, th:gasOut ? {ch:'igas', col:1} : null, name:gasOut ? 'Indoor gas thermistor' : 'The superheat reading',
           txt:`The indoor EEV sat wide open (${uMax} pulses on ${pHi} % of the settled cooling rows) chasing ${f0(shHi)} °F of coil superheat, which no working cooling coil shows.${isN(dG) ? ` The indoor gas pipe read ${f0(dG)} °F above the outdoor suction pipe on the same suction line` : ''}${isN(dP) ? `${isN(dG) ? ', while' : ' The'} the indoor and outdoor pressure sensors agreed within ${f0(Math.max(1, Math.abs(dP)))} psi` : ''}. ${gasOut ? 'That points at the indoor gas thermistor, not the valve: the valve did what the reading told it.' : 'The valve did what the reading told it; check the sensors behind that reading before the valve.'}`,
           src:`${c}${M.ieev} (superheat control); ${M.sens} (sensor positions)`});
         if (isN(shS) && shS < 5) add({m:'cool', lean:'away', sus:['ieev', 'ieevcoil'], name:'Indoor EEV and its coil',
@@ -5469,7 +5499,7 @@ function rtEvidence(X, pl, multi){
         if (Math.abs(dG) <= K.gOk) add({m:'cool', lean:'away', sus:['th_ts'], name:'Gas line thermistors',
           txt:`The indoor gas pipe and the outdoor suction pipe, on the same suction line in cooling, read within ${f0(Math.max(1, Math.abs(dG)))} °F of each other.`, src:`${c}${M.sens}`});
         else if (Math.abs(dG) >= K.gBad){ const sOut = isN(shS) && (shS > K.shBad || shS < -10);
-          add({m:'cool', lean:'toward', sus:sOut ? ['th_ts'] : [], outside:!sOut, name:sOut ? 'Suction thermistor' : 'Indoor gas thermistor',
+          add({m:'cool', lean:'toward', sus:sOut ? ['th_ts'] : [], outside:!sOut, th:{ch:sOut ? 'suct' : 'igas', col:1}, name:sOut ? 'Suction thermistor' : 'Indoor gas thermistor',
             txt:`The indoor gas pipe read ${f0(Math.abs(dG))} °F ${dG > 0 ? 'above' : 'below'} the outdoor suction pipe on the same suction line; the ${sOut ? 'suction pipe' : 'indoor gas pipe'} is the one that disagrees with the pressure sensors.`, src:`${c}${M.sens}`}); } }
     }
     // ---- outdoor EEV, heating: superheat (FIT, Ts − Tm) or indoor subcooling (DH9VS)
@@ -5502,9 +5532,9 @@ function rtEvidence(X, pl, multi){
       if (R.length >= 5 && has('oat')){ const ok = [], bad = [];
         for (const [ch, id, nm] of [['disch', 'th_td', 'discharge'], ['suct', 'th_ts', 'suction'], ['ochex', 'th_tb', 'outdoor coil (Tb)'], ['ocmid', 'th_tm', 'outdoor coil middle (Tm)'], ['liq', 'th_tl', 'liquid pipe']]){
           if (!has(ch)) continue; const d = med(R.map(i => isN(num[ch][i]) && isN(num.oat[i]) ? num[ch][i] - num.oat[i] : null)); if (!isN(d)) continue;
-          if (Math.abs(d) <= K.restOk) ok.push([id, nm, d]); else if (Math.abs(d) >= K.restBad) bad.push([id, nm, d]); }
+          if (Math.abs(d) <= K.restOk) ok.push([id, nm, d]); else if (Math.abs(d) >= K.restBad) bad.push([id, nm, d, ch]); }
         if (ok.length) add({m:null, lean:'away', sus:ok.map(x => x[0]), name:'Outdoor thermistors at rest', txt:`After ${K.rest} minutes or more with the compressor off, the ${ok.map(x => x[1]).join(', ')} thermistor${ok.length > 1 ? 's' : ''} read within ${K.restOk} °F of outdoor air (${mins(R)} min at rest).`, src:`${c}${M.sens} (thermistor positions)`});
-        for (const [id, nm, d] of bad) add({m:null, lean:'toward', sus:[id], name:`The ${nm} thermistor`, txt:`After ${K.rest} minutes or more with the compressor off it read ${f0(Math.abs(d))} °F ${d > 0 ? 'above' : 'below'} outdoor air (${mins(R)} min at rest).`, src:`${c}${M.sens} (thermistor positions)`}); } }
+        for (const [id, nm, d, ch] of bad) add({m:null, lean:'toward', sus:[id], th:{ch, col:ch === 'disch' ? 2 : 1}, name:`The ${nm} thermistor`, txt:`After ${K.rest} minutes or more with the compressor off it read ${f0(Math.abs(d))} °F ${d > 0 ? 'above' : 'below'} outdoor air (${mins(R)} min at rest).`, src:`${c}${M.sens} (thermistor positions)`}); } }
   } else {
     // ---- multi: each port's valve, in cooling (stopped rooms are closed then; calling rooms are steered on their gas pipe)
     const fams = (X.mfam || []).filter(f => RT_MEVP[f]); if (!fams.length) return null;
@@ -5538,12 +5568,16 @@ function rtEvidence(X, pl, multi){
   return {items, bySus};
 }
 function rtEvFor(X, m, id){ const B = X.ev && X.ev.bySus; if (!B) return null; return B[m + ':' + id] || B['any:' + id] || null; }
-function rtEvHtml(X, m, fam){
+function rtEvHtml(X, m, fam, b){
   const E = X.ev; if (!E || !E.items) return '';
   const it = E.items.filter(x => !x.m || !m || x.m === m); if (!it.length) return '';
   const ord = {toward:0, note:1, away:2}, rows = it.slice().sort((a, b) => ord[a.lean] - ord[b.lean]);
-  const mark = l => l === 'toward' ? '▲' : l === 'away' ? '▼' : '•';
-  return `<div class="rt-sec"><div class="rt-lbl">What the recording leans toward · the app's reading</div>${rows.map(x => `<div class="rt-ev ${x.lean}"><span class="rt-evm">${mark(x.lean)}</span><div><b>${rtE(x.name)}</b>${x.outside ? ' <span class="rt-tag">not on the chart</span>' : ''} ${rtE(x.txt)}<div class="rt-src">${rtE(x.srcF && fam && x.srcF[fam] ? x.srcF[fam] : x.src)}</div></div></div>`).join('')}
+  const mark = l => l === 'toward' ? '▲' : l === 'away' ? '▼' : '•', doc = TH_UNI_DOC[X.plat] || '';
+  const thBox = x => { if (!x.th || !b || !doc) return ''; const key = 'ev:' + x.th.ch, rd = (b.rd && b.rd[key]) || {}, e = rtThermK(rd.t, x.th.col), vv = rtThermV(rd.t, x.th.col);
+    return `<div class="rt-fs">${rtField(key + '|t', {l:'Temp at the sensor', u:'°F'}, rd.t)}${rtField(key + '|r', {l:'Resistance', u:'kΩ'}, rd.r)}</div>`
+      + (isN(e) ? `<div class="rt-judge">The chart: ${e >= 100 ? f0(e) : e.toFixed(2)} kΩ at ${f0(rd.t)} °F, ${vv.toFixed(2)} V DC at the board${isN(rd.r) ? `; your reading is ${f0(Math.abs(rd.r / e - 1) * 100)} % ${rd.r >= e ? 'above' : 'below'}` : ''} (${rtE(doc)})</div>`
+        : isN(rd.t) ? '<div class="rt-judge">Outside the chart\'s range</div>' : `<div class="rt-src">Unplug it at the board; measure its resistance and the temperature at the sensor, and compare with the thermistor chart (${rtE(doc)}).</div>`); };
+  return `<div class="rt-sec"><div class="rt-lbl">What the recording leans toward · the app's reading</div>${rows.map(x => `<div class="rt-ev ${x.lean}"><span class="rt-evm">${mark(x.lean)}</span><div><b>${rtE(x.name)}</b>${x.outside ? ' <span class="rt-tag">not on the chart</span>' : ''} ${rtE(x.txt)}<div class="rt-src">${rtE(x.srcF && fam && x.srcF[fam] ? x.srcF[fam] : x.src)}</div>${thBox(x)}</div></div>`).join('')}
     <div class="rt-note">▲ leans toward, ▼ leans away. The relationships are the manual's; what counts as a lean is the app's, measured on Brackett's recordings. Evidence only leans: the manual's test still decides, and the route keeps its order.</div></div>`;
 }
 let RT_LINK = null, RT_XC = null;
@@ -5627,7 +5661,7 @@ function rtMWidget(X, n, c, f, b){
     out.push(`<div class="rt-chk"><div class="rt-src">Check No.${n.chk}: ${rtE(k.t)} (${rtE(R.doc)} PDF ${rtE(k.p)})</div>${k.ol === false ? k.steps.map(t => `<div class="rt-how">${rtE(t)}</div>`).join('') : `<ol>${li(k.steps)}</ol>`}${(k.more || []).map(t => `<div class="rt-how">${rtE(t)}</div>`).join('')}${k.note ? `<div class="rt-how rt-note2">${rtE(k.note)}</div>` : ''}</div>`);
     if (n.chk === '01'){ const rd = (b.rd && b.rd['n:' + n.id]) || {}, e = rtMThermK(rd.t);
       out.push(`<div class="rt-fs">${rtField('n:' + n.id + '|t', {l:'Temp at the sensor', u:'°F'}, rd.t)}${rtField('n:' + n.id + '|r', {l:'Resistance', u:'kΩ'}, rd.r)}</div>`
-        + (isN(e) ? `<div class="rt-judge">The table: ${e.toFixed(e >= 100 ? 0 : 2)} kΩ at ${f0(rd.t)} °F${isN(rd.r) ? `; your reading is ${f0((rd.r / e - 1) * 100)} % ${rd.r >= e ? 'above' : 'below'}` : ''}${R.tSure ? '' : '. This manual says its data is for reference only.'}</div>` : isN(rd.t) ? '<div class="rt-judge">Outside the table\'s range (−4 to 122 °F)</div>' : '')); } }
+        + (isN(e) ? `<div class="rt-judge">The table: ${e.toFixed(e >= 100 ? 0 : 2)} kΩ at ${f0(rd.t)} °F${isN(rd.r) ? `; your reading is ${f0(Math.abs(rd.r / e - 1) * 100)} % ${rd.r >= e ? 'above' : 'below'}` : ''}${R.tSure ? '' : '. This manual says its data is for reference only.'}</div>` : isN(rd.t) ? '<div class="rt-judge">Outside the table\'s range (−4 to 122 °F)</div>' : '')); } }
   const h = rtMHint(X, n.w, c); if (h) out.push(`<div class="rt-hint">${rtE(h)}</div>`);
   return out.join('');
 }
@@ -5716,7 +5750,7 @@ function rtFlowWidget(X, w, c, f, b, nid){
     + line((() => { const a = ['a', 'b', 'c', 'd'].map(k => rd[k]).filter(isN); if (!a.length) return ''; const o = a.filter(x => x < 40 || x > 50); return o.length ? `${o.length} reading${o.length > 1 ? 's' : ''} outside 40–50 Ω` : `All ${a.length} inside 40–50 Ω`; })());
   if (/^th_/.test(w)){ const col = w === 'th_td' ? 2 : w === 'th_ta' ? 3 : 1, e = rtThermK(rd.t, col);
     return hint(`Measure its resistance and the temperature at the sensor; compare with the table (${R.th || 'the manual'}).`) + fields([{k:'t', l:'Temp at the sensor', u:'°F'}, {k:'r', l:'Resistance', u:'kΩ'}])
-      + line(isN(e) ? `The table: ${e >= 100 ? f0(e) : e.toFixed(2)} kΩ at ${f0(rd.t)} °F` + (isN(rd.r) ? `; your reading is ${f0((rd.r / e - 1) * 100)} % ${rd.r >= e ? 'above' : 'below'}` : '') : isN(rd.t) ? 'Outside the table\'s range' : ''); }
+      + line(isN(e) ? `The table: ${e >= 100 ? f0(e) : e.toFixed(2)} kΩ at ${f0(rd.t)} °F, ${rtThermV(rd.t, col).toFixed(2)} V DC at the board` + (isN(rd.r) ? `; your reading is ${f0(Math.abs(rd.r / e - 1) * 100)} % ${rd.r >= e ? 'above' : 'below'}` : '') : isN(rd.t) ? 'Outside the table\'s range' : ''); }
   if (w === 'charge'){ const p = rd.p, t = rd.t, s = isN(p) ? satF(p, X.ref) : null;
     const tgt = X.plat === 'dh9' ? 'CVT target subcooling 11 °F (installation manual p.26)' : X.plat === 'fit410' ? 'the charging table by size (installation manual 3P731493-1 p.29–30)' : 'the installation manual\'s charging table';
     return hint(`Gauge on the liquid valve port, thermometer on the liquid line at the valve; compare with ${tgt}.`) + fields([{k:'p', l:'Liquid pressure', u:'psig'}, {k:'t', l:'Liquid line', u:'°F'}])
@@ -5777,7 +5811,7 @@ function rtChartHtml(X, m, b){
       <div class="rt-note">Judged: ${rtE(C.seen.join(', '))}.${C.notes.length ? ' Note: ' + rtE(C.notes.join('; ')) + '.' : ''}</div></div>
     ${cmpKeys.length ? `<div class="rt-sec"><div class="rt-lbl">The complaint: tap what the customer reports (the chart's own columns)</div>${cmpKeys.map(k => `<button type="button" class="rt-cmp${mod.cmp.includes(k) ? ' on' : ''}" data-cmp="${k}">${rtE(RT_CMP[k](m))}</button>`).join('')}${rtCallHint()}</div>` : ''}
     <div class="rt-sec"><div class="rt-lbl">Suspects</div><div class="rt-head2">${rtE(head)}</div>${idle ? '' : `<div class="rt-sus">${sus}</div>`}</div>
-    ${rtEvHtml(X, m)}
+    ${rtEvHtml(X, m, null, b)}
     <div class="rt-sec"><div class="rt-lbl">Route · ${RT_TIER.map(t => t.s + ' ' + t.t).join('  ')}</div><ol class="rt-map">${start}${stops}</ol>${end}</div>`};
 }
 function rtCallHint(){ try { if (!RT_LINK && CALL && CALL.cats && CALL.cats.length) return `<div class="rt-note">The call notes say: ${rtE(CALL.cats.join(', '))}.</div>`; } catch(e){} return ''; }
@@ -5805,7 +5839,7 @@ function rtFlowHtml(X, src, b){
   const famNote = f.multi && X.mfam && X.mfam.length > 1 ? ` The recording does not settle the model, so this is the ${rtE(MULTI[f.fam].short)} manual's version: pick the manual that matches the outdoor unit's nameplate, or set Model in the toolbar.` : '';
   return {mod, html:`
     <div class="rt-sec"><div class="rt-lbl">What the log shows</div>${facts}${mfacts ? `<div class="rt-hint">${rtE(mfacts)}</div>` : ''}<div class="rt-note">${c.minor ? `Code ${rtE(c.disp)} is the minor (thermostat-only) form of this fault; the manual's error table gives it the same causes, so its flowchart applies. ` : ''}${f.gen ? '' : 'Error decision: '}${rtE(f.cond)}${f.box ? ' ' + rtE(f.box) : ''}${f.sizes ? ` Applies to ${rtE(f.sizes)}.` : ''}${f.gen ? '' : ` Code table: ${rtE(c.src)}.`}${famNote}</div></div>
-    ${rtEvHtml(X, f.gen ? null : (c.mode || null), f.multi ? f.fam : null)}
+    ${rtEvHtml(X, f.gen ? null : (c.mode || null), f.multi ? f.fam : null, b)}
     ${byMode ? `<div class="rt-sec rt-noprint"><div class="rt-lbl">Mode for the flowchart's [When cooling] / [When heating] steps</div>${['cool', 'heat'].map(x => `<button type="button" class="rt-cmp${m === x ? ' on' : ''}" data-mode="${x}">${x === 'heat' ? 'Heating' : 'Cooling'}</button>`).join('')}</div>` : ''}
     <div class="rt-sec"><div class="rt-lbl">The manual's ${f.gen ? 'check items' : 'flowchart'}, step by step: ${rtE(f.t)} (${rtE(pg)})</div><ol class="rt-map">${nodes}</ol>${f.note ? `<div class="rt-note">${rtE(f.note)}</div>` : ''}${end}</div>`};
 }
@@ -5826,7 +5860,7 @@ function buildRoute(){
       : (X.plat === 'fit32' || X.plat === 'dh9') ? `${X.doc} has no analysis chart, and no error code with a flowchart was logged in this recording. With Settings → Field rules on, the R-410A FIT chart can be used, labelled as a field rule.`
       : Object.keys(X.chartOut).length ? `The analysis chart holds only inside its outdoor range (${Object.entries(X.chartOut).map(([mm, o]) => `${mm === 'heat' ? 'heating' : 'cooling'} ${o.range[0]}–${o.range[1]} °F`).join(', ')}); this recording's settled running was outside it.`
       : 'This recording has no settled running inside the chart\'s range and no error code with a flowchart.';
-    host.innerHTML = linkBar + `<div class="rt-sheet"><div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''}</div></div></div><p class="rt-head2">${rtE(why)}</p>${rtEvHtml(X, null)}</div>`; return; }
+    host.innerHTML = linkBar + `<div class="rt-sheet"><div class="rt-headrow"><div><div class="rt-title">Diagnostic route</div><div class="rt-sub">${rtE(X.name)}${X.model ? ' · ' + rtE(X.model) : ''}</div></div></div><p class="rt-head2">${rtE(why)}</p>${rtEvHtml(X, null, null, rtBy(rtLoad(), 'x'))}</div>`; return; }
   st.src = src.id; const b = rtBy(st, src.id);
   const body = src.kind === 'chart' ? rtChartHtml(X, src.m, b) : rtFlowHtml(X, src, b);
   const mode = src.kind === 'chart' ? src.m : rtByMode(src.f) ? (b.mode || src.c.mode || 'cool') : src.c.mode, R = RT_DOC[X.plat] || {};
@@ -6492,7 +6526,7 @@ window.dchkCsv = () => D ? D._text : null;   // test hook: the CSV the app built
    a device still signed in from the old Fleet sync keeps its authenticated path and the Fleet tab. What goes up: the decoded CSV the app
    analyzed (gzipped), model, tech name, company, the app's findings and capacity figures, usage events, grille measurements the tech typed,
    learned compressor calibrations, thumbs-up/down feedback, and the job details the tech enters (tech, customer, address). Readable only by signed-in readers. */
-const APP_VERSION = 'v105';
+const APP_VERSION = 'v106';
 const SESSION_ID = Math.random().toString(36).slice(2, 10);
 const DEVICE = (() => { let d = loadJSON('dchk.device', null); if (!d){ d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); saveJSON('dchk.device', d); } return d; })();
 let SB = loadJSON('dchk.sb.session', null);   // {access_token, refresh_token, expires_at, user:{id,email}} — legacy signed-in device
@@ -7394,8 +7428,9 @@ var V3 = (() => {
     for (const q of meshes) if (q.dyn) q.model = tr(q.dyn(i));
     renderCard(); phDraw();
     for (const l of labels){ if (l.name) continue; const c = chById[l.ch], v = num[l.ch][i], st = stateOf(l.ch, i), pv = provTip(l.ch, i), rg = l.ch === 'dtp' ? dtpRange(i) : null;
-      l.el.querySelector('b').textContent = rg ? 'Calc air drop' : ((pv && pv.label) || c.short);
-      l.el.querySelector('.v').textContent = rg ? `${rg[0]}–${rg[1]} °F` : fmt(v, c) + (c.unit ? ' ' + c.unit : ''); l.el.className = 'v3chip' + (st === 'warn' || st === 'alarm' ? ' ' + st : '') + (pins.includes(l.ch) ? ' pin' : '') + (chainState(l.ch, i) ? ' ' + chainState(l.ch, i) : '') + (implausAt(l.ch, i) ? ' implaus' : ''); leadCls(l); }
+      const tv = THERMO && !rg && isN(v) ? thermAt(l.ch, v) : null;
+      l.el.querySelector('b').textContent = rg ? 'Calc air drop' : ((pv && pv.label) || c.short) + (tv ? ` ${fmt(v, c)} °F` : '');
+      l.el.querySelector('.v').textContent = rg ? `${rg[0]}–${rg[1]} °F` : tv ? (tv.out ? 'off chart' : thermK(tv.k) + ' kΩ') : fmt(v, c) + (c.unit ? ' ' + c.unit : ''); l.el.className = 'v3chip' + (st === 'warn' || st === 'alarm' ? ' ' + st : '') + (pins.includes(l.ch) ? ' pin' : '') + (chainState(l.ch, i) ? ' ' + chainState(l.ch, i) : '') + (implausAt(l.ch, i) ? ' implaus' : ''); leadCls(l); }
     dirty = true; kick();
   }
   // ---- drawing ----
@@ -7664,7 +7699,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
   let on = null;
   const show = (e, ev) => {
     const t = e._tip; if (!t) return;
-    tip.innerHTML = `<div class="tt-h"><b>${synEsc(t.label)}</b><span class="tt-k ${t.kind}">${t.kind === 'calc' ? 'Calculated' : t.kind === 'custom' ? 'Custom' : t.kind === 'board' ? 'From the board' : t.kind === 'unknown' ? 'Source unconfirmed' : 'Measured'}</span></div>${t.note ? `<div class="tt-f">${synEsc(t.note)}</div>` : ''}${t.kind === 'meas' ? '<div class="tt-s">Logged by the unit\'s own sensor, shown as recorded.</div>' : ''}${t.src ? `<div class="tt-s">${synEsc(t.src)}</div>` : ''}<div class="tt-p">${lpShown ? 'Tap the tag again to pin its trend' : 'Tap to pin its trend'}</div>`;
+    tip.innerHTML = `<div class="tt-h"><b>${synEsc(t.label)}</b><span class="tt-k ${t.kind}">${t.kind === 'calc' ? 'Calculated' : t.kind === 'custom' ? 'Custom' : t.kind === 'board' ? 'From the board' : t.kind === 'unknown' ? 'Source unconfirmed' : 'Measured'}</span></div>${t.note ? `<div class="tt-f">${synEsc(t.note)}</div>` : ''}${t.kind === 'meas' ? '<div class="tt-s">Logged by the unit\'s own sensor, shown as recorded.</div>' : ''}${t.src ? `<div class="tt-s">${synEsc(t.src)}</div>` : ''}${t.therm ? `<div class="tt-s">${synEsc(t.therm)}</div>` : ''}<div class="tt-p">${lpShown ? 'Tap the tag again to pin its trend' : 'Tap to pin its trend'}</div>`;
     tip.hidden = false; move(ev);
   };
   const move = ev => { const pad = 14, r = tip.getBoundingClientRect(); let x = ev.clientX + pad, y = ev.clientY + pad;
@@ -7697,6 +7732,7 @@ $('#dimsel').addEventListener('click', e => { const b = e.target.closest('[data-
 setView(VIEW);
 $('#thermal').addEventListener('change', e => setThermal(e.target.checked));
 $('#thermal2').addEventListener('change', e => setThermal(e.target.checked));
+$('#thermo').addEventListener('change', e => setThermo(e.target.checked)); $('#thermo2').addEventListener('change', e => setThermo(e.target.checked)); setThermo(THERMO);
 
 if (window.matchMedia) window.matchMedia('(min-width: 1100px) and (orientation: landscape)').addEventListener('change', () => { if (LAND === null) setLayout(); });
 $('#refsel').addEventListener('change', e => { if (D) saveJSON('dchk.ref.' + D.name, e.target.value); logEvent('refrigerant', {value:e.target.value});
